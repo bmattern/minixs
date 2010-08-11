@@ -14,8 +14,12 @@ class Exposure:
     self.info = self.parse_description(self.image.tag.get(270))
 
   def parse_description(self, desc):
-    # split into lines and strip off '#'
-    return [line[2:] for line in desc.split('\r\n')][:-1]
+    try:
+      # split into lines and strip off '#'
+      info = [line[2:] for line in desc.split('\r\n')][:-1]
+    except:
+      info = []
+    return info
 
   def filter_low_high(self, low, high):
     mask = logical_and(self.pixels >= low, self.pixels <= high)

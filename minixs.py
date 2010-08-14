@@ -176,7 +176,7 @@ class Calibrator:
         continue
 
       # find right edges of crystal regions (for this row)
-      right = where(row[i] < row[roll(i,-1)])[0]
+      right = where(row[i] >= row[roll(i,-1)])[0]
 
       right = filter(lambda r: r > 0, right)
       if len(right) == 0:

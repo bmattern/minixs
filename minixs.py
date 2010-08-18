@@ -201,7 +201,6 @@ class Calibrator:
         row[:] = 0
         continue
 
-      """
       # find right edges of crystal regions (for this row)
       right = where(row[i] >= row[roll(i,-1)])[0]
 
@@ -216,10 +215,6 @@ class Calibrator:
       num_xtals = len(right)
 
       xtals = [ i[l:r+1] for l,r in izip(left,right) ]
-      """
-
-      num_xtals = 1
-      xtals = [ i ]
 
       if len(xtals) == 0:
         row[:] = 0

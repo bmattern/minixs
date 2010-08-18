@@ -1,6 +1,6 @@
 from numpy import zeros, arange, logical_and, roll, isnan, where, asarray
 from numpy import loadtxt, savetxt
-from numpy import sqrt, unique, argmin
+from numpy import sqrt, unique, argmin, log
 
 from scipy import polyfit, polyval
 from itertools import izip, product as iproduct
@@ -39,8 +39,9 @@ def read_scan_info(scanfile, columns):
 
 
 class Exposure:
-  def __init__(self, filename):
-    self.load(filename)
+  def __init__(self, filename = None):
+    if filename is not None:
+      self.load(filename)
 
   def load(self, filename):
     self.filename = filename
@@ -48,6 +49,17 @@ class Exposure:
     self.image = Image.open(filename)
     self.pixels = asarray(self.image).copy()
     self.info = self.parse_description(self.image.tag.get(270))
+
+  def load_multi(self, filenames):
+    self.filenames = filenames
+    self.pixels = None
+    for f in filenames:
+      im = Image.open(f)
+      p = asarray(im)
+      if self.pixels is None:
+        self.pixels = p.copy()
+      else:
+        self.pixels += p
 
   def parse_description(self, desc):
     try:
@@ -70,13 +82,16 @@ class Exposure:
       ], 0) >= cutoff
     self.pixels *= mask
 
+  def filter_bad_pixels(self, bad_pixels):
+    for x,y in bad_pixels:
+      self.pixels[y,x] = 0
+
 
 class Calibrator:
   """Calibrates camera display using elastic scan images"""
 
-  def __init__(self, energies, I0s, image_files, direction):
+  def __init__(self, energies, image_files, direction):
     self.energies = energies
-    self.I0s = I0s
     self.image_files = image_files
     self.direction = direction
 
@@ -85,14 +100,25 @@ class Calibrator:
   def load_images(self):
     self.images = [Exposure(image_file) for image_file in self.image_files]
 
-  def filter_images(self, low, high, nborCutoff):
+  def filter_images(self, low, high, nborCutoff, bad_pixels = []):
     for im in self.images:
       im.filter_low_high(low, high)
       im.filter_neighbors(nborCutoff)
+      im.filter_bad_pixels(bad_pixels)
 
   def calibrate_elastic(self, im, inc_energy, ev_per_pixel=.75):
     p = im.pixels
     local_max = logical_and(p >= roll(p,-1,self.direction), p > roll(p, 1, self.direction))
+
+    # pick out highest peak to get rid of noise
+    # XXX this only works if there is a single crystal in the dispersive direction, and currently only for vertical spectra
+
+    """
+    local_max = zeros(p.shape)
+    maxima = p.argmax(0)
+    for i in range(len(maxima)):
+      local_max[maxima[i],i] = 1
+    """
 
     # perform windowed averaging to find average col value in local peak
     colMoment = zeros(p.shape)
@@ -175,6 +201,7 @@ class Calibrator:
         row[:] = 0
         continue
 
+      """
       # find right edges of crystal regions (for this row)
       right = where(row[i] >= row[roll(i,-1)])[0]
 
@@ -189,6 +216,10 @@ class Calibrator:
       num_xtals = len(right)
 
       xtals = [ i[l:r+1] for l,r in izip(left,right) ]
+      """
+
+      num_xtals = 1
+      xtals = [ i ]
 
       if len(xtals) == 0:
         row[:] = 0
@@ -301,7 +332,7 @@ def emission_spectrum(calib, exposure, low_energy, high_energy, energy_step, I0)
   return spectrum
 
 
-def process_all(calibfile, scanfile, base_image, image_nums, E_column=0, I0_column=6, low_cutoff=0, high_cutoff=1000, low_energy=None, high_energy=None, energy_step = 0.5):
+def process_all(calibfile, scanfile, base_image, image_nums, E_column=0, I0_column=6, low_cutoff=0, high_cutoff=1000, low_energy=None, high_energy=None, energy_step = 0.5, zero_pad=3):
 
   calib = loadtxt(calibfile)
 
@@ -313,7 +344,7 @@ def process_all(calibfile, scanfile, base_image, image_nums, E_column=0, I0_colu
 
 
   Es, I0s = read_scan_info(scanfile, [E_column, I0_column])
-  filenames = gen_file_list(base_image, image_nums)
+  filenames = gen_file_list(base_image, image_nums, zero_pad)
   exposures = [ Exposure(filename) for filename in filenames ]
 
   for e in exposures:
@@ -344,12 +375,44 @@ def save_rixs(filename, rixs):
     savetxt(f, rixs, fmt=fmt)
 
 
-def rixs_pfy_cut(rixs, energy):
+def rixs_xes_cut(rixs, energy):
   energies = unique(rixs[:,0])
  
   i = argmin(abs(energies - energy))
 
   return rixs[where(rixs[:,0] == energies[i])]
 
+def rixs_pfy_cut(rixs, energy):
+  energies = unique(rixs[:,1])
+ 
+  i = argmin(abs(energies - energy))
+
+  return rixs[where(rixs[:,1] == energies[i])]
 
 
+def rixs2d(rixs):
+  inc_energies = unique(rixs[:,0])
+  emit_energies = unique(rixs[:,1])
+
+  rixs2d = zeros((len(emit_energies), len(inc_energies)))
+
+  for row in rixs:
+    i = where(inc_energies == row[0])[0]
+    j = where(emit_energies == row[1])[0]
+    rixs2d[j,i] = row[2]
+
+  return rixs2d
+
+def plot_rixs(rixs, start=0, end=-1, plot_log=False, aspect=1):
+  incE = unique(rixs[:,0])
+  emitE = unique(rixs[:,1])
+  r2d = rixs2d(rixs)
+  if plot_log:
+    r2d = log(r2d)
+
+  from matplotlib.pyplot import imshow, figure
+  figure()
+  imshow(
+      r2d[:,start:end],
+      extent=(incE[start],incE[end],emitE[-1],emitE[0]),
+      aspect=aspect)

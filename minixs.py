@@ -185,7 +185,14 @@ class Calibrator:
     for xtal_rect in xtal_rects:
       self.interpolate_xtal(xtal_rect, direction)
 
-  def interpolate(self):
+  def interpolate(self, single_xtal=False):
+    """
+    Interpolate between calibrated points
+
+    If single_xtal is True, then the code assumes one crystal in the dispersive direction.
+    Otherwise, it finds crystal boundaries by finding points where energy jumps the opposite direction as expected
+    """
+    
     if self.direction == VERTICAL:
       calib = self.calib.transpose()
     else:
@@ -201,23 +208,27 @@ class Calibrator:
         row[:] = 0
         continue
 
-      # find right edges of crystal regions (for this row)
-      if self.direction == VERTICAL:
-        right = where(row[i] >= row[roll(i,-1)])[0]
+      if single_xtal:
+        xtals = [i]
+        num_xtals = 1
       else:
-        right = where(row[i] < row[roll(i,-1)])[0]
+        # find right edges of crystal regions (for this row)
+        if self.direction == VERTICAL:
+          right = where(row[i] >= row[roll(i,-1)])[0]
+        else:
+          right = where(row[i] < row[roll(i,-1)])[0]
 
-      right = filter(lambda r: r > 0, right)
-      if len(right) == 0:
-        row[:] = 0
-        continue
+        right = filter(lambda r: r > 0, right)
+        if len(right) == 0:
+          row[:] = 0
+          continue
 
-      left = roll(right,1) + 1
-      left[0] = 0
+        left = roll(right,1) + 1
+        left[0] = 0
 
-      num_xtals = len(right)
+        num_xtals = len(right)
 
-      xtals = [ i[l:r+1] for l,r in izip(left,right) ]
+        xtals = [ i[l:r+1] for l,r in izip(left,right) ]
 
       if len(xtals) == 0:
         row[:] = 0

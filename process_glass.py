@@ -7,7 +7,11 @@ from itertools import izip
 # Configurable parameters
 ######################################
 
-DIR = "/home/bmattern/research/Fe_K_Beta/data/FeS2/"
+do_calibration = True
+do_process = False
+
+
+DIR = "/home/bmattern/research/Fe_K_Beta/data/Glass/"
 
 # dispersive direction in image
 direction = minixs.VERTICAL
@@ -15,14 +19,14 @@ direction = minixs.VERTICAL
 zero_pad = 5
 
 # calibration parameters
-calib_root = DIR + 'sequence_'
-calib_nums = range(1,16)
+calib_root = DIR + 'calib_'
+calib_nums = range(1,50)
 calib_scan = DIR + 'calib.0001'
 
 calib_scan_energy_column = 0
 calib_scan_I0_column = 6
 
-calib_filter_low  = 12
+calib_filter_low  = 8
 calib_filter_high = 10000
 calib_filter_neighbors = 1
 
@@ -52,13 +56,14 @@ bad_pixels = [
 ]
 
 kill_regions = [
+    ((0,0), (500,10)),
+    ((0,190), (500,200)),
+    ((40,0), (48,200)),
     ((391,0),(393,196)),
     ((291,0),(294,196))
     ]
 
 
-do_calibration = False
-do_process = True
 
 do_multi = True
 
@@ -112,7 +117,7 @@ if do_calibration:
 
   c.build_calibration_matrix()
   c.kill_regions(kill_regions)
-  c.interpolate()
+  c.interpolate(single_xtal=True)
   c.save(calib_filename)
 
   t2 = time.time()

@@ -3,35 +3,44 @@ import time
 import os, sys
 from itertools import izip
 
+"""
+minIXS calibration and processing script
+
+minixs.py must either be in this directory or somewhere included in sys.path (which can be set by the PYTHONPATH environment variable)
+
+Configurable parameters are all located at the top of this file.
+"""
+
 ######################################
 # Configurable parameters
 ######################################
 
-DIR = "/home/bmattern/research/Fe_K_Beta/data/FeS2/"
+DIR = "/home/bmattern/research/Ravel_Co/Powder/"
 
 # dispersive direction in image
-direction = minixs.VERTICAL
+direction = minixs.HORIZONTAL
 
+# zero padding on pilatus image files
 zero_pad = 5
 
 # calibration parameters
-calib_root = DIR + 'sequence_'
-calib_nums = range(1,16)
-calib_scan = DIR + 'calib.0001'
+calib_root = DIR + 'calib2_'  # pilatus file name base
+calib_nums = range(1,19)  # pilatus file numbers (range() includes lower bound, but not upper bound!)
+calib_scan = DIR + 'calib2.0001'
 
 calib_scan_energy_column = 0
 calib_scan_I0_column = 6
 
-calib_filter_low  = 12
-calib_filter_high = 10000
-calib_filter_neighbors = 1
+calib_filter_low  = 10 # ignore pixels with counts below this value
+calib_filter_high = 10000  # ignore pixels with counts above this (bad pixels?)
+calib_filter_neighbors = 1 # ingore pixels without at least this many neighbors
 
-calib_filename = DIR + 'calibration.dat'
+calib_filename = DIR + 'calibration.dat'  # filename to save calibration matrix as
 
 # spectrum parameters
-spec_root = DIR + 'sequence_'
-spec_nums = range(46,213)
-spec_scan = DIR + 'xanes.0001'
+spec_root = DIR + 'rxes_'  # spectrum pilatus filename base
+spec_nums = range(1,168)      # spectrum image numbers
+spec_scan = DIR + 'rxes.0001' # spectrum scan file
 
 spec_scan_energy_column = 0
 spec_scan_I0_column = 6
@@ -39,28 +48,31 @@ spec_scan_I0_column = 6
 spec_filter_low = 0
 spec_filter_high = 100000
 
-spec_low_energy = 7000
-spec_high_energy = None
-spec_energy_step = 0.7 # bin size
+spec_low_energy = 7605   # minimum emission energy to include in spectrum
+spec_high_energy = None  # maximum emission energy to include
+spec_energy_step = 0.7   # emission energy bin size
 
-spec_filename = DIR + 'xanes.dat'
+spec_filename = DIR + 'rxes.dat'  # file to save spectrum to
 
 
+# The following two parameters are used for both calibration and spectrum processing
 
+# a list of bad pixels (note that the top left pixel is 0,0)
+# ImageJ uses (1,1) for the top left, so be sure to subtract one if you
+# are getting the values from there
 bad_pixels = [
     (13, 184)
 ]
 
+# regions to kill (ignore completely)
 kill_regions = [
-    ((391,0),(393,196)),
-    ((291,0),(294,196))
     ]
 
 
+# whether to process or calibrate or both
+# if these are True and an output file exists, the program will ask before overwriting
 do_calibration = False
 do_process = True
-
-do_multi = True
 
 #####################################
 
@@ -102,16 +114,9 @@ if do_calibration:
   """
   c.filter_images(calib_filter_low, calib_filter_high, calib_filter_neighbors, bad_pixels)
 
-  for energy, exposure in izip(c.energies, c.images):
-    # mask out emission from calibration scan
-    if energy >= 7090:
-      z = 1.3214 * energy - 9235.82 - 12
-      exposure.pixels[0:z,:] = 0
-
-      
-
   c.build_calibration_matrix()
   c.kill_regions(kill_regions)
+  c.save(calib_filename.replace('.dat','_preinterp.dat'))
   c.interpolate()
   c.save(calib_filename)
 
@@ -150,4 +155,5 @@ if do_process:
 
   rixs = minixs.build_rixs(spectra, energies)
   minixs.save_rixs(spec_filename, rixs)
+
 

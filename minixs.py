@@ -4,7 +4,7 @@ from numpy import sqrt, unique, argmin, log
 
 from scipy import polyfit, polyval
 from itertools import izip, product as iproduct
-import sys
+import sys, os
 
 from PIL import Image
 
@@ -94,6 +94,10 @@ class Calibrator:
     self.energies = energies
     self.image_files = image_files
     self.direction = direction
+
+    print "Directory: %s" % os.path.dirname(image_files[0])
+    print "Files %s to %s" % (os.path.basename(image_files[0]),
+        os.path.basename(image_files[-1]))
 
     self.load_images()
 
@@ -360,6 +364,10 @@ def process_all(calibfile, scanfile, base_image, image_nums, E_column=0, I0_colu
 
   Es, I0s = read_scan_info(scanfile, [E_column, I0_column])
   filenames = gen_file_list(base_image, image_nums, zero_pad)
+
+  print "Directory: %s" % os.path.dirname(filenames[0])
+  print "Files %s to %s" % (os.path.basename(filenames[0]),
+      os.path.basename(filenames[-1]))
   exposures = [ Exposure(filename) for filename in filenames ]
 
   for e in exposures:

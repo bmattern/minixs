@@ -318,6 +318,12 @@ def emission_spectrum(calib, exposure, low_energy, high_energy, energy_step, I0)
       sigma = sqrt(raw_counts) / num_pixels / I0
 
   """
+
+  if low_energy is None:
+    low_energy = calib[where(calib > 0)].min()
+  if high_energy is None:
+    high_energy = calib.max()
+
   energies = arange(low_energy, high_energy, energy_step)
   spectrum = zeros((len(energies), 5))
   spectrum[:,0] = energies + energy_step / 2.
@@ -425,3 +431,26 @@ def plot_rixs(rixs, start=0, end=-1, plot_log=False, aspect=1):
       r2d[:,start:end],
       extent=(incE[start],incE[end],emitE[-1],emitE[0]),
       aspect=aspect)
+
+def plot_spectrum(s, **kwargs):
+  plot_errorbars = True
+  if kwargs.has_key('errorbar'):
+    plot_errorbars = kwargs['errorbar']
+    del(kwargs['errorbar'])
+
+  new_plot = True
+  if kwargs.has_key('new_plot'):
+    new_plot = kwargs['new_plot']
+    del(kwargs['new_plot'])
+
+  from matplotlib.pyplot import plot, errorbar, figure
+
+  if new_plot:
+    figure()
+
+  if plot_errorbars:
+    errorbar(s[:,0], s[:,1], s[:,2], **kwargs)
+  else:
+    plot(s[:,0], s[:,1], **kwargs)
+    
+  

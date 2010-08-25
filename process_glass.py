@@ -2,13 +2,15 @@ import minixs
 import time
 import os, sys
 from itertools import izip
+from numpy import pi, cos, sqrt, loadtxt, savetxt, zeros
+import glob
 
 ######################################
 # Configurable parameters
 ######################################
 
-do_calibration = True
-do_process = False
+do_calibration = False
+do_process = True
 
 
 DIR = "/home/bmattern/research/Fe_K_Beta/data/Glass/"
@@ -126,33 +128,34 @@ else:
   print "Skipping calibration."
 
 
-if do_process and os.path.exists(spec_filename):
-  do_process = ask_yn_question("Processed data file exists. Reprocess? (y/n): ")
-
 if do_process:
-  energies, I0s = minixs.read_scan_info(spec_scan,
-      [spec_scan_energy_column, spec_scan_I0_column])
-
-  print "Process spectra"
-
   t1 = time.time()
 
-  spectra = minixs.process_all(
-      calib_filename,
-      spec_scan,
-      spec_root,
-      spec_nums,
-      low_cutoff=spec_filter_low,
-      high_cutoff=spec_filter_high,
-      low_energy=spec_low_energy,
-      high_energy=spec_high_energy,
-      energy_step=spec_energy_step,
-      zero_pad=zero_pad
-      )
+  E_inc = 7120.
+  E_emit = 7050
+  xtal_bounds = [(0,39), (49,91), (96,139), (143,187), (196,240), (245,290), (293,330), (342,390), (392,440), (443,485)]
+
+  angles = [69.53, 73.84, 78.32, 82.94, 87.64, 92.36, 97.06, 101.68, 106.16, 110.47]
+
+  def calc_q(E_inc, E_emit, theta):
+    hbarc = 1973. # ev A
+    return sqrt(E_inc**2 + E_emit**2 - 2 * E_inc * E_emit * cos(theta)) / hbarc
+
+  qs = [calc_q(E_inc, E_emit, pi * a / 180.) for a in angles]
+
+  cal = loadtxt(calib_filename)
+
+  e = minixs.Exposure()
+  e.load_multi(glob.glob(DIR+'nixs2_*.tif'))
+  
+
+  for bounds,q in izip(xtal_bounds, qs):
+    x1,x2 = bounds
+    mask = zeros(cal.shape)
+    mask[:,x1:x2] = 1
+    s = minixs.emission_spectrum(cal * mask, e, 7000, 7140, .7, 1)
+    savetxt(DIR+'nixs2_q_%.2f.dat' % q, s)
 
   t2 = time.time()
   print"  finished in %.2f s" % (t2 - t1,)
-
-  rixs = minixs.build_rixs(spectra, energies)
-  minixs.save_rixs(spec_filename, rixs)
 

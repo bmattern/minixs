@@ -1,7 +1,4 @@
-from numpy import zeros, arange, logical_and, roll, isnan, where, asarray
-from numpy import loadtxt, savetxt
-from numpy import sqrt, unique, argmin, log
-
+from numpy import *
 from scipy import polyfit, polyval
 from itertools import izip, product as iproduct
 import sys, os
@@ -110,11 +107,97 @@ class Calibrator:
       im.filter_neighbors(nborCutoff)
       im.filter_bad_pixels(bad_pixels)
 
+  def find_maxima(self, im, mask, inc_energy, window_size = 3):
+    p = im.pixels * mask
+    local_max = logical_and(p >= roll(p,-1,self.direction), p > roll(p, 1, self.direction))
+
+    # perform windowed averaging to find average col value in local peak
+    colMoment = zeros(p.shape)
+    norm = zeros(p.shape)
+
+    cols = arange(0,p.shape[self.direction])
+    if self.direction == VERTICAL:
+      cols.shape = (len(cols),1)
+
+    for i in range(-window_size,window_size+1):
+      colMoment += local_max * roll(cols * p, i, self.direction)
+      norm += local_max * roll(p, i, self.direction)
+
+    windowedAvg = colMoment / norm
+    windowedAvg[isnan(windowedAvg)] = 0
+
+    index = where(windowedAvg > 0)
+
+    if self.direction == VERTICAL:
+      y = windowedAvg[index]
+      x = index[1]
+    else:
+      x = index[0]
+      y = windowedAvg[index]
+
+    z = inc_energy * ones(len(x))
+
+    return vstack([x,y,z]).T
+
+  def calibrate(self, xtals, return_full = False):
+    self.calib = zeros(self.images[0].pixels.shape)
+
+    xtal_points = []
+
+    import time
+    n = 0
+    for xtal in xtals:
+      print "Calibrate xtal #%d" % n
+
+      print "  build mask...",
+      t1 = time.time()
+      (x1,y1),(x2,y2) = xtal
+
+      mask = zeros(self.images[0].pixels.shape)
+      mask[y1:y2,x1:x2] = 1
+      t2 = time.time()
+      print " %.2fs" % (t2-t1,)
+
+      print "  find maxima...",
+      t1 = time.time()
+      points = vstack([
+        self.find_maxima(im,mask,energy)
+        for im,energy in izip(self.images, self.energies)
+        ])
+      t2 = time.time()
+      print " %.2fs" % (t2-t1,)
+
+      if return_full:
+        xtal_points.append(points)
+
+      print "   fit quadratic...",
+      t1 = time.time()
+      x,y,z = points.T
+
+      # fit to quadratic
+      A = vstack([x**2, y**2, x*y, x, y, ones(x.shape)]).T
+      fit, res = linalg.lstsq(A,z)[0:2]
+
+      # fill in pixels with fit values
+      xx, yy = meshgrid(arange(x1,x2), arange(y1,y2))
+      xx = ravel(xx)
+      yy = ravel(yy)
+      zz = dot(vstack([xx**2,yy**2,xx*yy,xx,yy,ones(xx.shape)]).T,fit).T
+
+      self.calib[yy,xx] = zz
+      t2 = time.time()
+      print " %.3fs" % (t2-t1,)
+      n += 1
+
+    if return_full:
+      return xtal_points, res
+      
+
   def calibrate_elastic(self, im, inc_energy, ev_per_pixel=.75):
     p = im.pixels
     local_max = logical_and(p >= roll(p,-1,self.direction), p > roll(p, 1, self.direction))
 
-    # pick out highest peak to get rid of noise
+    # pick out highest peak to get rid of noise?
     # XXX this only works if there is a single crystal in the dispersive direction, and currently only for vertical spectra
 
     """
@@ -138,6 +221,7 @@ class Calibrator:
 
     windowedAvg = colMoment / norm
     windowedAvg[isnan(windowedAvg)] = 0
+
 
     return ((windowedAvg - cols) * ev_per_pixel + inc_energy) * local_max
 

@@ -2,6 +2,7 @@ from numpy import *
 from scipy import polyfit, polyval
 from itertools import izip, product as iproduct
 import sys, os
+import time
 
 from PIL import Image
 
@@ -107,8 +108,22 @@ class Calibrator:
       im.filter_neighbors(nborCutoff)
       im.filter_bad_pixels(bad_pixels)
 
-  def find_maxima(self, im, mask, inc_energy, window_size = 3):
-    p = im.pixels * mask
+  def find_maxima(self, p, inc_energy, window_size = 3):
+    """Find local maxima in an elastic scan
+
+    Finds the center of each peak in the dispersive direction
+
+    Parameters
+    ----------
+    p : pixel array from an elastic exposure
+    inc_energy : the incident energy for this elastic exposure
+    window_size : size in pixels around max for windowed average
+
+    Returns
+    -------
+    xyz : array of x, y and energy coordinates
+    """
+
     local_max = logical_and(p >= roll(p,-1,self.direction), p > roll(p, 1, self.direction))
 
     # perform windowed averaging to find average col value in local peak
@@ -139,58 +154,58 @@ class Calibrator:
 
     return vstack([x,y,z]).T
 
-  def calibrate(self, xtals, return_full = False):
+  def calibrate(self, xtals):
+    """Fits a 2d cubic function to each crystal
+
+    Parameters
+    ----------
+
+    xtals: list of rects for each crystal
+
+    The crystals should be specified as ((x1,y1),(x2,y2))
+    where (x1,y1) is the top left of the rect and (x2,y2) is the bottom
+    right.
+    """
+
     self.calib = zeros(self.images[0].pixels.shape)
 
-    xtal_points = []
+    points = vstack([
+      self.find_maxima(im.pixels,energy)
+      for im,energy in izip(self.images, self.energies)
+      ])
 
-    import time
-    n = 0
+    lin_res = []
+    rms_res = []
+
     for xtal in xtals:
-      print "Calibrate xtal #%d" % n
-
-      print "  build mask...",
-      t1 = time.time()
       (x1,y1),(x2,y2) = xtal
 
-      mask = zeros(self.images[0].pixels.shape)
-      mask[y1:y2,x1:x2] = 1
-      t2 = time.time()
-      print " %.2fs" % (t2-t1,)
-
-      print "  find maxima...",
-      t1 = time.time()
-      points = vstack([
-        self.find_maxima(im,mask,energy)
-        for im,energy in izip(self.images, self.energies)
-        ])
-      t2 = time.time()
-      print " %.2fs" % (t2-t1,)
-
-      if return_full:
-        xtal_points.append(points)
-
-      print "   fit quadratic...",
-      t1 = time.time()
-      x,y,z = points.T
+      index = where(
+          logical_and(
+            points[:,0] >= x1,
+            points[:,0] < x2
+            )
+          )
+      x,y,z = points[index].T
 
       # fit to quadratic
-      A = vstack([x**2, y**2, x*y, x, y, ones(x.shape)]).T
-      fit, res = linalg.lstsq(A,z)[0:2]
+      #A = vstack([x**2, y**2, x*y, x, y, ones(x.shape)]).T
+      A = vstack([x**3,y**3,x**2*y,x*y**2,x**2, y**2, x*y, x, y, ones(x.shape)]).T
+      fit, r = linalg.lstsq(A,z)[0:2]
+      
+      rms_res.append(sqrt(r / len(z))[0])
+
+      lin_res.append( sum(z - dot(A, fit)) / len(z) )
 
       # fill in pixels with fit values
       xx, yy = meshgrid(arange(x1,x2), arange(y1,y2))
       xx = ravel(xx)
       yy = ravel(yy)
-      zz = dot(vstack([xx**2,yy**2,xx*yy,xx,yy,ones(xx.shape)]).T,fit).T
+      zz = dot(vstack([xx**3,yy**3,xx**2*yy,xx*yy**2,xx**2,yy**2,xx*yy,xx,yy,ones(xx.shape)]).T,fit).T
 
       self.calib[yy,xx] = zz
-      t2 = time.time()
-      print " %.3fs" % (t2-t1,)
-      n += 1
 
-    if return_full:
-      return xtal_points, res
+    return points, lin_res, rms_res
       
 
   def calibrate_elastic(self, im, inc_energy, ev_per_pixel=.75):
@@ -230,21 +245,12 @@ class Calibrator:
 
     self.calib = zeros(self.images[0].pixels.shape)
 
-    #XXX should this be estimated somehow instead of hard coded?
-    ev_per_pixel = .75
-
     # run through images, detect rings and set energy on rings in calib
     for im, inc_energy in izip(self.images, self.energies):
 
       c = self.calibrate_elastic(im, inc_energy, ev_per_pixel)
       mask = where(c > 0)
       self.calib[mask] = c[mask]
-
-  def kill_regions(self, regions):
-    for r in regions:
-      x1,y1 = r[0]
-      x2,y2 = r[1]
-      self.calib[y1:y2,x1:x2] = 0
 
   def interpolate_xtal(self, xtal_rect):
     (x1,y1),(x2,y2) = xtal_rect
@@ -268,6 +274,13 @@ class Calibrator:
       yfit = polyval(fit, xfit)
 
       row[xfit] = yfit
+
+  def kill_regions(self, regions):
+    """Mask out regions of calibration matrix"""
+    for r in regions:
+      x1,y1 = r[0]
+      x2,y2 = r[1]
+      self.calib[y1:y2,x1:x2] = 0
 
   def interpolate_rects(self, xtal_rects, direction):
     for xtal_rect in xtal_rects:

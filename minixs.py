@@ -447,6 +447,43 @@ def emission_spectrum(calib, exposure, low_energy, high_energy, energy_step, I0)
   sys.stdout.flush()
   return spectrum
 
+def emission_spectrum2(cal, exposure, energies, I0, direction,):
+  """Interpolated emission spectrum
+
+  Parameters
+  ----------
+  cal : calibration matrix
+  exposure : spectrum Exposure
+  energies : list of emission energies for desired spectrum
+  I0 : intensity normalization value
+  direction: dispersive direction (minixs.HORIZONTAL or minixs.VERTICAL)
+  """
+
+  intensity = zeros(energies.shape)
+  variance = zeros(energies.shape)
+  mask = zeros(energies.shape)
+  #y_i = zeros(energies.shape)
+  #var_i = zeros(energies.shape)
+  cols = zeros(energies.shape)
+
+  if direction == VERTICAL:
+    for i in range(exposure.pixels.shape[1]):
+      if not any(cal[:,i] == 0):
+        #interp_poisson(energies, y_i, var_i, cal[:,i], exposure.pixels[:,i],-1,-1)
+        y_i = interp(energies, cal[:,i], exposure.pixels[:,i],-1,-1)
+        mask *= 0
+        mask[where(y_i >= 0)] = 1
+        intensity += y_i * mask
+        #variance += var_i * mask
+        cols += mask
+
+    cols[where(cols == 0)] = 1
+    #spectrum = vstack([energies, intensity/I0/cols, sqrt(variance)/I0/cols, intensity, cols*ones(energies.shape)]).T
+    spectrum = vstack([energies, intensity/I0/cols, sqrt(intensity)/I0/cols, intensity, cols*ones(energies.shape)]).T
+
+    return spectrum
+  else:
+    raise Exception("Not yet supported")
 
 def process_all(calibfile, scanfile, base_image, image_nums, E_column=0, I0_column=6, low_cutoff=0, high_cutoff=1000, low_energy=None, high_energy=None, energy_step = 0.5, zero_pad=3):
 
@@ -548,14 +585,68 @@ def plot_spectrum(s, **kwargs):
     new_plot = kwargs['new_plot']
     del(kwargs['new_plot'])
 
+  normalize = False
+  if kwargs.has_key('normalize'):
+    normalize = kwargs['normalize']
+    del(kwargs['normalize'])
+
+
   from matplotlib.pyplot import plot, errorbar, figure
 
   if new_plot:
     figure()
 
+ 
+  n = 1
+  if normalize:
+    n = sum(s[:,1]) * len(s[:,1])
+
   if plot_errorbars:
-    errorbar(s[:,0], s[:,1], s[:,2], **kwargs)
+    errorbar(s[:,0], s[:,1]/n, s[:,2]/n, **kwargs)
   else:
-    plot(s[:,0], s[:,1], **kwargs)
+    plot(s[:,0], s[:,1]/n, **kwargs)
     
   
+def interp_poisson(x, y, var, xp, yp, left=None, right=None):
+  """Linearly interpolate points and calculate Poisson variance"""
+  i = -1
+  n = len(xp)
+
+  if y is None:
+    y = zeros(len(x))
+
+  if var is None:
+    var = zeros(len(x))
+
+  if left is None:
+    left = yp[0]
+  if right is None:
+    right = yp[-1]
+
+  for j in xrange(len(x)):
+    if i >= n-1:
+      y[j] = right
+      continue
+
+    skip = False
+    while x[j] > xp[i+1]:
+      i += 1
+      if i >= n-1:
+        y[j] = right
+        skip = True
+        break
+
+    if skip:
+      continue
+
+    if i == -1:
+      y[j] = left
+    else:
+      f = (x[j] - xp[i]) / (xp[i+1] - xp[i])
+      y[j] = (1-f) * yp[i] + f * yp[i+1]
+      var[j] = (1-f)*(1-f)*yp[i] + f*f*yp[i+1]
+
+  return y,var
+
+
+

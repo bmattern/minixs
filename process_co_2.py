@@ -139,7 +139,7 @@ if do_process and os.path.exists(spec_filename):
   do_process = ask_yn_question("Processed data file exists. Reprocess? (y/n): ")
 
 if do_process:
-  energies, I0s = minixs.read_scan_info(spec_scan,
+  inc_energies, I0s = minixs.read_scan_info(spec_scan,
       [spec_scan_energy_column, spec_scan_I0_column])
 
   t1 = time.time()
@@ -175,7 +175,7 @@ if do_process:
   t2 = time.time()
   print"  finished in %.2f s" % (t2 - t1,)
 
-  rixs = minixs.build_rixs(spectra, energies)
+  rixs = minixs.build_rixs(spectra, inc_energies)
   minixs.save_rixs(spec_filename, rixs)
 
 

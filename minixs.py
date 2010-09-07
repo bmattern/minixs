@@ -147,12 +147,13 @@ class Calibrator:
       y = windowedAvg[index]
       x = index[1]
     else:
-      x = index[0]
-      y = windowedAvg[index]
+      x = windowedAvg[index]
+      y = index[0]
 
-    z = inc_energy * ones(len(x))
+    z = inc_energy * ones(x.shape)
 
-    return vstack([x,y,z]).T
+    ret = vstack([x,y,z]).T
+    return ret
 
   def calibrate(self, xtals):
     """Fits a 2d cubic function to each crystal
@@ -447,7 +448,7 @@ def emission_spectrum(calib, exposure, low_energy, high_energy, energy_step, I0)
   sys.stdout.flush()
   return spectrum
 
-def emission_spectrum2(cal, exposure, energies, I0, direction,):
+def emission_spectrum2(cal, exposure, energies, I0, direction, xtals):
   """Interpolated emission spectrum
 
   Parameters
@@ -457,20 +458,33 @@ def emission_spectrum2(cal, exposure, energies, I0, direction,):
   energies : list of emission energies for desired spectrum
   I0 : intensity normalization value
   direction: dispersive direction (minixs.HORIZONTAL or minixs.VERTICAL)
+  xtals: list of crystal rects
   """
 
   intensity = zeros(energies.shape)
-  variance = zeros(energies.shape)
+  #variance = zeros(energies.shape)
   mask = zeros(energies.shape)
   #y_i = zeros(energies.shape)
   #var_i = zeros(energies.shape)
   cols = zeros(energies.shape)
 
-  if direction == VERTICAL:
-    for i in range(exposure.pixels.shape[1]):
-      if not any(cal[:,i] == 0):
+  for xtal in xtals:
+    (x1,y1), (x2,y2) = xtal
+
+    if direction == VERTICAL:
+      i1, i2 = y1, y2
+    else:
+      i1, i2 = x1, x2
+
+    for i in range(i1,i2):
+      if direction == VERTICAL:
+        # this is much slower, but gets the statistical error correct
+        # for now, use quicker method that overestimates statistical error
         #interp_poisson(energies, y_i, var_i, cal[:,i], exposure.pixels[:,i],-1,-1)
-        y_i = interp(energies, cal[:,i], exposure.pixels[:,i],-1,-1)
+        y_i = interp(energies, cal[y1:y2,i], exposure.pixels[y1:y2,i],-1,-1)
+      else:
+        y_i = interp(energies, cal[i,x2:x1:-1], exposure.pixels[i,x2:x1:-1],-1,-1)
+
         mask *= 0
         mask[where(y_i >= 0)] = 1
         intensity += y_i * mask
@@ -599,7 +613,7 @@ def plot_spectrum(s, **kwargs):
  
   n = 1
   if normalize:
-    n = sum(s[:,1]) * len(s[:,1])
+    n = sum(s[:,1]) / len(s[:,1])
 
   if plot_errorbars:
     errorbar(s[:,0], s[:,1]/n, s[:,2]/n, **kwargs)

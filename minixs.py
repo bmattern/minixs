@@ -472,9 +472,9 @@ def emission_spectrum2(cal, exposure, energies, I0, direction, xtals):
     (x1,y1), (x2,y2) = xtal
 
     if direction == VERTICAL:
-      i1, i2 = y1, y2
-    else:
       i1, i2 = x1, x2
+    else:
+      i1, i2 = y1, y2
 
     for i in range(i1,i2):
       if direction == VERTICAL:

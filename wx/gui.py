@@ -457,20 +457,11 @@ class CalibrationViewPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
     wx.Panel.__init__(self, *args, **kwargs)
 
-class MainPanel(wx.Panel):
-  def __init__(self, *args, **kwargs):
-    wx.Panel.__init__(self, *args, **kwargs)
-
     self.exposure = minixs.Exposure()
 
     vbox = wx.BoxSizer(wx.VERTICAL)
 
-    self.input_panel = CalibrationInputPanel(self)
-    self.input_panel.load_cb = self.OnLoad
-    vbox.Add(self.input_panel, 1, wx.EXPAND)
-  
     hbox = wx.BoxSizer(wx.HORIZONTAL)
-
     label = wx.StaticText(self, wx.ID_ANY, 'No Files Loaded')
     hbox.Add(label, 1, wx.EXPAND)
     self.label = label
@@ -507,14 +498,7 @@ class MainPanel(wx.Panel):
 
     vbox.Add(hbox, 0, wx.EXPAND)
 
-    filters = FilterPanel(self, wx.ID_ANY)
-    vbox.Add(filters, 1, wx.EXPAND)
-
     self.SetSizerAndFit(vbox)
-
-  def OnCoord(self, x, y):
-    s = "(% 3d,% 3d)" % (x,y)
-    self.coord_label.SetLabel(s)
 
   def OnLoad(self, energies, files):
     self.energies = energies
@@ -525,6 +509,11 @@ class MainPanel(wx.Panel):
     self.slider.SetValue(1)
 
     self.SetExposureIndex(0)
+
+
+  def OnCoord(self, x, y):
+    s = "(% 3d,% 3d)" % (x,y)
+    self.coord_label.SetLabel(s)
 
   def OnSlider(self, evt):
     i = self.slider.GetValue() - 1
@@ -578,6 +567,31 @@ class MainPanel(wx.Panel):
     text = "%d/%d (%s) %.2f eV" % (i+1, len(self.files), f, self.energies[i])
     self.label.SetLabel(text)
 
+
+class MainPanel(wx.Panel):
+  def __init__(self, *args, **kwargs):
+    wx.Panel.__init__(self, *args, **kwargs)
+
+    vbox = wx.BoxSizer(wx.VERTICAL)
+
+    self.input_panel = CalibrationInputPanel(self)
+    vbox.Add(self.input_panel, 1, wx.EXPAND)
+
+    hbox = wx.BoxSizer(wx.HORIZONTAL)
+
+    self.view_panel = CalibrationViewPanel(self)
+    hbox.Add(self.view_panel, 1, wx.EXPAND)
+  
+    self.input_panel.load_cb = self.view_panel.OnLoad
+
+    filters = FilterPanel(self, wx.ID_ANY)
+    hbox.Add(filters, 0, wx.EXPAND)
+
+    vbox.Add(hbox, 1, wx.EXPAND)
+
+    self.SetSizerAndFit(vbox)
+
+
 class MainFrame(wx.Frame):
   def __init__(self, *args, **kwargs):
 
@@ -613,7 +627,7 @@ class MainFrame(wx.Frame):
 
 if __name__ == "__main__":
   app = wx.App(False)
-  frame = MainFrame(None, wx.ID_ANY, "minIXS processor", size=(500,800))
+  frame = MainFrame(None, wx.ID_ANY, "minIXS processor", size=(800,700))
   frame.Show(True)
 
   app.MainLoop()

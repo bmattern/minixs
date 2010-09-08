@@ -1,6 +1,7 @@
 import wx
 import minixs
-from matplotlib import cm
+from matplotlib import cm, colors
+from numpy import where
 import os, sys
 
 dialog_directory = ''
@@ -173,7 +174,7 @@ class ImagePanel(wx.Panel):
 
   def set_pixels(self, pixels):
     h,w = pixels.shape
-    p = (cm.Greys_r(pixels)[:,:,0:3] * 255).astype('uint8')
+    p = cm.Greys_r(pixels, bytes=True)[:,:,0:3]
     self.bitmap = wx.BitmapFromBuffer(w, h, p.tostring())
     self.Refresh()
 
@@ -395,31 +396,38 @@ class CalibrationInputPanel(wx.Panel):
     self.exposures = []
     self.num_exposures = 0
 
+FILTER_MIN  = 0
+FILTER_MAX  = 1
+FILTER_LOW  = 2
+FILTER_HIGH = 3
+FILTER_NBOR = 4
+
 class FilterPanel(wx.Panel):
 
   def __init__(self, *args, **kwargs):
     wx.Panel.__init__(self, *args, **kwargs)
 
-    controls = [
-        ('Min Visible',  self.OnMinChange,       0,     True),
-        ('Max Visible',  self.OnMaxChange,       1000,  False),
-        ('Low Cutoff',   self.OnLowChange,       0,     False),
-        ('High Cutoff',  self.OnHighChange,      10000, False),
-        ('Neighbors',    self.OnNeighborsChange, 1,     True )
+    control_info = [
+        ('Min Visible', 0,     True),
+        ('Max Visible', 1000,  False),
+        ('Low Cutoff',  0,     False),
+        ('High Cutoff', 10000, False),
+        ('Neighbors',   1,     True )
       ]
 
-    grid = wx.FlexGridSizer(len(controls), 2, 9, 25)
-
     self.controls = []
+    self.filter_cb = None
 
-    for text, cb, val, checked in controls:
+    grid = wx.FlexGridSizer(len(control_info), 2, 9, 25)
+
+    for text, val, checked in control_info:
       check = wx.CheckBox(self, wx.ID_ANY, text)
       check.SetValue(checked)
       check.Bind(wx.EVT_CHECKBOX, self.OnCheckChange)
       grid.Add(check)
 
-      spin = wx.SpinCtrl(self, wx.ID_ANY, '')
-      spin.Bind(wx.EVT_SPIN, cb)
+      spin = wx.SpinCtrl(self, wx.ID_ANY, '', max=10000)
+      spin.Bind(wx.EVT_SPINCTRL, self.OnSpinChange)
       spin.SetValue(val)
       if not checked:
         spin.Disable()
@@ -427,7 +435,6 @@ class FilterPanel(wx.Panel):
       self.controls.append((check,spin))
 
       grid.Add(spin)
-
 
     self.SetSizerAndFit(grid)
 
@@ -438,26 +445,23 @@ class FilterPanel(wx.Panel):
         spin.Enable(check.IsChecked())
         break
 
-  def OnMinChange(self, evt):
-    self.OnControlChange(check,spin)
+    self.UpdateFilters()
 
-  def OnMaxChange(self, evt):
-    self.OnControlChange(check,spin)
+  def OnSpinChange(self, evt):
+    self.UpdateFilters()
 
-  def OnLowChange(self, evt):
-    self.OnControlChange(check,spin)
-
-  def OnHighChange(self, evt):
-    self.OnControlChange(check,spin)
-
-  def OnNeighborsChange(self, evt):
-    self.OnControlChange(check,spin)
+  def UpdateFilters(self):
+    if self.filter_cb:
+      vals = [ (c.IsChecked(), int(s.GetValue())) for c,s in self.controls]
+      self.filter_cb(vals)
+      
 
 class CalibrationViewPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
     wx.Panel.__init__(self, *args, **kwargs)
 
     self.exposure = minixs.Exposure()
+    self.filters = None
 
     vbox = wx.BoxSizer(wx.VERTICAL)
 
@@ -467,14 +471,14 @@ class CalibrationViewPanel(wx.Panel):
     self.label = label
 
     label = wx.StaticText(self, wx.ID_ANY, '')
-    hbox.Add(label, 0, wx.EXPAND | wx.ALIGN_RIGHT)
+    hbox.Add(label, 0, wx.EXPAND | wx.ALIGN_RIGHT, 10)
     self.coord_label = label
 
     vbox.Add(hbox, 0, wx.EXPAND)
 
     image = ImagePanel(self, size=(487,195))
     image.coord_cb = self.OnCoord
-    vbox.Add(image, 1, wx.EXPAND)
+    vbox.Add(image, 0)
     self.image = image
 
     slider = wx.Slider(self, wx.ID_ANY, 1,1,2)
@@ -512,8 +516,10 @@ class CalibrationViewPanel(wx.Panel):
 
 
   def OnCoord(self, x, y):
-    s = "(% 3d,% 3d)" % (x,y)
-    self.coord_label.SetLabel(s)
+    if self.exposure.loaded:
+      z = self.exposure.raw[y,x]
+      s = "(% 3d,% 3d) [% 4d]" % (x,y, z)
+      self.coord_label.SetLabel(s)
 
   def OnSlider(self, evt):
     i = self.slider.GetValue() - 1
@@ -559,13 +565,47 @@ class CalibrationViewPanel(wx.Panel):
   def OnCalibrate(self, evt):
     pass
 
+  def OnFilterChange(self, values):
+    self.filters = values
+    self.UpdateFilters()
+
   def SetExposureIndex(self, i):
     d,f = self.files[i]
+    self.exposure_index = i
     self.exposure.load(os.path.join(d,f))
-    self.image.set_pixels(self.exposure.pixels)
+    self.UpdateFilters()
 
     text = "%d/%d (%s) %.2f eV" % (i+1, len(self.files), f, self.energies[i])
     self.label.SetLabel(text)
+
+  def UpdateFilters(self):
+    if not self.exposure or not self.exposure.loaded:
+      return
+
+    self.exposure.pixels = self.exposure.raw.copy()
+
+    p = self.exposure.pixels
+    if self.filters:
+      do_min, min_val = self.filters[FILTER_MIN]
+      do_max, max_val = self.filters[FILTER_MAX]
+      do_low, low_val = self.filters[FILTER_LOW]
+      do_high, high_val = self.filters[FILTER_HIGH]
+      do_nbor, nbor_val = self.filters[FILTER_NBOR]
+
+      if not do_low: low_val = None
+      if not do_high: high_val = None
+      if do_low or do_high: self.exposure.filter_low_high(low_val, high_val)
+
+      if do_nbor: self.exposure.filter_neighbors(nbor_val)
+
+      p = self.exposure.pixels
+      if not do_min: min_val = p.min()
+      if not do_max: max_val = p.max()
+
+      p = colors.Normalize(min_val, max_val)(p)
+
+    self.image.set_pixels(p)
+
 
 
 class MainPanel(wx.Panel):
@@ -580,17 +620,18 @@ class MainPanel(wx.Panel):
     hbox = wx.BoxSizer(wx.HORIZONTAL)
 
     self.view_panel = CalibrationViewPanel(self)
-    hbox.Add(self.view_panel, 1, wx.EXPAND)
+    hbox.Add(self.view_panel, 0)
   
-    self.input_panel.load_cb = self.view_panel.OnLoad
-
     filters = FilterPanel(self, wx.ID_ANY)
-    hbox.Add(filters, 0, wx.EXPAND)
+    hbox.Add(filters, 0)
 
     vbox.Add(hbox, 1, wx.EXPAND)
 
     self.SetSizerAndFit(vbox)
 
+    self.input_panel.load_cb = self.view_panel.OnLoad
+    filters.filter_cb = self.view_panel.OnFilterChange
+    filters.UpdateFilters()
 
 class MainFrame(wx.Frame):
   def __init__(self, *args, **kwargs):
@@ -623,11 +664,10 @@ class MainFrame(wx.Frame):
 
   def on_exit(self, event):
     self.Close(True)
-    
 
 if __name__ == "__main__":
   app = wx.App(False)
-  frame = MainFrame(None, wx.ID_ANY, "minIXS processor", size=(800,700))
+  frame = MainFrame(None, wx.ID_ANY, "minIXS processor", size=(800,600))
   frame.Show(True)
 
   app.MainLoop()

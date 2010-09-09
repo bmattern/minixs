@@ -40,19 +40,25 @@ def read_scan_info(scanfile, columns):
   s = ScanFile(scanfile)
   return s.data[:,columns].transpose()
 
-def determine_dispersive_direction(e1, e2, threshold=.75):
+def determine_dispersive_direction(e1, e2, threshold=.75, sep=20):
   """Given two exposures with increasing energy, determine
   the dispersive direction on the camera"""
 
+  p1 = e1.pixels.copy()
+  p2 = e2.pixels.copy()
+
+  p1[where(p1 > 10000)] = 0
+  p2[where(p2 > 10000)] = 0
+
   tests = [
-      (0, (1,20)), # DOWN
-      (1, (-20,-1)), # LEFT
-      (0, (-20,-1)),   # UP
-      (1, (1,20))    # RIGHT
+      (0, (1,sep)), # DOWN
+      (1, (-sep,-1)), # LEFT
+      (0, (-sep,-1)),   # UP
+      (1, (1,sep))    # RIGHT
       ]
 
   diffs = [
-      min([ sum((e2.pixels - roll(e1.pixels,i,axis))**2)
+      min([ sum(abs(p2 - roll(p1,i,axis)))
             for i in range(i1,i2) ])
       for axis, (i1,i2) in tests ]
 

@@ -563,7 +563,22 @@ class CalibrationViewPanel(wx.Panel):
         self.image.set_xtals(xtals)
 
   def OnCalibrate(self, evt):
-    pass
+    paths = [os.path.join(d,f) for d,f in self.files]
+   
+    #XXX fix direction
+    c = minixs.Calibrator(self.energies, paths, minixs.LEFT)
+
+    do_low, low_val = self.filters[FILTER_LOW]
+    do_high, high_val = self.filters[FILTER_HIGH]
+    do_nbor, nbor_val = self.filters[FILTER_NBOR]
+    if not do_low: low_val = None
+    if not do_high: high_val = None
+    if not do_nbor: nbor_val = 0
+
+    c.filter_images(low_val, high_val, nbor_val, self.image.bad_pixels)
+    c.calibrate(self.image.xtals)
+
+    c.save('test_calibrate.dat')
 
   def OnFilterChange(self, values):
     self.filters = values

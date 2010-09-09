@@ -403,6 +403,7 @@ FILTER_HIGH = 3
 FILTER_NBOR = 4
 
 class FilterPanel(wx.Panel):
+  dispersive_labels = ['Down', 'Left', 'Up', 'Right']
 
   def __init__(self, *args, **kwargs):
     wx.Panel.__init__(self, *args, **kwargs)
@@ -410,7 +411,7 @@ class FilterPanel(wx.Panel):
     control_info = [
         ('Min Visible', 0,     True),
         ('Max Visible', 1000,  False),
-        ('Low Cutoff',  0,     False),
+        ('Low Cutoff',  2,     True),
         ('High Cutoff', 10000, False),
         ('Neighbors',   1,     True )
       ]
@@ -436,6 +437,11 @@ class FilterPanel(wx.Panel):
 
       grid.Add(spin)
 
+    grid.Add(wx.StaticText(self, wx.ID_ANY, 'Dispersive Dir.'))
+    combo = wx.ComboBox(self, wx.ID_ANY, choices=self.dispersive_labels)
+    grid.Add(combo)
+    self.dispersive_combo = combo
+
     self.SetSizerAndFit(grid)
 
   def OnCheckChange(self, evt):
@@ -455,6 +461,13 @@ class FilterPanel(wx.Panel):
       vals = [ (c.IsChecked(), int(s.GetValue())) for c,s in self.controls]
       self.filter_cb(vals)
       
+  def OnLoadExposures(self, energies, files):
+    i = len(files) / 2
+    e1 = minixs.Exposure(os.path.join(*files[i]))
+    e2 = minixs.Exposure(os.path.join(*files[i+1]))
+
+    disp = minixs.determine_dispersive_direction(e1,e2, sep=30)
+    self.dispersive_combo.SetValue(self.dispersive_labels[disp])
 
 class CalibrationViewPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
@@ -504,7 +517,7 @@ class CalibrationViewPanel(wx.Panel):
 
     self.SetSizerAndFit(vbox)
 
-  def OnLoad(self, energies, files):
+  def OnLoadExposures(self, energies, files):
     self.energies = energies
     self.files = files
 
@@ -622,7 +635,6 @@ class CalibrationViewPanel(wx.Panel):
     self.image.set_pixels(p)
 
 
-
 class MainPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
     wx.Panel.__init__(self, *args, **kwargs)
@@ -636,17 +648,22 @@ class MainPanel(wx.Panel):
 
     self.view_panel = CalibrationViewPanel(self)
     hbox.Add(self.view_panel, 0)
-  
+
     filters = FilterPanel(self, wx.ID_ANY)
     hbox.Add(filters, 0)
+    self.filter_panel = filters
 
     vbox.Add(hbox, 1, wx.EXPAND)
 
     self.SetSizerAndFit(vbox)
 
-    self.input_panel.load_cb = self.view_panel.OnLoad
+    self.input_panel.load_cb = self.OnLoadExposures
     filters.filter_cb = self.view_panel.OnFilterChange
     filters.UpdateFilters()
+
+  def OnLoadExposures(self, energies, files):
+    self.view_panel.OnLoadExposures(energies, files)
+    self.filter_panel.OnLoadExposures(energies, files)
 
 class MainFrame(wx.Frame):
   def __init__(self, *args, **kwargs):

@@ -10,6 +10,11 @@ from PIL import Image
 VERTICAL = 0
 HORIZONTAL = 1
 
+DOWN = 0
+LEFT = 1
+UP = 2
+RIGHT = 3
+
 def gen_rects(horizontal_bounds=None, vertical_bounds=None):
   """Convert lists of horizontal and vertical boundary locations into rectangles"""
   return [
@@ -35,9 +40,30 @@ def read_scan_info(scanfile, columns):
   s = ScanFile(scanfile)
   return s.data[:,columns].transpose()
 
+def determine_dispersive_direction(e1, e2, threshold=.75):
+  """Given two exposures with increasing energy, determine
+  the dispersive direction on the camera"""
+
+  tests = [
+      (0, (1,20)), # DOWN
+      (1, (-20,-1)), # LEFT
+      (0, (-20,-1)),   # UP
+      (1, (1,20))    # RIGHT
+      ]
+
+  diffs = [
+      min([ sum((e2.pixels - roll(e1.pixels,i,axis))**2)
+            for i in range(i1,i2) ])
+      for axis, (i1,i2) in tests ]
+
+  if min(diffs) / average(diffs) < threshold:
+    return argmin(diffs)
+
+  return -1
 
 class Exposure:
   def __init__(self, filename = None):
+    self.loaded = False
     if filename is not None:
       self.load(filename)
 
@@ -45,8 +71,10 @@ class Exposure:
     self.filename = filename
 
     self.image = Image.open(filename)
-    self.pixels = asarray(self.image).copy()
+    self.raw = asarray(self.image)
+    self.pixels = self.raw.copy()
     self.info = self.parse_description(self.image.tag.get(270))
+    self.loaded = True
 
   def load_multi(self, filenames):
     self.filenames = filenames
@@ -68,6 +96,9 @@ class Exposure:
     return info
 
   def filter_low_high(self, low, high):
+    if low == None: low = self.pixels.min()
+    if high == None: high = self.pixels.max()
+
     mask = logical_and(self.pixels >= low, self.pixels <= high)
     self.pixels *= mask
 
@@ -124,19 +155,21 @@ class Calibrator:
     xyz : array of x, y and energy coordinates
     """
 
-    local_max = logical_and(p >= roll(p,-1,self.direction), p > roll(p, 1, self.direction))
+    rolldir = self.direction % 2
+
+    local_max = logical_and(p >= roll(p,-1,rolldir), p > roll(p, 1, rolldir))
 
     # perform windowed averaging to find average col value in local peak
     colMoment = zeros(p.shape)
     norm = zeros(p.shape)
 
-    cols = arange(0,p.shape[self.direction])
+    cols = arange(0,p.shape[rolldir])
     if self.direction == VERTICAL:
       cols.shape = (len(cols),1)
 
     for i in range(-window_size,window_size+1):
-      colMoment += local_max * roll(cols * p, i, self.direction)
-      norm += local_max * roll(p, i, self.direction)
+      colMoment += local_max * roll(cols * p, i, rolldir)
+      norm += local_max * roll(p, i, rolldir)
 
     windowedAvg = colMoment / norm
     windowedAvg[isnan(windowedAvg)] = 0
@@ -179,6 +212,7 @@ class Calibrator:
     rms_res = []
 
     for xtal in xtals:
+      print xtal
       (x1,y1),(x2,y2) = xtal
 
       index = where(
@@ -573,6 +607,18 @@ def rixs2d(rixs):
     rixs2d[j,i] = row[2]
 
   return rixs2d
+
+def plot_rixs_contour(rixs, plot_log=False, aspect=1):
+  incE = unique(rixs[:,0])
+  emitE = unique(rixs[:,1])
+  r2d = rixs2d(rixs)
+  if plot_log:
+    r2d = log10(r2d)
+
+  from matplotlib.pyplot import contourf, figure, colorbar
+  figure()
+  contourf(incE, emitE, r2d, 50, aspect=aspect)
+  colorbar()
 
 def plot_rixs(rixs, start=0, end=-1, plot_log=False, aspect=1):
   incE = unique(rixs[:,0])

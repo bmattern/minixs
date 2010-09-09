@@ -212,15 +212,17 @@ class Calibrator:
     rms_res = []
 
     for xtal in xtals:
-      print xtal
       (x1,y1),(x2,y2) = xtal
 
-      index = where(
+      index = where(logical_and(
           logical_and(
             points[:,0] >= x1,
-            points[:,0] < x2
+            points[:,0] < x2),
+          logical_and(
+            points[:,1] >= y1,
+            points[:,1] < y2
             )
-          )
+          ))
       x,y,z = points[index].T
 
       # fit to quadratic
@@ -505,7 +507,7 @@ def emission_spectrum2(cal, exposure, energies, I0, direction, xtals):
   for xtal in xtals:
     (x1,y1), (x2,y2) = xtal
 
-    if direction == VERTICAL:
+    if direction == DOWN or direction == UP:
       i1, i2 = x1, x2
     else:
       i1, i2 = y1, y2
@@ -519,19 +521,16 @@ def emission_spectrum2(cal, exposure, energies, I0, direction, xtals):
       else:
         y_i = interp(energies, cal[i,x2:x1:-1], exposure.pixels[i,x2:x1:-1],-1,-1)
 
-        mask *= 0
-        mask[where(y_i >= 0)] = 1
-        intensity += y_i * mask
-        #variance += var_i * mask
-        cols += mask
+      mask *= 0
+      mask[where(y_i >= 0)] = 1
+      intensity += y_i * mask
+      #variance += var_i * mask
+      cols += mask
 
-    cols[where(cols == 0)] = 1
-    #spectrum = vstack([energies, intensity/I0/cols, sqrt(variance)/I0/cols, intensity, cols*ones(energies.shape)]).T
-    spectrum = vstack([energies, intensity/I0/cols, sqrt(intensity)/I0/cols, intensity, cols*ones(energies.shape)]).T
+  cols[where(cols == 0)] = 1
+  spectrum = vstack([energies, intensity/I0/cols, sqrt(intensity)/I0/cols, intensity, cols]).T
 
-    return spectrum
-  else:
-    raise Exception("Not yet supported")
+  return spectrum
 
 def process_all(calibfile, scanfile, base_image, image_nums, E_column=0, I0_column=6, low_cutoff=0, high_cutoff=1000, low_energy=None, high_energy=None, energy_step = 0.5, zero_pad=3):
 

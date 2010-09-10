@@ -15,6 +15,8 @@ LEFT = 1
 UP = 2
 RIGHT = 3
 
+DIRECTION_NAMES = [ "Down", "Left", "Up", "Right" ]
+
 def gen_rects(horizontal_bounds=None, vertical_bounds=None):
   """Convert lists of horizontal and vertical boundary locations into rectangles"""
   return [

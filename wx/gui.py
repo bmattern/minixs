@@ -1,5 +1,5 @@
 import wx
-import minixs
+import minixs as mx
 from matplotlib import cm, colors
 from numpy import where
 import os, sys
@@ -328,7 +328,7 @@ class CalibrationInputPanel(wx.Panel):
     for e in energies:
       self.AppendEnergy(e)
 
-    for f in minixs.gen_file_list('calib2_', range(1,19), 5):
+    for f in mx.gen_file_list('calib2_', range(1,19), 5):
       self.AppendExposure('data', f)
 
   def OnLoad(self, evt):
@@ -364,7 +364,7 @@ class CalibrationInputPanel(wx.Panel):
     if ret == wx.ID_OK:
       filename, column = dlg.get_info()
 
-      energies = minixs.read_scan_info(filename, [column])[0]
+      energies = mx.read_scan_info(filename, [column])[0]
 
       for e in energies:
         #s = '%.2f' % e
@@ -463,17 +463,17 @@ class FilterPanel(wx.Panel):
       
   def OnLoadExposures(self, energies, files):
     i = len(files) / 2
-    e1 = minixs.Exposure(os.path.join(*files[i]))
-    e2 = minixs.Exposure(os.path.join(*files[i+1]))
+    e1 = mx.Exposure(os.path.join(*files[i]))
+    e2 = mx.Exposure(os.path.join(*files[i+1]))
 
-    disp = minixs.determine_dispersive_direction(e1,e2, sep=30)
+    disp = mx.determine_dispersive_direction(e1,e2, sep=30)
     self.dispersive_combo.SetValue(self.dispersive_labels[disp])
 
 class CalibrationViewPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
     wx.Panel.__init__(self, *args, **kwargs)
 
-    self.exposure = minixs.Exposure()
+    self.exposure = mx.Exposure()
     self.filters = None
 
     vbox = wx.BoxSizer(wx.VERTICAL)
@@ -579,7 +579,7 @@ class CalibrationViewPanel(wx.Panel):
     paths = [os.path.join(d,f) for d,f in self.files]
    
     #XXX fix direction
-    c = minixs.Calibrator(self.energies, paths, minixs.LEFT)
+    c = mx.Calibrator(self.energies, paths, mx.LEFT)
 
     do_low, low_val = self.filters[FILTER_LOW]
     do_high, high_val = self.filters[FILTER_HIGH]

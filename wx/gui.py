@@ -808,8 +808,8 @@ class CalibrationFrame(wx.Frame):
         return
 
       self.panel.input_panel.OnInfoChanged()
-      self.panel.filter_panel.OnInfoChanged()
       self.panel.view_panel.OnInfoChanged()
+      self.panel.filter_panel.OnInfoChanged()
 
     dlg.Destroy()
 

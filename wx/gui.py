@@ -333,14 +333,14 @@ class CalibrationInputPanel(wx.Panel):
   def OnLoad(self, evt):
     if self.load_cb:
       try:
-        energies, exposures = self.listctrl.GetData()
+        self.info.energies, self.info.exposure_files = self.listctrl.GetData()
       except ValueError as e:
         dlg = wx.MessageDialog(self, e.message, 'Error', wx.OK | wx.ICON_ERROR)
         dlg.ShowModal()
         dlg.Destroy()
         return
 
-      self.load_cb(energies, exposures)
+      self.load_cb()
 
   def AppendEnergy(self, energy):
     s = '%.2f' % energy
@@ -496,12 +496,14 @@ class FilterPanel(wx.Panel):
 
     self.info.filters = [ (self.filter_names[i], vals[i][1]) for i in range(len(vals)) if vals[i][0] is True ]
       
-  def OnLoadExposures(self, energies, files):
+  def OnLoadExposures(self):
+    files = self.info.exposure_files
     i = len(files) / 2
     e1 = mx.Exposure(files[i])
     e2 = mx.Exposure(files[i+1])
 
     disp = mx.determine_dispersive_direction(e1,e2, sep=30)
+    self.info.dispersive_direction = disp
     self.dispersive_combo.SetValue(mx.DIRECTION_NAMES[disp])
 
   def GetFilters(self):
@@ -580,11 +582,8 @@ class CalibrationViewPanel(wx.Panel):
 
     self.SetSizerAndFit(vbox)
 
-  def OnLoadExposures(self, energies, files):
-    self.energies = energies
-    self.files = files
-
-    self.slider.SetMax(len(self.files))
+  def OnLoadExposures(self):
+    self.slider.SetMax(len(self.info.exposure_files))
     self.slider.SetMin(1)
     self.slider.SetValue(1)
 
@@ -638,12 +637,12 @@ class CalibrationViewPanel(wx.Panel):
             continue
           x1,y1,x2,y2 = [int(s.strip()) for s in line.split()]
           xtals.append([[x1,y1],[x2,y2]])
-        self.image.set_xtals(xtals)
+
+        self.info.xtals = xtals
     dlg.Destroy()
 
   def OnCalibrate(self, evt):
-    #XXX fix direction
-    c = mx.Calibrator(self.energies, self.files, mx.LEFT)
+    c = mx.Calibrator(self.info.energies, self.info.exposure_files, self.info.dispersive_direction)
 
     do_low, low_val = self.filters[FILTER_LOW]
     do_high, high_val = self.filters[FILTER_HIGH]
@@ -653,9 +652,9 @@ class CalibrationViewPanel(wx.Panel):
     if not do_nbor: nbor_val = 0
 
     c.filter_images(low_val, high_val, nbor_val, self.image.bad_pixels)
-    c.calibrate(self.image.xtals)
+    c.calibrate(self.info.xtals)
 
-    c.save('test_calibrate.dat')
+    self.info.calibration_matrix = c.calib
 
   def OnFilterChange(self, values):
     self.filters = values
@@ -663,11 +662,11 @@ class CalibrationViewPanel(wx.Panel):
 
   def SetExposureIndex(self, i):
     self.exposure_index = i
-    self.exposure.load(self.files[i])
+    self.exposure.load(self.info.exposure_files[i])
     self.UpdateFilters()
 
-    f = os.path.basename(self.files[i])
-    text = "%d/%d (%s) %.2f eV" % (i+1, len(self.files), f, self.energies[i])
+    f = os.path.basename(self.info.exposure_files[i])
+    text = "%d/%d (%s) %.2f eV" % (i+1, len(self.info.exposure_files), f, self.info.energies[i])
     self.label.SetLabel(text)
 
   def UpdateFilters(self):
@@ -730,9 +729,9 @@ class MainPanel(wx.Panel):
     filters.filter_cb = self.view_panel.OnFilterChange
     filters.UpdateFilters()
 
-  def OnLoadExposures(self, energies, files):
-    self.view_panel.OnLoadExposures(energies, files)
-    self.filter_panel.OnLoadExposures(energies, files)
+  def OnLoadExposures(self):
+    self.view_panel.OnLoadExposures()
+    self.filter_panel.OnLoadExposures()
 
 class CalibrationFrame(wx.Frame):
   def __init__(self, *args, **kwargs):
@@ -783,14 +782,8 @@ class CalibrationFrame(wx.Frame):
 
       path = os.path.join(directory, filename)
 
-      ci = CalibrationInfo()
-      ci.dataset = ''
-      ci.dispersive_direction = self.panel.filter_panel.GetDispersiveDir()
-      ci.energies, ci.exposure_files = self.panel.input_panel.listctrl.GetData()
-      ci.filters = self.panel.filter_panel.GetFilters()
-      ci.xtals = self.panel.view_panel.image.xtals
+      self.info.save(path)
 
-      ci.save(path)
     dlg.Destroy()
 
   def on_load(self, evt):

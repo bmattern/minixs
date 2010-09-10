@@ -44,7 +44,9 @@ class CalibrationInfo:
         f.write("#   %3d %3d %3d %3d\n" % (x1,y1,x2,y2))
       f.write("#\n")
 
-      if self.calibration_matrix and len(self.calibration_matrix.shape) == 2:
+      if (self.calibration_matrix is not None and
+          len(self.calibration_matrix) > 0 and 
+          len(self.calibration_matrix.shape) == 2):
         f.write("# %d x %d matrix follows\n" % self.calibration_matrix.shape)
 
         np.savetxt(f, self.calibration_matrix, fmt='%.3f')
@@ -100,7 +102,6 @@ class CalibrationInfo:
             self.dataset_name = line[11:].strip()
           elif line[2:23] == 'Dispersive Direction:':
             dirname = line[24:].strip()
-            print dirname
             if dirname in mx.DIRECTION_NAMES:
               self.dispersive_direction = mx.DIRECTION_NAMES.index(dirname)
           elif line[2:25] == 'Energies and Exposures:':

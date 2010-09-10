@@ -81,7 +81,7 @@ xtals = [
 
 # whether to process or calibrate or both
 # if these are True and an output file exists, the program will ask before overwriting
-do_calibration = False 
+do_calibration = True
 do_process = True
 
 #####################################

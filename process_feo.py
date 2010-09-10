@@ -8,7 +8,7 @@ from itertools import izip
 ######################################
 
 do_calibration = True
-do_process = True
+do_process = False
 
 
 DIR = "/home/bmattern/research/Fe_K_Beta/data/FeO/"
@@ -23,14 +23,14 @@ calib_root = DIR + 'sequence_'
 calib_nums = range(30,47)
 calib_scan = DIR + 'calib.0004'
 
-calib_scan_energy_column = 0
+calib_scan_energy_column = 8
 calib_scan_I0_column = 6
 
 calib_filter_low  = 6
 calib_filter_high = 10000
 calib_filter_neighbors = 1
 
-calib_filename = DIR + 'calibration.dat'
+calib_filename = DIR + 'calibration_old.dat'
 
 # spectrum parameters
 spec_root = DIR + 'sequence_'

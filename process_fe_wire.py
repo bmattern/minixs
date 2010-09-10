@@ -107,7 +107,7 @@ if do_calibration:
 else:
   print "Skipping calibration."
 
-do_process = True
+do_process = False
 
 if os.path.exists(spec_filename):
   do_process = ask_yn_question("Processed data file exists. Reprocess? (y/n): ")

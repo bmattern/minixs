@@ -4,6 +4,8 @@ from matplotlib import cm, colors
 from numpy import where
 import os, sys
 
+from dataset import CalibrationInfo, InvalidFileError 
+
 dialog_directory = ''
 
 def read_scan_column_names(scanfile):
@@ -353,7 +355,7 @@ class CalibrationInputPanel(wx.Panel):
 
 
     # XXX for testing only
-
+    """
     energies = [ 7604.99256633,  7609.99840914,  7615.01108544,  7620.00586552,
         7625.00743927,  7629.99100963,  7635.00617806,  7640.00330303,
         7645.00720891,  7649.99296363,  7655.01043838,  7660.00972158,
@@ -364,6 +366,7 @@ class CalibrationInputPanel(wx.Panel):
 
     for f in mx.gen_file_list('calib2_', range(1,19), 5):
       self.AppendExposure('data', f)
+    """
 
   def OnLoad(self, evt):
     if self.load_cb:
@@ -388,13 +391,12 @@ class CalibrationInputPanel(wx.Panel):
 
     self.num_energies += 1
 
-  def AppendExposure(self, directory, filename):
+  def AppendExposure(self, path):
     if self.num_exposures >= self.num_rows:
       self.listctrl.InsertStringItem(self.num_rows, '')
       self.num_rows += 1
 
-    str = os.path.join(directory, filename)
-    self.listctrl.SetStringItem(self.num_exposures, 1, str)
+    self.listctrl.SetStringItem(self.num_exposures, 1, path)
     self.num_exposures += 1
 
   def OnLoadEnergies(self, evt):
@@ -422,7 +424,7 @@ class CalibrationInputPanel(wx.Panel):
       filenames = dlg.GetFilenames()
 
       for f in filenames:
-        self.AppendExposure(directory, f)
+        self.AppendExposure(os.path.join(directory, f))
 
   def OnClearEnergies(self, evt):
     for i in range(self.num_rows):
@@ -434,6 +436,16 @@ class CalibrationInputPanel(wx.Panel):
       self.listctrl.SetStringItem(i, 1, '')
     self.num_exposures = 0
 
+  def load_info(self, ci):
+    self.OnClearEnergies(None)
+    self.OnClearExposures(None)
+    
+    for e in ci.energies:
+      self.AppendEnergy(e)
+
+    for f in ci.exposure_files:
+      self.AppendExposure(f)
+
 FILTER_MIN  = 0
 FILTER_MAX  = 1
 FILTER_LOW  = 2
@@ -441,7 +453,6 @@ FILTER_HIGH = 3
 FILTER_NBOR = 4
 
 class FilterPanel(wx.Panel):
-  dispersive_labels = ['Down', 'Left', 'Up', 'Right']
   filter_names = [
       'Min Visible',
       'Max Visible',
@@ -483,7 +494,7 @@ class FilterPanel(wx.Panel):
       grid.Add(spin)
 
     grid.Add(wx.StaticText(self, wx.ID_ANY, 'Dispersive Dir.'))
-    combo = wx.ComboBox(self, wx.ID_ANY, choices=self.dispersive_labels)
+    combo = wx.ComboBox(self, wx.ID_ANY, choices=mx.DIRECTION_NAMES)
     grid.Add(combo)
     self.dispersive_combo = combo
 
@@ -512,7 +523,34 @@ class FilterPanel(wx.Panel):
     e2 = mx.Exposure(files[i+1])
 
     disp = mx.determine_dispersive_direction(e1,e2, sep=30)
-    self.dispersive_combo.SetValue(self.dispersive_labels[disp])
+    self.dispersive_combo.SetValue(mx.DIRECTION_NAMES[disp])
+
+  def GetFilters(self):
+    filters = []
+    for i in range(len(self.controls)):
+      check, spin = self.controls[i]
+      if check.IsChecked():
+        filters.append((self.filter_names[i], spin.GetValue()))
+    return filters
+
+  def GetDispersiveDir(self):
+    return mx.DIRECTION_NAMES.index(self.dispersive_combo.GetValue())
+
+  def load_info(self, ci):
+    for i in range(len(self.controls)):
+      self.controls[i][0].SetValue(False)
+      self.controls[i][1].Enable(False)
+
+    print self.filter_names
+    for name,val in ci.filters:
+      print name
+      if name in self.filter_names:
+        i = self.filter_names.index(name)
+        self.controls[i][0].SetValue(True)
+        self.controls[i][1].Enable(True)
+        self.controls[i][1].SetValue(val)
+
+    self.dispersive_combo.SetValue(mx.DIRECTION_NAMES[ci.dispersive_direction])
 
 class CalibrationViewPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
@@ -677,6 +715,9 @@ class CalibrationViewPanel(wx.Panel):
 
     self.image.set_pixels(p)
 
+  def load_info(self, ci):
+    pass
+
 
 class MainPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
@@ -722,6 +763,13 @@ class MainFrame(wx.Frame):
     menubar = wx.MenuBar()
 
     menu = wx.Menu()
+
+    menu_item1 = menu.Append(wx.ID_SAVE, "&Save...", "Save Calibration Setup")
+    self.Bind(wx.EVT_MENU, self.on_save, menu_item1)
+
+    menu_item = menu.Append(wx.ID_OPEN, "&Open...", "Load Calibration Setup")
+    self.Bind(wx.EVT_MENU, self.on_load, menu_item)
+
     menu_item = menu.Append(wx.ID_ABOUT, "&About", "Information about minIXS")
     self.Bind(wx.EVT_MENU, self.on_about, menu_item)
 
@@ -736,6 +784,59 @@ class MainFrame(wx.Frame):
     dlg = wx.MessageDialog(self, "Data processor for minIXS XES spectra", "About minIXS", wx.OK)
     dlg.ShowModal()
     dlg.Destroy()
+
+  def on_save(self, evt):
+    global dialog_directory
+    dlg = wx.FileDialog(self, 'Save Crystal Boundaries', dialog_directory, style=wx.FD_SAVE)
+    ret = dlg.ShowModal()
+
+    if ret == wx.ID_OK:
+      directory = dlg.GetDirectory()
+      dialog_directory = directory
+      filename = dlg.GetFilename()
+
+      path = os.path.join(directory, filename)
+
+      ci = CalibrationInfo()
+      ci.dataset = ''
+      ci.dispersive_direction = self.panel.filter_panel.GetDispersiveDir()
+      ci.energies, ci.exposure_files = self.panel.input_panel.listctrl.GetData()
+      ci.filters = self.panel.filter_panel.GetFilters()
+      ci.xtals = self.panel.view_panel.image.xtals
+
+      ci.save(path)
+
+  def on_load(self, evt):
+    print "load"
+    global dialog_directory
+    dlg = wx.FileDialog(self, 'Select calibration file', dialog_directory, style=wx.FD_OPEN)
+    ret = dlg.ShowModal()
+
+    print ret
+    if ret == wx.ID_OK:
+      d = dlg.GetDirectory()
+      dialog_directory = d 
+      f = dlg.GetFilename()
+      path = os.path.join(d,f)
+
+      ci = CalibrationInfo()
+      print ci
+      try:
+        ci.load(path)
+      except InvalidFileError:
+        msgdlg = wx.MessageDialog(self, "Invalid file selected", 'Error', wx.OK | wx.ICON_ERROR)
+        msgdlg.ShowModal()
+        msgdlg.Destroy()
+        return
+
+    print "Load!"
+    self.panel.input_panel.load_info(ci)
+    self.panel.filter_panel.load_info(ci)
+    self.panel.view_panel.load_info(ci)
+
+    dlg.Destroy()
+
+
 
   def on_exit(self, event):
     self.Close(True)

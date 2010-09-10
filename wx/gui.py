@@ -4,36 +4,11 @@ from matplotlib import cm, colors
 from numpy import where
 import os, sys
 
+import util
+
 from dataset import CalibrationInfo, InvalidFileError 
 
 dialog_directory = ''
-
-def read_scan_column_names(scanfile):
-  with open(scanfile) as f:
-    last = None
-
-    for line in f:
-      if line[0] != "#":
-        num = len(line.split())
-
-        if last is None:
-          num = len(line.split())
-          return [ str(i) for i in range(1,num+1) ]
-
-        else:
-          last = last[1:]
-          cols = last.split()
-
-          # if whitespace separated headers aren't correct, try fixed width
-          if len(cols) != num:
-            w = 20
-            cols = [ last[w*i:w*(i+1)].strip() for i in range(0,len(last)/20) ]
-          if len(cols) != num:
-            return [ str(i) for i in range(1,num+1) ]
-
-          return [ "%d: %s" % (i,s) for i,s in zip(range(1,num+1), cols) ]
-
-      last = line
 
 class LoadEnergiesPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
@@ -75,7 +50,7 @@ class LoadEnergiesPanel(wx.Panel):
       self.fill_column_names()
 
   def fill_column_names(self):
-    columns = read_scan_column_names(os.path.join(self.directory, self.filename))
+    columns = util.read_scan_column_names(os.path.join(self.directory, self.filename))
     sel = self.combo.GetSelection()
     if columns:
       self.combo.SetItems(columns)

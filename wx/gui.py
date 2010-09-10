@@ -295,6 +295,16 @@ class CalibrationInputPanel(wx.Panel):
 
     vbox = wx.BoxSizer(wx.VERTICAL)
 
+    hbox = wx.BoxSizer(wx.HORIZONTAL)
+    label = wx.StaticText(self, wx.ID_ANY, 'Dataset Name:')
+    text = wx.TextCtrl(self, wx.ID_ANY, '')
+    text.Bind(wx.EVT_TEXT, self.OnDatasetText)
+    hbox.Add(label, 0, wx.ALIGN_CENTER_VERTICAL)
+    hbox.Add(text, 1)
+    vbox.Add(hbox, 0, wx.EXPAND | wx.DOWN, 5)
+    self.dataset_textctrl = text
+
+
     style = wx.LC_REPORT | wx.LC_HRULES | wx.LC_VRULES
     l = CalibrationListCtrl(self, wx.ID_ANY, style=style)
     l.InsertColumn(0, 'Incident Energy', width=200)
@@ -329,6 +339,9 @@ class CalibrationInputPanel(wx.Panel):
     self.SetSizerAndFit(vbox)
 
     self.load_cb = None
+
+  def OnDatasetText(self, evt):
+    self.info.dataset_name = self.dataset_textctrl.GetValue()
 
   def OnLoad(self, evt):
     if self.load_cb:
@@ -410,6 +423,8 @@ class CalibrationInputPanel(wx.Panel):
 
     for f in self.info.exposure_files:
       self.AppendExposure(f)
+
+    self.dataset_textctrl.SetValue(self.info.dataset_name)
 
 FILTER_MIN  = 0
 FILTER_MAX  = 1
@@ -712,20 +727,23 @@ class MainPanel(wx.Panel):
     vbox = wx.BoxSizer(wx.VERTICAL)
 
     self.input_panel = CalibrationInputPanel(self, info=self.info)
-    vbox.Add(self.input_panel, 1, wx.EXPAND)
+    vbox.Add(self.input_panel, 1, wx.EXPAND | wx.DOWN, 10)
 
     hbox = wx.BoxSizer(wx.HORIZONTAL)
-
-    self.view_panel = CalibrationViewPanel(self, info=self.info)
-    hbox.Add(self.view_panel, 0)
 
     filters = FilterPanel(self, wx.ID_ANY, info=self.info)
     hbox.Add(filters, 0)
     self.filter_panel = filters
 
+    self.view_panel = CalibrationViewPanel(self, info=self.info)
+    hbox.Add(self.view_panel, 0)
+
     vbox.Add(hbox, 1, wx.EXPAND)
 
-    self.SetSizerAndFit(vbox)
+    border = wx.BoxSizer()
+    border.Add(vbox, 1, wx.ALL, 10)
+
+    self.SetSizerAndFit(border)
 
     self.input_panel.load_cb = self.OnLoadExposures
     filters.filter_cb = self.view_panel.OnFilterChange

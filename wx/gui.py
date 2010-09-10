@@ -131,6 +131,9 @@ RESIZE_BR = RESIZE_B | RESIZE_R
 
 class ImagePanel(wx.Panel):
   def __init__(self, *args, **kwargs):
+    self.info = kwargs['info']
+    del(kwargs['info'])
+
     wx.Panel.__init__(self, *args, **kwargs)
     self.bitmap = None
 
@@ -286,6 +289,9 @@ class CalibrationListCtrl(wx.ListCtrl,
 
 class CalibrationInputPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
+    self.info = kwargs['info']
+    del(kwargs['info'])
+
     wx.Panel.__init__(self, *args, **kwargs)
 
     self.num_energies = 0
@@ -442,6 +448,9 @@ class FilterPanel(wx.Panel):
       ]
 
   def __init__(self, *args, **kwargs):
+    self.info = kwargs['info']
+    del(kwargs['info'])
+
     wx.Panel.__init__(self, *args, **kwargs)
 
     control_info = [
@@ -534,6 +543,9 @@ class FilterPanel(wx.Panel):
 
 class CalibrationViewPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
+    self.info = kwargs['info']
+    del(kwargs['info'])
+
     wx.Panel.__init__(self, *args, **kwargs)
 
     self.exposure = mx.Exposure()
@@ -552,7 +564,7 @@ class CalibrationViewPanel(wx.Panel):
 
     vbox.Add(hbox, 0, wx.EXPAND)
 
-    image = ImagePanel(self, size=(487,195))
+    image = ImagePanel(self, size=(487,195), info=self.info)
     image.coord_cb = self.OnCoord
     vbox.Add(image, 0)
     self.image = image
@@ -704,19 +716,22 @@ class CalibrationViewPanel(wx.Panel):
 
 class MainPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
+    self.info = kwargs['info']
+    del(kwargs['info'])
+
     wx.Panel.__init__(self, *args, **kwargs)
 
     vbox = wx.BoxSizer(wx.VERTICAL)
 
-    self.input_panel = CalibrationInputPanel(self)
+    self.input_panel = CalibrationInputPanel(self, info=self.info)
     vbox.Add(self.input_panel, 1, wx.EXPAND)
 
     hbox = wx.BoxSizer(wx.HORIZONTAL)
 
-    self.view_panel = CalibrationViewPanel(self)
+    self.view_panel = CalibrationViewPanel(self, info=self.info)
     hbox.Add(self.view_panel, 0)
 
-    filters = FilterPanel(self, wx.ID_ANY)
+    filters = FilterPanel(self, wx.ID_ANY, info=self.info)
     hbox.Add(filters, 0)
     self.filter_panel = filters
 
@@ -739,7 +754,8 @@ class CalibrationFrame(wx.Frame):
     self.CreateStatusBar()
     self.create_menu_bar()
 
-    self.panel = MainPanel(self)
+    self.info = CalibrationInfo()
+    self.panel = MainPanel(self, info=self.info)
 
   def create_menu_bar(self):
 

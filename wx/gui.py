@@ -505,6 +505,8 @@ class FilterPanel(wx.Panel):
     disp = mx.determine_dispersive_direction(e1,e2, sep=30)
     self.info.dispersive_direction = disp
     self.dispersive_combo.SetValue(mx.DIRECTION_NAMES[disp])
+    
+    self.UpdateFilters()
 
   def GetFilters(self):
     filters = []

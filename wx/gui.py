@@ -73,9 +73,6 @@ class LoadEnergiesDialog(wx.Dialog):
   def __init__(self, *args, **kwargs):
     wx.Dialog.__init__(self, *args, **kwargs)
 
-    self.add_cb = None
-    self.cancel_cb = None
-
     vbox = wx.BoxSizer(wx.VERTICAL)
 
     self.panel = LoadEnergiesPanel(self)
@@ -99,22 +96,6 @@ class LoadEnergiesDialog(wx.Dialog):
 
   def get_info(self):
     return self.panel.get_info()
-
-  def set_add_cb(self, add_cb):
-    self.add_cb = add_cb
-
-  def set_cancel_cb(self, cancel_cb):
-    self.cancel_cb = cancel_cb
-
-  def OnAdd(self, evt):
-    filename, column = self.panel.get_info()
-
-    if self.add_cb:
-      self.add_cb(filename, column)
-
-  def OnCancel(self, evt):
-    if self.cancel_cb:
-      self.cancel_cb()
 
 ACTION_NONE = 0
 ACTION_RESIZE = 1
@@ -384,9 +365,8 @@ class CalibrationInputPanel(wx.Panel):
       energies = mx.read_scan_info(filename, [column])[0]
 
       for e in energies:
-        #s = '%.2f' % e
-        #self.listctrl.InsertStringItem(sys.maxint, s)
         self.AppendEnergy(e)
+
     dlg.Destroy()
 
   def OnSelectExposures(self, evt):

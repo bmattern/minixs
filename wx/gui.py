@@ -330,22 +330,6 @@ class CalibrationInputPanel(wx.Panel):
 
     self.load_cb = None
 
-
-
-    # XXX for testing only
-    """
-    energies = [ 7604.99256633,  7609.99840914,  7615.01108544,  7620.00586552,
-        7625.00743927,  7629.99100963,  7635.00617806,  7640.00330303,
-        7645.00720891,  7649.99296363,  7655.01043838,  7660.00972158,
-        7664.99072539,  7670.00352365,  7674.99800186,  7679.99922059,
-        7685.00719331,  7689.99671692]
-    for e in energies:
-      self.AppendEnergy(e)
-
-    for f in mx.gen_file_list('calib2_', range(1,19), 5):
-      self.AppendExposure('data', f)
-    """
-
   def OnLoad(self, evt):
     if self.load_cb:
       try:

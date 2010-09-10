@@ -732,7 +732,7 @@ class MainPanel(wx.Panel):
     self.view_panel.OnLoadExposures(energies, files)
     self.filter_panel.OnLoadExposures(energies, files)
 
-class MainFrame(wx.Frame):
+class CalibrationFrame(wx.Frame):
   def __init__(self, *args, **kwargs):
 
     wx.Frame.__init__(self, *args, **kwargs)
@@ -821,7 +821,7 @@ class MainFrame(wx.Frame):
 
 if __name__ == "__main__":
   app = wx.App(False)
-  frame = MainFrame(None, wx.ID_ANY, "minIXS processor", size=(800,600))
+  frame = CalibrationFrame(None, wx.ID_ANY, "minIXS processor", size=(800,600))
   frame.Show(True)
 
   app.MainLoop()

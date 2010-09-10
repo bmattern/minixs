@@ -483,7 +483,9 @@ class FilterPanel(wx.Panel):
       grid.Add(spin)
 
     grid.Add(wx.StaticText(self, wx.ID_ANY, 'Dispersive Dir.'))
-    combo = wx.ComboBox(self, wx.ID_ANY, choices=mx.DIRECTION_NAMES)
+    combo = wx.ComboBox(self, wx.ID_ANY, style=wx.CB_READONLY, 
+        choices=mx.DIRECTION_NAMES)
+    combo.Bind(wx.EVT_COMBOBOX, self.OnComboChange)
     grid.Add(combo)
     self.dispersive_combo = combo
 
@@ -501,10 +503,19 @@ class FilterPanel(wx.Panel):
   def OnSpinChange(self, evt):
     self.UpdateFilters()
 
+  def OnComboChange(self, evt):
+    val = self.dispersive_combo.GetValue()
+    if val in mx.DIRECTION_NAMES:
+      self.info.dispersive_direction = mx.DIRECTION_NAMES.index(val)
+    else:
+      self.info.dispersive_direction = -1
+
   def UpdateFilters(self):
     if self.filter_cb:
       vals = [ (c.IsChecked(), int(s.GetValue())) for c,s in self.controls]
       self.filter_cb(vals)
+
+    self.info.filters = [ (self.filter_names[i], vals[i][1]) for i in range(len(vals)) if vals[i][0] is True ]
       
   def OnLoadExposures(self, energies, files):
     i = len(files) / 2
@@ -530,9 +541,7 @@ class FilterPanel(wx.Panel):
       self.controls[i][0].SetValue(False)
       self.controls[i][1].Enable(False)
 
-    print self.filter_names
     for name,val in ci.filters:
-      print name
       if name in self.filter_names:
         i = self.filter_names.index(name)
         self.controls[i][0].SetValue(True)

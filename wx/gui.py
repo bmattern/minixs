@@ -270,14 +270,53 @@ class ImagePanel(wx.Panel):
         (x1,y1), (x2,y2) = xtal
         dc.DrawRectangle(x1,y1,x2-x1,y2-y1)
 
+import wx.lib.mixins.listctrl as listmix
+
+class CalibrationListCtrl(wx.ListCtrl, 
+                       listmix.ListCtrlAutoWidthMixin,
+                       listmix.TextEditMixin):
+  
+  def __init__(self, *args, **kwargs):
+    wx.ListCtrl.__init__(self, *args, **kwargs)
+    listmix.ListCtrlAutoWidthMixin.__init__(self)
+    listmix.TextEditMixin.__init__(self)
+
+  def SetStringItem(self, index, column, data, update_store = True):
+    wx.ListCtrl.SetStringItem(self, index, column, data)
+
+  def GetData(self):
+    nr = self.GetItemCount()
+    nc = self.GetColumnCount()
+    strings = [
+        [self.GetItem(i,j).GetText() for j in range(nc)]
+        for i in range(nr)
+        ]
+
+    energies = []
+    files = []
+    for row in strings:
+      e,f = row
+      if e == '' and f == '':
+        continue
+      if e == '' or f == '':
+        raise ValueError("Empty cells are not allowed")
+      energies.append(float(e))
+      files.append(f)
+
+    return (energies, files)
+
 class CalibrationInputPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
     wx.Panel.__init__(self, *args, **kwargs)
 
+    self.num_energies = 0
+    self.num_exposures = 0
+    self.num_rows = 0
+
     vbox = wx.BoxSizer(wx.VERTICAL)
 
     style = wx.LC_REPORT | wx.LC_HRULES | wx.LC_VRULES
-    l = wx.ListCtrl(self, wx.ID_ANY, style=style)
+    l = CalibrationListCtrl(self, wx.ID_ANY, style=style)
     l.InsertColumn(0, 'Incident Energy', width=200)
     l.InsertColumn(1, 'Exposure File', width=200)
     self.listctrl = l
@@ -311,11 +350,6 @@ class CalibrationInputPanel(wx.Panel):
 
     self.load_cb = None
 
-    self.num_energies = 0
-    self.num_exposures = 0
-    self.num_rows = 0
-    self.energies = []
-    self.exposures = []
 
 
     # XXX for testing only
@@ -333,10 +367,17 @@ class CalibrationInputPanel(wx.Panel):
 
   def OnLoad(self, evt):
     if self.load_cb:
-      self.load_cb(self.energies, self.exposures)
+      try:
+        energies, exposures = self.listctrl.GetData()
+      except ValueError as e:
+        dlg = wx.MessageDialog(self, e.message, 'Error', wx.OK | wx.ICON_ERROR)
+        dlg.ShowModal()
+        dlg.Destroy()
+        return
+
+      self.load_cb(energies, exposures)
 
   def AppendEnergy(self, energy):
-    self.energies.append(energy)
     s = '%.2f' % energy
 
     if self.num_energies < self.num_rows:
@@ -348,13 +389,12 @@ class CalibrationInputPanel(wx.Panel):
     self.num_energies += 1
 
   def AppendExposure(self, directory, filename):
-    self.exposures.append((directory, filename))
-    
     if self.num_exposures >= self.num_rows:
       self.listctrl.InsertStringItem(self.num_rows, '')
       self.num_rows += 1
 
-    self.listctrl.SetStringItem(self.num_exposures, 1, filename)
+    str = os.path.join(directory, filename)
+    self.listctrl.SetStringItem(self.num_exposures, 1, str)
     self.num_exposures += 1
 
   def OnLoadEnergies(self, evt):
@@ -387,13 +427,11 @@ class CalibrationInputPanel(wx.Panel):
   def OnClearEnergies(self, evt):
     for i in range(self.num_rows):
       self.listctrl.SetStringItem(i, 0, '')
-    self.energies = []
     self.num_energies = 0
 
   def OnClearExposures(self, evt):
     for i in range(self.num_rows):
       self.listctrl.SetStringItem(i, 1, '')
-    self.exposures = []
     self.num_exposures = 0
 
 FILTER_MIN  = 0
@@ -463,8 +501,8 @@ class FilterPanel(wx.Panel):
       
   def OnLoadExposures(self, energies, files):
     i = len(files) / 2
-    e1 = mx.Exposure(os.path.join(*files[i]))
-    e2 = mx.Exposure(os.path.join(*files[i+1]))
+    e1 = mx.Exposure(files[i])
+    e2 = mx.Exposure(files[i+1])
 
     disp = mx.determine_dispersive_direction(e1,e2, sep=30)
     self.dispersive_combo.SetValue(self.dispersive_labels[disp])
@@ -576,10 +614,8 @@ class CalibrationViewPanel(wx.Panel):
         self.image.set_xtals(xtals)
 
   def OnCalibrate(self, evt):
-    paths = [os.path.join(d,f) for d,f in self.files]
-   
     #XXX fix direction
-    c = mx.Calibrator(self.energies, paths, mx.LEFT)
+    c = mx.Calibrator(self.energies, self.files, mx.LEFT)
 
     do_low, low_val = self.filters[FILTER_LOW]
     do_high, high_val = self.filters[FILTER_HIGH]
@@ -598,11 +634,11 @@ class CalibrationViewPanel(wx.Panel):
     self.UpdateFilters()
 
   def SetExposureIndex(self, i):
-    d,f = self.files[i]
     self.exposure_index = i
-    self.exposure.load(os.path.join(d,f))
+    self.exposure.load(self.files[i])
     self.UpdateFilters()
 
+    f = os.path.basename(self.files[i])
     text = "%d/%d (%s) %.2f eV" % (i+1, len(self.files), f, self.energies[i])
     self.label.SetLabel(text)
 

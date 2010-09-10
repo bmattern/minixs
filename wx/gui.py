@@ -49,6 +49,8 @@ class LoadEnergiesPanel(wx.Panel):
       self.file_entry.SetValue(self.filename)
       self.fill_column_names()
 
+    dlg.Destroy()
+
   def fill_column_names(self):
     columns = util.read_scan_column_names(os.path.join(self.directory, self.filename))
     sel = self.combo.GetSelection()
@@ -387,6 +389,7 @@ class CalibrationInputPanel(wx.Panel):
         #s = '%.2f' % e
         #self.listctrl.InsertStringItem(sys.maxint, s)
         self.AppendEnergy(e)
+    dlg.Destroy()
 
   def OnSelectExposures(self, evt):
     global dialog_directory
@@ -400,6 +403,8 @@ class CalibrationInputPanel(wx.Panel):
 
       for f in filenames:
         self.AppendExposure(os.path.join(directory, f))
+
+    dlg.Destroy()
 
   def OnClearEnergies(self, evt):
     for i in range(self.num_rows):
@@ -613,6 +618,8 @@ class CalibrationViewPanel(wx.Panel):
         for (x1,y1),(x2,y2) in self.image.xtals:
           f.write("%d\t%d\t%d\t%d\n" % (x1,y1,x2,y2))
 
+    dlg.Destroy()
+
   def OnLoadXtals(self, evt):
     global dialog_directory
     dlg = wx.FileDialog(self, 'Load Crystal Boundaries', dialog_directory, style=wx.FD_OPEN)
@@ -632,6 +639,7 @@ class CalibrationViewPanel(wx.Panel):
           x1,y1,x2,y2 = [int(s.strip()) for s in line.split()]
           xtals.append([[x1,y1],[x2,y2]])
         self.image.set_xtals(xtals)
+    dlg.Destroy()
 
   def OnCalibrate(self, evt):
     #XXX fix direction
@@ -780,14 +788,13 @@ class MainFrame(wx.Frame):
       ci.xtals = self.panel.view_panel.image.xtals
 
       ci.save(path)
+    dlg.Destroy()
 
   def on_load(self, evt):
-    print "load"
     global dialog_directory
     dlg = wx.FileDialog(self, 'Select calibration file', dialog_directory, style=wx.FD_OPEN)
     ret = dlg.ShowModal()
 
-    print ret
     if ret == wx.ID_OK:
       d = dlg.GetDirectory()
       dialog_directory = d 
@@ -795,7 +802,6 @@ class MainFrame(wx.Frame):
       path = os.path.join(d,f)
 
       ci = CalibrationInfo()
-      print ci
       try:
         ci.load(path)
       except InvalidFileError:
@@ -804,14 +810,11 @@ class MainFrame(wx.Frame):
         msgdlg.Destroy()
         return
 
-    print "Load!"
-    self.panel.input_panel.load_info(ci)
-    self.panel.filter_panel.load_info(ci)
-    self.panel.view_panel.load_info(ci)
+      self.panel.input_panel.load_info(ci)
+      self.panel.filter_panel.load_info(ci)
+      self.panel.view_panel.load_info(ci)
 
     dlg.Destroy()
-
-
 
   def on_exit(self, event):
     self.Close(True)

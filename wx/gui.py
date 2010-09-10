@@ -751,11 +751,12 @@ class CalibrationFrame(wx.Frame):
 
     menu = wx.Menu()
 
-    menu_item1 = menu.Append(wx.ID_SAVE, "&Save...", "Save Calibration Setup")
-    self.Bind(wx.EVT_MENU, self.on_save, menu_item1)
-
     menu_item = menu.Append(wx.ID_OPEN, "&Open...", "Load Calibration Setup")
     self.Bind(wx.EVT_MENU, self.on_load, menu_item)
+
+    menu_item = menu.Append(wx.ID_SAVE, "&Save...", "Save Calibration Setup")
+    self.Bind(wx.EVT_MENU, self.on_save, menu_item)
+
 
     menu_item = menu.Append(wx.ID_ABOUT, "&About", "Information about minIXS")
     self.Bind(wx.EVT_MENU, self.on_about, menu_item)
@@ -774,7 +775,7 @@ class CalibrationFrame(wx.Frame):
 
   def on_save(self, evt):
     global dialog_directory
-    dlg = wx.FileDialog(self, 'Save Crystal Boundaries', dialog_directory, style=wx.FD_SAVE)
+    dlg = wx.FileDialog(self, 'Save Calibration Information', dialog_directory, style=wx.FD_SAVE)
     ret = dlg.ShowModal()
 
     if ret == wx.ID_OK:

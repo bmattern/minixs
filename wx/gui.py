@@ -442,16 +442,23 @@ FILTER_NBOR = 4
 
 class FilterPanel(wx.Panel):
   dispersive_labels = ['Down', 'Left', 'Up', 'Right']
+  filter_names = [
+      'Min Visible',
+      'Max Visible',
+      'Low Cutoff',
+      'High Cutoff',
+      'Neighbors'
+      ]
 
   def __init__(self, *args, **kwargs):
     wx.Panel.__init__(self, *args, **kwargs)
 
     control_info = [
-        ('Min Visible', 0,     True),
-        ('Max Visible', 1000,  False),
-        ('Low Cutoff',  2,     True),
-        ('High Cutoff', 10000, False),
-        ('Neighbors',   1,     True )
+        (self.filter_names[FILTER_MIN],  0,     True),
+        (self.filter_names[FILTER_MAX],  1000,  False),
+        (self.filter_names[FILTER_LOW],  2,     True),
+        (self.filter_names[FILTER_HIGH], 10000, False),
+        (self.filter_names[FILTER_NBOR], 1,     True )
       ]
 
     self.controls = []

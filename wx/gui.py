@@ -139,7 +139,6 @@ class ImagePanel(wx.Panel):
 
     self.SetEvtHandlerEnabled(True)
 
-    self.xtals = []
     self.bad_pixels = []
 
     self.Bind(wx.EVT_PAINT, self.OnPaint)
@@ -160,10 +159,6 @@ class ImagePanel(wx.Panel):
     self.bitmap = wx.BitmapFromBuffer(w, h, p.tostring())
     self.Refresh()
 
-  def set_xtals(self, xtals):
-    self.xtals = xtals
-    self.Refresh()
-
   def OnLeftDown(self, evt):
     if self.action == ACTION_NONE:
       x,y = evt.GetPosition()
@@ -171,7 +166,7 @@ class ImagePanel(wx.Panel):
       off = 4
       resize_dir = 0
 
-      for xtal in self.xtals:
+      for xtal in self.info.xtals:
         (x1,y1),(x2,y2) = xtal
 
         if y1 - off < y < y2 + off:
@@ -192,7 +187,7 @@ class ImagePanel(wx.Panel):
 
       if not self.resize_xtal:
         xtal = [[x,y],[x+1,y+1]]
-        self.xtals.append(xtal)
+        self.info.xtals.append(xtal)
         self.resize_xtal = xtal
         self.resize_dir = RESIZE_BR
 
@@ -212,12 +207,12 @@ class ImagePanel(wx.Panel):
 
   def OnRightUp(self, evt):
     if self.action == ACTION_NONE:
-      for xtal in self.xtals:
+      for xtal in self.info.xtals:
         x,y = evt.GetPosition()
         (x1,y1), (x2,y2) = xtal
 
         if x1 <= x <= x2 and y1 <= y <= y2:
-          self.xtals.remove(xtal)
+          self.info.xtals.remove(xtal)
           self.Refresh()
           break
 
@@ -248,7 +243,7 @@ class ImagePanel(wx.Panel):
 
       dc.SetBrush(wx.Brush('#aa0000', wx.TRANSPARENT))
       dc.SetPen(wx.Pen('#33dd33', 1, wx.DOT_DASH))
-      for xtal in self.xtals:
+      for xtal in self.info.xtals:
         (x1,y1), (x2,y2) = xtal
         dc.DrawRectangle(x1,y1,x2-x1,y2-y1)
 
@@ -422,14 +417,14 @@ class CalibrationInputPanel(wx.Panel):
       self.listctrl.SetStringItem(i, 1, '')
     self.num_exposures = 0
 
-  def load_info(self, ci):
+  def OnInfoChanged(self):
     self.OnClearEnergies(None)
     self.OnClearExposures(None)
     
-    for e in ci.energies:
+    for e in self.info.energies:
       self.AppendEnergy(e)
 
-    for f in ci.exposure_files:
+    for f in self.info.exposure_files:
       self.AppendExposure(f)
 
 FILTER_MIN  = 0
@@ -536,19 +531,19 @@ class FilterPanel(wx.Panel):
   def GetDispersiveDir(self):
     return mx.DIRECTION_NAMES.index(self.dispersive_combo.GetValue())
 
-  def load_info(self, ci):
+  def OnInfoChanged(self):
     for i in range(len(self.controls)):
       self.controls[i][0].SetValue(False)
       self.controls[i][1].Enable(False)
 
-    for name,val in ci.filters:
+    for name,val in self.info.filters:
       if name in self.filter_names:
         i = self.filter_names.index(name)
         self.controls[i][0].SetValue(True)
         self.controls[i][1].Enable(True)
         self.controls[i][1].SetValue(val)
 
-    self.dispersive_combo.SetValue(mx.DIRECTION_NAMES[ci.dispersive_direction])
+    self.dispersive_combo.SetValue(mx.DIRECTION_NAMES[self.info.dispersive_direction])
 
 class CalibrationViewPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
@@ -719,9 +714,8 @@ class CalibrationViewPanel(wx.Panel):
 
     self.image.set_pixels(p)
 
-  def load_info(self, ci):
-    pass
-
+  def OnInfoChanged(self):
+    self.Refresh()
 
 class MainPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
@@ -826,18 +820,17 @@ class CalibrationFrame(wx.Frame):
       f = dlg.GetFilename()
       path = os.path.join(d,f)
 
-      ci = CalibrationInfo()
       try:
-        ci.load(path)
+        self.info.load(path)
       except InvalidFileError:
         msgdlg = wx.MessageDialog(self, "Invalid file selected", 'Error', wx.OK | wx.ICON_ERROR)
         msgdlg.ShowModal()
         msgdlg.Destroy()
         return
 
-      self.panel.input_panel.load_info(ci)
-      self.panel.filter_panel.load_info(ci)
-      self.panel.view_panel.load_info(ci)
+      self.panel.input_panel.OnInfoChanged()
+      self.panel.filter_panel.OnInfoChanged()
+      self.panel.view_panel.OnInfoChanged()
 
     dlg.Destroy()
 

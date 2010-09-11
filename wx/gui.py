@@ -538,6 +538,9 @@ class CalibrationViewPanel(wx.Panel):
 
     self.exposure = mx.Exposure()
     self.filters = None
+    self.update_filters_flag = False
+
+    self.Bind(wx.EVT_IDLE, self.OnIdle)
 
     vbox = wx.BoxSizer(wx.VERTICAL)
 
@@ -687,6 +690,14 @@ class CalibrationViewPanel(wx.Panel):
   def UpdateFilters(self):
     if not self.exposure or not self.exposure.loaded:
       return
+    
+    self.update_filters_flag = True
+
+  def OnIdle(self, evt):
+    if not self.update_filters_flag:
+      return
+
+    self.update_filters_flag = False
 
     self.exposure.pixels = self.exposure.raw.copy()
 

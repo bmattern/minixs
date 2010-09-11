@@ -6,7 +6,8 @@ import os, sys
 
 import util
 
-from dataset import CalibrationInfo, InvalidFileError 
+import dataset
+from dataset import CalibrationInfo, InvalidFileError
 
 dialog_directory = ''
 
@@ -609,7 +610,7 @@ class CalibrationViewPanel(wx.Panel):
 
       path = os.path.join(directory, filename)
       with open(path, 'w') as f:
-        f.write("# minIXS Crystal Boundary definitions\n")
+        f.write("# minIXS crystal boundaries\n")
         f.write("# x1\ty1\tx2\ty2\n")
         for (x1,y1),(x2,y2) in self.image.xtals:
           f.write("%d\t%d\t%d\t%d\n" % (x1,y1,x2,y2))
@@ -627,15 +628,32 @@ class CalibrationViewPanel(wx.Panel):
       filename = dlg.GetFilename()
 
       path = os.path.join(directory, filename)
-      with open(path) as f:
-        xtals = []
-        for line in f:
-          if line[0] == "#": 
-            continue
-          x1,y1,x2,y2 = [int(s.strip()) for s in line.split()]
-          xtals.append([[x1,y1],[x2,y2]])
 
-        self.info.xtals = xtals
+      t = dataset.determine_filetype(path)
+      print t
+
+      if t == dataset.FILE_XTALS:
+        with open(path) as f:
+          xtals = []
+          for line in f:
+            if line[0] == "#": 
+              continue
+            x1,y1,x2,y2 = [int(s.strip()) for s in line.split()]
+            xtals.append([[x1,y1],[x2,y2]])
+          self.info.xtals = xtals
+
+      elif t == dataset.FILE_CALIBRATION:
+        ci = CalibrationInfo()
+        ci.load(path, header_only=True)
+        self.info.xtals = ci.xtals
+
+      else:
+        errdlg = wx.MessageDialog(self, "Unkown Filetype", "Error", wx.OK | wx.ICON_ERROR)
+        errdlg.ShowModal()
+        errdlg.Destroy()
+
+    print self.info.xtals
+    self.image.Refresh()
     dlg.Destroy()
 
   def OnCalibrate(self, evt):

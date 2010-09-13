@@ -608,12 +608,8 @@ def rixs2d(rixs):
 
   rixs2d = zeros((len(emit_energies), len(inc_energies)))
 
-  for row in rixs:
-    i = where(inc_energies == row[0])[0]
-    j = where(emit_energies == row[1])[0]
-    rixs2d[j,i] = row[2]
-
-  return rixs2d
+  i = len(inc_energies)
+  return rixs[:,2].reshape((i,len(rixs)/i)).T
 
 def plot_rixs_contour(rixs, plot_log=False, aspect=1):
   incE = unique(rixs[:,0])

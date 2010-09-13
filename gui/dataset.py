@@ -160,6 +160,8 @@ class CalibrationInfo:
 
 class XESInfo:
   def __init__(self):
+    self.dataset_name = ""
+    self.calibration_file = ""
     self.energy = 0
     self.I0 = 0
     self.exposure_files = []
@@ -187,14 +189,20 @@ class XESInfo:
     with open(filename, 'w') as f:
       f.write("# minIXS XES Spectrum\n#\n")
       f.write("# Dataset: %s\n" % self.dataset_name)
-      f.write("# Energy: %.2f\n" % self.energy)
+      f.write("# Calibration File: %s\n" % self.calibration_file)
+      f.write("# Incident Energy: %.2f\n" % self.energy)
       f.write("# I0: %.2f\n" % self.I0)
       f.write("# Exposures:\n")
       for ef in self.exposure_files:
         f.write("#   %s\n" % ef)
       f.write("#\n")
+
       f.write("# E_emission    Intensity  Uncertainty  Raw_Counts   Num_Pixels\n")
-      np.savetxt(f, self.spectrum, fmt=('%12.2f','%.6e','%.6e','% 11d',' % 11d'))
+      if len(self.spectrum.shape) == 2 and self.spectrum.shape[1] == 5:
+        np.savetxt(f, self.spectrum, fmt=('%12.2f','%.6e','%.6e','% 11d',' % 11d'))
+      elif len(self.spectrum) > 0:
+        raise Exception("Invalid shape for spectrum array")
+      
 
   def load(self, filename=None, header_only=False):
     if filename is None:
@@ -219,11 +227,97 @@ class XESInfo:
 
           elif line[2:10] == 'Dataset:':
             self.dataset_name = line[11:].strip()
-          elif line[2:9] == 'Energy:':
-            self.energy = float(line[10:].strip())
+          elif line[2:19] == 'Calibration File:':
+            self.calibration_file = line[20:].strip()
+          elif line[2:18] == 'Incident Energy:':
+            self.energy = float(line[19:].strip())
           elif line[2:5] == 'I0:':
             self.I0 = float(line[6:].strip())
           elif line[2:12] == 'Exposures:':
+            self.exposure_files = []
+            in_exposures = True
+          else:
+            pass
+        elif header_only:
+          return
+        else:
+          f.seek(pos)
+          self.spectrum = np.loadtxt(f)
+          if len(self.spectrum.shape) == 1:
+            self.spectrum.shape = (1,self.spectrum.shape[0])
+
+        pos = f.tell()
+        line = f.readline()
+
+class RIXSInfo:
+  def __init__(self):
+    self.dataset_name = ""
+    self.calibration_file = ""
+    self.energies = []
+    self.I0s = []
+    self.exposure_files = []
+    self.spectrum = np.array([]) 
+    self.filename = None
+
+  def save(self, filename=None):
+    if filename is None:
+      filename = self.filename
+    else:
+      self.filename = filename
+
+    with open(filename, 'w') as f:
+      f.write("# minIXS RIXS Spectrum\n#\n")
+      f.write("# Dataset: %s\n" % self.dataset_name)
+      f.write("# Calibration File: %s\n" % self.calibration_file)
+      f.write("# Incident Energies / I0s / Exposures:\n")
+      for energy, I0, ef in izip(self.energies, self.I0s, self.exposure_files):
+        f.write("#   %12.2f %12.2f %s\n" % (energy, I0, ef))
+      f.write("#\n")
+
+      f.write("# E_incident   E_emission    Intensity  Uncertainty  Raw_Counts   Num_Pixels\n")
+      if len(self.spectrum.shape) == 2 and self.spectrum.shape[1] == 6:
+        fmt=('%12.2f', '%12.2f','%.6e','%.6e','% 11d',' % 11d')
+        np.savetxt(f, self.spectrum, fmt=fmt)
+      elif len(self.spectrum) > 0:
+        raise Exception("Invalid shape for RIXS spectrum array")
+      
+
+  def load(self, filename=None, header_only=False):
+    if filename is None:
+      filename = self.filename
+    else:
+      self.filename = filename
+
+    with open(filename, 'r') as f:
+      pos = f.tell()
+      line = f.readline()
+
+      in_exposures = False
+
+      while line:
+        if line[0] == "#":
+
+          # parse exposures
+          if in_exposures:
+            bits = line[2:].split(None, 3)
+            if not bits:
+              in_exposures = False
+            elif len(bits) > 0:
+              energy = float(bits[0].strip())
+              I0 = float(bits[1].strip())
+              ef = ' '.join(bits[2:]).strip()
+              if ef:
+                self.energies.append(energy)
+                self.I0s.append(I0)
+                self.exposure_files.append(ef)
+            else:
+              raise Exception("Invalid Format")
+
+          elif line[2:10] == 'Dataset:':
+            self.dataset_name = line[11:].strip()
+          elif line[2:19] == 'Calibration File:':
+            self.calibration_file = line[20:].strip()
+          elif line[2:38] == 'Incident Energies / I0s / Exposures:':
             self.exposure_files = []
             in_exposures = True
           else:

@@ -6,8 +6,8 @@ import os, sys
 
 import util
 
-import dataset
-from dataset import CalibrationInfo, InvalidFileError
+import minixs.info as mxinfo
+from minixs.info import CalibrationInfo, InvalidFileError
 
 dialog_directory = ''
 
@@ -632,10 +632,10 @@ class CalibrationViewPanel(wx.Panel):
 
       path = os.path.join(directory, filename)
 
-      t = dataset.determine_filetype(path)
+      t = mxinfo.determine_filetype(path)
       print t
 
-      if t == dataset.FILE_XTALS:
+      if t == info.FILE_XTALS:
         with open(path) as f:
           xtals = []
           for line in f:
@@ -645,7 +645,7 @@ class CalibrationViewPanel(wx.Panel):
             xtals.append([[x1,y1],[x2,y2]])
           self.info.xtals = xtals
 
-      elif t == dataset.FILE_CALIBRATION:
+      elif t == info.FILE_CALIBRATION:
         ci = CalibrationInfo()
         ci.load(path, header_only=True)
         self.info.xtals = ci.xtals

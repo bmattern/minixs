@@ -16,7 +16,7 @@ def read_scan_column_names(scanfile):
 
           # if whitespace separated headers aren't correct, try fixed width
           if len(cols) != num:
-            w = 20
+            w = 21
             cols = [ last[w*i:w*(i+1)].strip() for i in range(0,len(last)/20) ]
           if len(cols) != num:
             return [ str(i) for i in range(1,num+1) ]

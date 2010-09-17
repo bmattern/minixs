@@ -118,7 +118,7 @@ class ProcessorPanel(wx.Panel):
 
     entry = wx.TextCtrl(self, ID_CALIB, style=wx.TE_READONLY)
     hbox.Add(entry, 1, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, HPAD)
-    self.calibration_filename_entry = entry
+    self.calibration_file_entry = entry
 
     button = wx.Button(self, ID_CALIB_LOAD, "...")
     hbox.Add(button, 0, wx.RIGHT, HPAD)
@@ -137,7 +137,7 @@ class ProcessorPanel(wx.Panel):
 
     listbox = wx.ListBox(self, ID_EXPOSURE_LIST)
     hbox.Add(listbox, 1, wx.EXPAND | wx.RIGHT, HPAD)
-    self.listbox = listbox
+    self.exposure_listbox = listbox
 
     vbox2 = wx.BoxSizer(wx.VERTICAL)
     button = wx.Button(self, ID_EXPOSURE_ADD, "Add Files...")
@@ -165,11 +165,12 @@ class ProcessorModel(object):
     xes.load(filename)
     self.xes = xes
 
-    self.load_calibration(xes.calibration_filename)
+    self.load_calibration(xes.calibration_file)
 
-  def load_calibration(self, calib_filename):
+  def load_calibration(self, calibration_file):
     calibration = mxinfo.CalibrationInfo()
-    calibration.load(calib_filename)
+    if calibration_file:
+      calibration.load(calibration_file)
     self.calibration = calibration
 
 class ProcessorController(object):
@@ -209,7 +210,12 @@ class ProcessorController(object):
       self.open_directory = directory
       self.model.load(os.path.join(directory, filename))
 
-      # XXX update view
+    self.view.panel.dataset_entry.SetValue(self.model.xes.dataset_name)
+    self.view.panel.energy_entry.SetValue("%.2f" % self.model.xes.energy)
+    self.view.panel.norm_entry.SetValue("%.2f" % self.model.xes.I0)
+    self.view.panel.calibration_file_entry.SetValue(self.model.xes.calibration_file)
+    self.view.panel.exposure_listbox.Clear()
+    self.view.panel.exposure_listbox.AppendItems(self.model.xes.exposure_files)
 
   def OnMenuSave(self, evt):
     if not self.save_directory:
@@ -247,7 +253,7 @@ class ProcessorController(object):
       self.save_directory = directory
       path = os.path.join(directory, filename)
 
-      self.view.panel.calibration_panel.calibration_filename_entry.SetValue(path)
+      self.view.panel.calibration_panel.calibration_file_entry.SetValue(path)
       self.model.load_calibration(path)
 
   def OnCalibView(self, evt):

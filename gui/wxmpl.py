@@ -21,7 +21,7 @@ import weakref
 
 import matplotlib
 matplotlib.use('WXAgg')
-import matplotlib.numerix as Numerix
+import numpy as Numerix
 from matplotlib.axes import _process_plot_var_args
 from matplotlib.backend_bases import FigureCanvasBase
 from matplotlib.backends.backend_agg import FigureCanvasAgg, RendererAgg

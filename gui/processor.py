@@ -25,6 +25,7 @@ ID_UPDATE_GRAPH = wx.NewId()
 
 WILDCARD_XES = "XES Data Files (*.xes)|*.xes|Data Files (*.dat)|*.dat|Text Files (*.txt)|*.txt"
 WILDCARD_CALIB = "Calibration Files (*.calib)|*.calib|Data Files (*.dat)|*.dat|Text Files (*.txt)|*.txt"
+WILDCARD_EXPOSURE = "TIF Files (*.tif)|*.tif|All Files|*"
 
 
 class ProcessorApp(wx.App):
@@ -179,9 +180,11 @@ class ProcessorController(object):
     self.view = view
     self.model = model
 
+    self.last_directory = ''
+
     self.open_directory = ''
     self.save_directory = ''
-    self.calib_directory = ''
+    self.exposure_directory = ''
 
     self.BindCallbacks()
 
@@ -194,11 +197,14 @@ class ProcessorController(object):
     self.view.Bind(wx.EVT_BUTTON, self.OnCalibLoad, id=ID_CALIB_LOAD)
     self.view.Bind(wx.EVT_BUTTON, self.OnCalibView, id=ID_CALIB_VIEW)
 
+    self.view.Bind(wx.EVT_BUTTON, self.OnExposureAdd, id=ID_EXPOSURE_ADD)
+    self.view.Bind(wx.EVT_BUTTON, self.OnExposureDel, id=ID_EXPOSURE_DEL)
+
     self.view.Bind(wx.EVT_BUTTON, self.OnUpdateGraph, id=ID_UPDATE_GRAPH)
 
   def OnMenuOpen(self, evt):
     if not self.open_directory:
-      self.open_directory = self.save_directory
+      self.open_directory = self.last_directory
 
     dlg = wx.FileDialog(self.view, "Select an XES data file to open", self.open_directory, style=wx.FD_OPEN, wildcard=WILDCARD_XES)
     ret = dlg.ShowModal()
@@ -207,7 +213,7 @@ class ProcessorController(object):
       directory = dlg.GetDirectory()
       filename = dlg.GetFilename()
 
-      self.open_directory = directory
+      self.last_directory = self.open_directory = directory
       self.model.load(os.path.join(directory, filename))
 
     self.view.panel.dataset_entry.SetValue(self.model.xes.dataset_name)
@@ -219,7 +225,7 @@ class ProcessorController(object):
 
   def OnMenuSave(self, evt):
     if not self.save_directory:
-      self.save_directory = self.open_directory
+      self.save_directory = self.last_directory
     dlg = wx.FileDialog(self.view, "Select a file to save XES data to", self.save_directory, style=wx.FD_SAVE, wildcard=WILDCARD_XES)
     ret = dlg.ShowModal()
 
@@ -227,7 +233,7 @@ class ProcessorController(object):
       directory = dlg.GetDirectory()
       filename = dlg.GetFilename()
 
-      self.save_directory = directory
+      self.last_directory = self.save_directory = directory
       self.model.save(os.path.join(directory, filename))
 
   def OnMenuExit(self, evt):
@@ -239,9 +245,7 @@ class ProcessorController(object):
 
   def OnCalibLoad(self, evt):
     if not self.calib_directory:
-      self.calib_directory = self.open_directory
-    if not self.calib_directory:
-      self.calib_directory = self.save_directory
+      self.calib_directory = self.last_directory
 
     dlg = wx.FileDialog(self.view, "Select a calibration matrix to open", self.calib_directory, style=wx.FD_OPEN, wildcard=WILDCARD_CALIB)
     ret = dlg.ShowModal()
@@ -250,7 +254,7 @@ class ProcessorController(object):
       directory = dlg.GetDirectory()
       filename = dlg.GetFilename()
 
-      self.save_directory = directory
+      self.last_directory = self.calib_directory = directory
       path = os.path.join(directory, filename)
 
       self.view.panel.calibration_panel.calibration_file_entry.SetValue(path)
@@ -258,6 +262,38 @@ class ProcessorController(object):
 
   def OnCalibView(self, evt):
     pass
+
+  def OnExposureAdd(self, evt):
+    if not self.exposure_directory:
+      self.exposure_directory = self.last_directory
+
+    dlg = wx.FileDialog(self.view, "Select spectrum image(s) to add", self.exposure_directory, style=wx.FD_MULTIPLE, wildcard=WILDCARD_EXPOSURE)
+    ret = dlg.ShowModal()
+
+    if ret == wx.ID_OK:
+      directory = dlg.GetDirectory()
+      filenames = dlg.GetFilenames()
+
+      self.last_directory = self.calib_directory = directory
+
+      paths = [ os.path.join(directory, filename) for filename in filenames ]
+
+      self.view.panel.exposure_listbox.AppendItems(paths)
+
+  def OnExposureDel(self, evt):
+    l = self.view.panel.exposure_listbox
+    sel = l.GetSelection()
+
+    if sel < 0:
+      return
+
+    l.Delete(sel)
+
+    # move selection to next item (or last item in list)
+    c = l.GetCount()
+    if sel >= c:
+      sel = c-1
+    l.SetSelection(sel)
 
   def OnUpdateGraph(self, evt):
     pass

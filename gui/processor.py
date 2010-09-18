@@ -3,6 +3,7 @@ import minixs as mx
 import numpy as np
 import minixs.info as mxinfo
 import wx
+import wxmpl
 
 
 HPAD = 10
@@ -153,6 +154,10 @@ class ProcessorPanel(wx.Panel):
     button = wx.Button(self, ID_UPDATE_GRAPH, "Update Graph")
     vbox.Add(button, 0, wx.EXPAND | wx.BOTTOM, VPAD)
 
+    plot = wxmpl.PlotPanel(self, wx.ID_ANY)
+    vbox.Add(plot, 1, wx.EXPAND | wx.BOTTOM, VPAD)
+    self.plot_panel = plot
+
     self.SetSizerAndFit(vbox)
     print "Done"
 
@@ -216,12 +221,7 @@ class ProcessorController(object):
       self.last_directory = self.open_directory = directory
       self.model.load(os.path.join(directory, filename))
 
-    self.view.panel.dataset_entry.SetValue(self.model.xes.dataset_name)
-    self.view.panel.energy_entry.SetValue("%.2f" % self.model.xes.energy)
-    self.view.panel.norm_entry.SetValue("%.2f" % self.model.xes.I0)
-    self.view.panel.calibration_file_entry.SetValue(self.model.xes.calibration_file)
-    self.view.panel.exposure_listbox.Clear()
-    self.view.panel.exposure_listbox.AppendItems(self.model.xes.exposure_files)
+    self.model_to_view()
 
   def OnMenuSave(self, evt):
     if not self.save_directory:
@@ -257,7 +257,7 @@ class ProcessorController(object):
       self.last_directory = self.calib_directory = directory
       path = os.path.join(directory, filename)
 
-      self.view.panel.calibration_panel.calibration_file_entry.SetValue(path)
+      self.view.panel.calibration_file_entry.SetValue(path)
       self.model.load_calibration(path)
 
   def OnCalibView(self, evt):
@@ -296,8 +296,53 @@ class ProcessorController(object):
     l.SetSelection(sel)
 
   def OnUpdateGraph(self, evt):
-    pass
+    self.view_to_model()
+    self.process_spectrum()
+    plot = self.view.panel.plot_panel
+    fig = plot.get_figure()
+    ax = fig.gca()
 
+    x = self.model.xes.spectrum[:,0]
+    y = self.model.xes.spectrum[:,1]
+
+    ax.cla()
+    ax.plot(x,y)
+
+    plot.draw()
+
+  def model_to_view(self):
+    self.view.panel.dataset_entry.SetValue(self.model.xes.dataset_name)
+    self.view.panel.energy_entry.SetValue("%.2f" % self.model.xes.energy)
+    self.view.panel.norm_entry.SetValue("%.2f" % self.model.xes.I0)
+    self.view.panel.calibration_file_entry.SetValue(self.model.xes.calibration_file)
+    self.view.panel.exposure_listbox.Clear()
+    self.view.panel.exposure_listbox.AppendItems(self.model.xes.exposure_files)
+
+  def view_to_model(self):
+    self.model.xes.dataset = self.view.panel.dataset_entry.GetValue()
+    self.model.xes.calibration_file = self.view.panel.calibration_file_entry.GetValue()
+    self.model.xes.energy = float(self.view.panel.energy_entry.GetValue())
+    self.model.xes.I0 = float(self.view.panel.norm_entry.GetValue())
+    self.model.xes.exposure_files = self.view.panel.exposure_listbox.GetItems()
+
+  def process_spectrum(self):
+
+    exposure = mx.Exposure()
+    exposure.load_multi(self.model.xes.exposure_files)
+
+    energies = np.arange(
+        np.min(self.model.calibration.calibration_matrix),
+        np.max(self.model.calibration.calibration_matrix) + .25,
+        .25)
+
+    self.model.xes.spectrum = mx.emission_spectrum2(
+        self.model.calibration.calibration_matrix,
+        exposure,
+        energies,
+        self.model.xes.I0,
+        self.model.calibration.dispersive_direction,
+        self.model.calibration.xtals
+        )
 
 
 if __name__ == "__main__":

@@ -298,6 +298,9 @@ class ProcessorController(object):
   def OnUpdateGraph(self, evt):
     self.view_to_model()
     self.process_spectrum()
+    self.graph()
+
+  def graph(self):
     plot = self.view.panel.plot_panel
     fig = plot.get_figure()
     ax = fig.gca()
@@ -317,6 +320,8 @@ class ProcessorController(object):
     self.view.panel.calibration_file_entry.SetValue(self.model.xes.calibration_file)
     self.view.panel.exposure_listbox.Clear()
     self.view.panel.exposure_listbox.AppendItems(self.model.xes.exposure_files)
+
+    self.graph()
 
   def view_to_model(self):
     self.model.xes.dataset = self.view.panel.dataset_entry.GetValue()

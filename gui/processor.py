@@ -57,7 +57,11 @@ class ProcessorFrame(wx.Frame):
           ]),
         ]
     self.CreateMenuBar(menu_info)
+
+    box = wx.BoxSizer(wx.VERTICAL)
     self.panel = ProcessorPanel(self, wx.ID_ANY)
+    box.Add(self.panel, 1, wx.EXPAND | wx.ALL, 5)
+    self.SetSizerAndFit(box)
     self.CreateStatusBar()
 
   def CreateMenuBar(self, menu_info):

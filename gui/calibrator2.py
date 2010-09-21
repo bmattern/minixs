@@ -15,6 +15,7 @@ ID_CLEAR_ENERGIES   = wx.NewId()
 ID_CLEAR_EXPOSURES  = wx.NewId()
 ID_LOAD_EXPOSURES   = wx.NewId()
 ID_DISPERSIVE_DIR   = wx.NewId()
+ID_EXPOSURE_SLIDER  = wx.NewId()
 
 class CalibratorModel(object):
   def __init__(self):
@@ -76,9 +77,31 @@ class FilterPanel(wx.Panel):
 
     self.SetSizerAndFit(grid)
 
+class ImagePanel(wx.Panel):
+  def __init__(self, *args, **kwargs):
+    wx.Panel.__init__(self, *args, **kwargs)
+
+
 class ExposuresPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
     wx.Panel.__init__(self, *args, **kwargs)
+
+    vbox = wx.BoxSizer(wx.VERTICAL)
+
+    label = wx.StaticText(self, wx.ID_ANY, 'No Exposures Loaded')
+    vbox.Add(label, 0, wx.EXPAND | wx.BOTTOM, VPAD)
+    self.label = label
+
+    panel = ImagePanel(self, wx.ID_ANY)
+    vbox.Add(panel, 0, wx.EXPAND | wx.BOTTOM, VPAD)
+    self.image_panel = panel
+
+    slider = wx.Slider(self, ID_EXPOSURE_SLIDER, 1,1,2)
+    vbox.Add(slider, 0, wx.EXPAND)
+    self.slider = slider
+
+    self.SetSizerAndFit(vbox)
+
 
 class CalibratorPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
@@ -133,7 +156,7 @@ class CalibratorPanel(wx.Panel):
     self.filter_panel = panel
 
     panel = ExposuresPanel(self, wx.ID_ANY)
-    hbox.Add(panel, 0)
+    hbox.Add(panel, 1)
     self.filter_panel = panel
 
     vbox.Add(hbox, 0, wx.EXPAND)

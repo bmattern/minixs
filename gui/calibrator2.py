@@ -20,7 +20,7 @@ class CalibratorPanel(wx.Panel):
 
     vbox = wx.BoxSizer(wx.VERTICAL)
 
-    # add dataset name box
+    # dataset name box
     hbox = wx.BoxSizer(wx.HORIZONTAL)
     label = wx.StaticText(self, wx.ID_ANY, "Dataset Name: ")
     entry = wx.TextCtrl(self, ID_DATASET_NAME)
@@ -29,6 +29,7 @@ class CalibratorPanel(wx.Panel):
     vbox.Add(hbox, 0, wx.EXPAND | wx.BOTTOM, VPAD)
     self.dataset_name = entry
 
+    # exposures list
     listctrl = wx.ListCtrl(self, ID_EXPOSURE_LIST,
         style=wx.LC_REPORT|wx.LC_HRULES|wx.LC_VRULES)
     listctrl.InsertColumn(0, 'Incident Energy', width=200)

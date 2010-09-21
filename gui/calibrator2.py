@@ -192,9 +192,32 @@ class CalibratorController(object):
     self.BindCallbacks()
 
   def BindCallbacks(self):
-    self.view.Bind(wx.EVT_MENU, self.OnExit, id=wx.ID_EXIT)
-    self.view.Bind(wx.EVT_MENU, self.OnOpen, id=wx.ID_OPEN)
-    self.view.Bind(wx.EVT_MENU, self.OnAbout, id=wx.ID_ABOUT)
+    callbacks = [
+        (wx.EVT_MENU, [
+          (wx.ID_EXIT, self.OnExit),
+          (wx.ID_OPEN, self.OnOpen),
+          (wx.ID_ABOUT, self.OnAbout),
+          ]),
+        (wx.EVT_TEXTBOX, [
+          (ID_DATASET_NAME, self.OnDatasetName),
+          ]),
+        (wx.EVT_BUTTON, [
+          (ID_READ_ENERGIES, self.OnReadEnergies),
+          (ID_CLEAR_ENERGIES, self.OnClearEnergies),
+          (ID_SELECT_EXPOSURES, self.OnSelectExposures),
+          (ID_CLEAR_EXPOSURES, self.OnClearExposures),
+          (ID_LOAD_EXPOSURES, self.OnLoadExposures),
+          ]),
+        ]
+
+    for event, bindings in callbacks:
+      for id, callback in bindings:
+        self.view.Bind(event, callback, id=id)
+
+    for id in FILTER_IDS:
+      self.view.Bind(wx.EVT_SPINCTRL, self.OnFilterSpin, id=id)
+      self.view.Bind(wx.EVT_CHECKBOX, self.OnFilterCheck, id=id)
+
 
   def OnOpen(self, evt):
     pass
@@ -204,6 +227,31 @@ class CalibratorController(object):
 
   def OnAbout(self, evt):
     pass
+
+  def OnDatasetName(self, evt):
+    pass
+
+  def OnReadEnergies(self, evt):
+    pass
+
+  def OnClearEnergies(self, evt):
+    pass
+
+  def OnSelectExposures(self, evt):
+    pass
+
+  def OnClearExposures(self, evt):
+    pass
+
+  def OnLoadExposures(self, evt):
+    pass
+
+  def OnFilterSpin(self, evt):
+    pass
+
+  def OnFilterCheck(self, evt):
+    pass
+
 
 class CalibratorApp(wx.App):
   def __init__(self, *args, **kwargs):

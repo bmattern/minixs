@@ -7,8 +7,12 @@ from frame import MenuFrame
 HPAD = 10
 VPAD = 5
 
-ID_DATASET_NAME  = wx.NewId()
-ID_EXPOSURE_LIST = wx.NewId()
+ID_DATASET_NAME     = wx.NewId()
+ID_EXPOSURE_LIST    = wx.NewId()
+ID_READ_ENERGIES    = wx.NewId()
+ID_SELECT_EXPOSURES = wx.NewId()
+ID_CLEAR_ENERGIES   = wx.NewId()
+ID_CLEAR_EXPOSURES  = wx.NewId()
 
 class CalibratorModel(object):
   def __init__(self):
@@ -36,6 +40,24 @@ class CalibratorPanel(wx.Panel):
     listctrl.InsertColumn(1, 'Exposure File', width=200)
     vbox.Add(listctrl, 0, wx.EXPAND | wx.BOTTOM, VPAD)
     self.exposure_list = listctrl
+
+    # buttons to control exposure list
+    hbox = wx.BoxSizer(wx.HORIZONTAL)
+
+    button = wx.Button(self, ID_READ_ENERGIES, "Read Energies...")
+    hbox.Add(button, 1, wx.EXPAND | wx.RIGHT, HPAD)
+
+    button = wx.Button(self, ID_SELECT_EXPOSURES, "Select Exposures...")
+    hbox.Add(button, 1, wx.EXPAND | wx.RIGHT, HPAD)
+
+    button = wx.Button(self, ID_CLEAR_ENERGIES, "Clear Energies")
+    hbox.Add(button, 1, wx.EXPAND | wx.RIGHT, HPAD)
+
+    button = wx.Button(self, ID_CLEAR_EXPOSURES, "Clear Exposures")
+    hbox.Add(button, 1, wx.EXPAND)
+
+    vbox.Add(hbox, 0, wx.EXPAND | wx.BOTTOM, VPAD)
+
 
     self.SetSizerAndFit(vbox)
 

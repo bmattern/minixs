@@ -193,6 +193,7 @@ class ProcessorController(object):
 
     self.open_directory = ''
     self.save_directory = ''
+    self.calib_directory = ''
     self.exposure_directory = ''
 
     self.BindCallbacks()

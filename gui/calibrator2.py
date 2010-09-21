@@ -1,0 +1,87 @@
+import minixs as mx
+import minixs.info as mxinfo
+import wx
+import wxmpl
+from frame import MenuFrame
+
+HPAD = 10
+VPAD = 5
+
+ID_DATASET_NAME = wx.NewId()
+
+class CalibratorModel(object):
+  def __init__(self):
+    calib = mxinfo.CalibrationInfo()
+
+class CalibratorPanel(wx.Panel):
+  def __init__(self, *args, **kwargs):
+    wx.Panel.__init__(self, *args, **kwargs)
+
+    vbox = wx.BoxSizer(wx.VERTICAL)
+
+    # add dataset name box
+    hbox = wx.BoxSizer(wx.HORIZONTAL)
+    label = wx.StaticText(self, wx.ID_ANY, "Dataset Name: ")
+    entry = wx.TextCtrl(self, ID_DATASET_NAME)
+    hbox.Add(label, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, HPAD)
+    hbox.Add(entry, 1, 0 )
+
+    vbox.Add(hbox, 0, wx.EXPAND | wx.BOTTOM, VPAD)
+
+    self.SetSizerAndFit(vbox)
+
+class CalibratorFrame(MenuFrame):
+  def __init__(self, *args, **kwargs):
+    kwargs['menu_info'] = [
+        ('&File', [
+          ('&Open', wx.ID_OPEN, 'Load File'),
+          ('', None, None), # separator
+          ('E&xit', wx.ID_EXIT, 'Terminate this program'),
+          ]),
+        ('&Help', [
+          ('&About', wx.ID_ABOUT, 'About this program')
+          ]),
+        ]
+    MenuFrame.__init__(self, *args, **kwargs)
+    self.CreateStatusBar()
+
+    box = wx.BoxSizer(wx.VERTICAL)
+    self.panel = CalibratorPanel(self, wx.ID_ANY)
+    box.Add(self.panel, 1, wx.EXPAND | wx.ALL, VPAD)
+
+    self.SetSizerAndFit(box)
+
+class CalibratorController(object):
+  def __init__(self, view, model):
+    self.view = view
+    self.model = model
+
+    self.BindCallbacks()
+
+  def BindCallbacks(self):
+    self.view.Bind(wx.EVT_MENU, self.OnExit, id=wx.ID_EXIT)
+    self.view.Bind(wx.EVT_MENU, self.OnOpen, id=wx.ID_OPEN)
+    self.view.Bind(wx.EVT_MENU, self.OnAbout, id=wx.ID_ABOUT)
+
+  def OnOpen(self, evt):
+    pass
+
+  def OnExit(self, evt):
+    self.view.Close(True)
+
+  def OnAbout(self, evt):
+    pass
+
+class CalibratorApp(wx.App):
+  def __init__(self, *args, **kwargs):
+    wx.App.__init__(self, *args, **kwargs)
+
+    model = CalibratorModel()
+    view = CalibratorFrame(None, wx.ID_ANY, "minIXS Calibrator")
+    controller = CalibratorController(view, model)
+
+    view.Show()
+
+if __name__ == "__main__":
+  app = CalibratorApp()
+  app.MainLoop()

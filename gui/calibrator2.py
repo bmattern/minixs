@@ -14,6 +14,8 @@ ID_SELECT_EXPOSURES = wx.NewId()
 ID_CLEAR_ENERGIES   = wx.NewId()
 ID_CLEAR_EXPOSURES  = wx.NewId()
 
+ID_LOAD_EXPOSURES  = wx.NewId()
+
 class CalibratorModel(object):
   def __init__(self):
     calib = mxinfo.CalibrationInfo()
@@ -57,6 +59,10 @@ class CalibratorPanel(wx.Panel):
     hbox.Add(button, 1, wx.EXPAND)
 
     vbox.Add(hbox, 0, wx.EXPAND | wx.BOTTOM, VPAD)
+
+    # load exposures button
+    button = wx.Button(self, ID_LOAD_EXPOSURES, "Load Exposures")
+    vbox.Add(button, 1, wx.EXPAND | wx.BOTTOM, VPAD)
 
 
     self.SetSizerAndFit(vbox)

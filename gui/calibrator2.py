@@ -13,8 +13,8 @@ ID_READ_ENERGIES    = wx.NewId()
 ID_SELECT_EXPOSURES = wx.NewId()
 ID_CLEAR_ENERGIES   = wx.NewId()
 ID_CLEAR_EXPOSURES  = wx.NewId()
-
-ID_LOAD_EXPOSURES  = wx.NewId()
+ID_LOAD_EXPOSURES   = wx.NewId()
+ID_DISPERSIVE_DIR   = wx.NewId()
 
 class CalibratorModel(object):
   def __init__(self):
@@ -68,6 +68,11 @@ class FilterPanel(wx.Panel):
 
       self.checks.append(check)
       self.spins.append(spin)
+
+    label = wx.StaticText(self, wx.ID_ANY, 'Dispersive Dir.')
+    choice = wx.Choice(self, ID_DISPERSIVE_DIR, choices=mx.DIRECTION_NAMES)
+    grid.Add(label)
+    grid.Add(choice)
 
     self.SetSizerAndFit(grid)
 

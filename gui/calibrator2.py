@@ -7,7 +7,8 @@ from frame import MenuFrame
 HPAD = 10
 VPAD = 5
 
-ID_DATASET_NAME = wx.NewId()
+ID_DATASET_NAME  = wx.NewId()
+ID_EXPOSURE_LIST = wx.NewId()
 
 class CalibratorModel(object):
   def __init__(self):
@@ -25,8 +26,15 @@ class CalibratorPanel(wx.Panel):
     entry = wx.TextCtrl(self, ID_DATASET_NAME)
     hbox.Add(label, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, HPAD)
     hbox.Add(entry, 1, 0 )
-
     vbox.Add(hbox, 0, wx.EXPAND | wx.BOTTOM, VPAD)
+    self.dataset_name = entry
+
+    listctrl = wx.ListCtrl(self, ID_EXPOSURE_LIST,
+        style=wx.LC_REPORT|wx.LC_HRULES|wx.LC_VRULES)
+    listctrl.InsertColumn(0, 'Incident Energy', width=200)
+    listctrl.InsertColumn(1, 'Exposure File', width=200)
+    vbox.Add(listctrl, 0, wx.EXPAND | wx.BOTTOM, VPAD)
+    self.exposure_list = listctrl
 
     self.SetSizerAndFit(vbox)
 

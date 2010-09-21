@@ -20,6 +20,14 @@ class CalibratorModel(object):
   def __init__(self):
     calib = mxinfo.CalibrationInfo()
 
+class FilterPanel(wx.Panel):
+  def __init__(self, *args, **kwargs):
+    wx.Panel.__init__(self, *args, **kwargs)
+
+class ExposuresPanel(wx.Panel):
+  def __init__(self, *args, **kwargs):
+    wx.Panel.__init__(self, *args, **kwargs)
+
 class CalibratorPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
     wx.Panel.__init__(self, *args, **kwargs)
@@ -40,7 +48,7 @@ class CalibratorPanel(wx.Panel):
         style=wx.LC_REPORT|wx.LC_HRULES|wx.LC_VRULES)
     listctrl.InsertColumn(0, 'Incident Energy', width=200)
     listctrl.InsertColumn(1, 'Exposure File', width=200)
-    vbox.Add(listctrl, 0, wx.EXPAND | wx.BOTTOM, VPAD)
+    vbox.Add(listctrl, 1, wx.EXPAND | wx.BOTTOM, VPAD)
     self.exposure_list = listctrl
 
     # buttons to control exposure list
@@ -62,8 +70,21 @@ class CalibratorPanel(wx.Panel):
 
     # load exposures button
     button = wx.Button(self, ID_LOAD_EXPOSURES, "Load Exposures")
-    vbox.Add(button, 1, wx.EXPAND | wx.BOTTOM, VPAD)
+    vbox.Add(button, 0, wx.EXPAND | wx.BOTTOM, VPAD)
 
+   
+    # add filters and image view
+    hbox = wx.BoxSizer(wx.HORIZONTAL)
+
+    panel = FilterPanel(self, wx.ID_ANY)
+    hbox.Add(panel, 0, wx.RIGHT, HPAD)
+    self.filter_panel = panel
+
+    panel = ExposuresPanel(self, wx.ID_ANY)
+    hbox.Add(panel, 0)
+    self.filter_panel = panel
+
+    vbox.Add(hbox, 0, wx.EXPAND)
 
     self.SetSizerAndFit(vbox)
 

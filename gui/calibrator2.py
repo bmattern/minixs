@@ -71,7 +71,7 @@ class FilterPanel(wx.Panel):
 
     label = wx.StaticText(self, wx.ID_ANY, 'Dispersive Dir.')
     choice = wx.Choice(self, ID_DISPERSIVE_DIR, choices=mx.DIRECTION_NAMES)
-    grid.Add(label)
+    grid.Add(label, 0, wx.ALIGN_CENTER_VERTICAL)
     grid.Add(choice)
 
     self.SetSizerAndFit(grid)

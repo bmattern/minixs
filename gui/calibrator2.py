@@ -20,9 +20,56 @@ class CalibratorModel(object):
   def __init__(self):
     calib = mxinfo.CalibrationInfo()
 
+
+FILTER_MIN  = 0
+FILTER_MAX  = 1
+FILTER_LOW  = 2
+FILTER_HIGH = 3
+FILTER_NBOR = 4
+NUM_FILTERS = 5
+
+FILTER_NAMES = [
+    'Min Visible',
+    'Max Visible',
+    'Low Cutoff',
+    'High Cutoff',
+    'Neighbors'
+    ]
+
+FILTER_IDS = [ wx.NewId() for n in FILTER_NAMES ]
+
 class FilterPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
     wx.Panel.__init__(self, *args, **kwargs)
+
+    filter_defaults = [
+        (0, True),       # min vis
+        (1000, False),   # max vis
+        (5, True),       # low cut
+        (10000, False),  # high cut
+        (2, True)        # neighbors
+        ]
+
+    grid = wx.FlexGridSizer(NUM_FILTERS, 2, HPAD, VPAD)
+    self.checks = []
+    self.spins = []
+
+    for i, name in enumerate(FILTER_NAMES):
+      val, enabled = filter_defaults[i]
+      id = FILTER_IDS[i]
+      check = wx.CheckBox(self, id, name)
+      check.SetValue(enabled)
+      spin = wx.SpinCtrl(self, id, '', max=100000)
+      spin.SetValue(val)
+      spin.Enable(enabled)
+
+      grid.Add(check)
+      grid.Add(spin)
+
+      self.checks.append(check)
+      self.spins.append(spin)
+
+    self.SetSizerAndFit(grid)
 
 class ExposuresPanel(wx.Panel):
   def __init__(self, *args, **kwargs):

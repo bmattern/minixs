@@ -26,9 +26,9 @@ WILDCARD_EXPOSURE = "TIF Files (*.tif)|*.tif|All Files|*"
 WILDCARD_XTAL = "Calibration Files (*.calib)|*.calib|Crystal Files (*.xtal)|*.xtal|Text Files (*.txt)|*.txt|All Files|*"
 WILDCARD_SCAN = "Scan Files (*.nnnn)|*.????|Text Files (*.txt)|*.txt|All Files|*"
 
-class CalibratorModel(object):
+class CalibratorModel(mxinfo.CalibrationInfo):
   def __init__(self):
-    calib = mxinfo.CalibrationInfo()
+    mxinfo.CalibrationInfo.__init__(self)
 
 class LoadEnergiesPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
@@ -124,23 +124,23 @@ FILTER_NAMES = [
 FILTER_IDS = [ wx.NewId() for n in FILTER_NAMES ]
 
 class FilterPanel(wx.Panel):
+  filter_defaults = [
+      (0, True),       # min vis
+      (1000, False),   # max vis
+      (5, True),       # low cut
+      (10000, False),  # high cut
+      (2, True)        # neighbors
+      ]
   def __init__(self, *args, **kwargs):
     wx.Panel.__init__(self, *args, **kwargs)
 
-    filter_defaults = [
-        (0, True),       # min vis
-        (1000, False),   # max vis
-        (5, True),       # low cut
-        (10000, False),  # high cut
-        (2, True)        # neighbors
-        ]
 
     grid = wx.FlexGridSizer(NUM_FILTERS, 2, HPAD, VPAD)
     self.checks = []
     self.spins = []
 
     for i, name in enumerate(FILTER_NAMES):
-      val, enabled = filter_defaults[i]
+      val, enabled = self.filter_defaults[i]
       id = FILTER_IDS[i]
       check = wx.CheckBox(self, id, name)
       check.SetValue(enabled)
@@ -168,7 +168,13 @@ class FilterPanel(wx.Panel):
     self.checks[filter_type].SetValue(enabled)
     self.spins[filter_type].Enable(enabled)
 
-  def get_filter_info(self):
+  def set_filters(self, filters):
+    for i, (enabled, val) in enumerate(filters):
+      self.checks[i].SetValue(enabled)
+      self.spins[i].Enable(enabled)
+      self.spins[i].SetValue(val)
+
+  def get_filters(self):
     return [ (self.checks[i].GetValue(), self.spins[i].GetValue()) for i in range(NUM_FILTERS) ]
 
 class ImagePanel(wx.Panel):
@@ -384,8 +390,35 @@ class CalibratorController(object):
       self.view.Bind(wx.EVT_SPINCTRL, self.OnFilterSpin, id=id)
       self.view.Bind(wx.EVT_CHECKBOX, self.OnFilterCheck, id=id)
 
-  def OnOpen(self, evt):
+  def model_to_view(self):
+    self.view.panel.dataset_name.SetValue(self.model.dataset_name)
+
+    for f in self.model.exposure_files:
+      self.view.panel.exposure_list.AppendExposure(f)
+    for e in self.model.energies:
+      self.view.panel.exposure_list.AppendEnergy(e)
+
+    filters = [(False, val) for enabled,val in self.view.panel.filter_panel.filter_defaults]
+
+    for name, val in self.model.filters:
+      i = FILTER_NAMES.index(name)
+      filters[i] = (True, val)
+
+    self.view.panel.filter_panel.set_filters(filters)
+
+  def view_to_model(self):
     pass
+
+  def OnOpen(self, evt):
+    filename = self.FileDialog(
+        'open',
+        'Select a calibration file to open',
+        wildcard=WILDCARD_CALIB
+        )
+
+    if (filename):
+      self.model.load(filename)
+      self.model_to_view()
 
   def OnExit(self, evt):
     self.view.Close(True)
@@ -418,7 +451,7 @@ class CalibratorController(object):
     filename = self.FileDialog(
         'scan',
         'Select a text file',
-        WILDCARD_SCAN
+        wildcard=WILDCARD_SCAN
         )
 
     if filename:
@@ -443,7 +476,7 @@ class CalibratorController(object):
 
   def FileDialog(self, type, title, wildcard='', save=False, multiple=False):
     """
-    Show a file dialog and return selected paths
+    Show a file dialog and return selected path(s)
     """
     if type not in self.dialog_dirs.keys() or not self.dialog_dirs[type]:
       self.dialog_dirs[type] = self.dialog_dirs['last']
@@ -473,6 +506,9 @@ class CalibratorController(object):
 
     dlg.Destroy()
 
+    if not paths:
+      return None
+
     if multiple:
       return paths
     else:
@@ -486,13 +522,13 @@ class CalibratorController(object):
     self.changed(self.CHANGED_EXPOSURES)
 
   def OnFilterSpin(self, evt):
-    self.filter_info = self.view.panel.filter_panel.get_filter_info()
+    self.filters= self.view.panel.filter_panel.get_filters()
     self.changed(self.CHANGED_FILTERS)
 
   def OnFilterCheck(self, evt):
     i = FILTER_IDS.index(evt.Id)
     self.view.panel.filter_panel.set_filter_enabled(i, evt.Checked())
-    self.filter_info = self.view.panel.filter_panel.get_filter_info()
+    self.filters = self.view.panel.filter_panel.get_filters()
     self.changed(self.CHANGED_FILTERS)
 
   def changed(self, flag):

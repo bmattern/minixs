@@ -163,7 +163,7 @@ class CalibratorPanel(wx.Panel):
 
     panel = ExposuresPanel(self, wx.ID_ANY)
     hbox.Add(panel, 1)
-    self.filter_panel = panel
+    self.exposures_panel = panel
 
     vbox.Add(hbox, 0, wx.EXPAND)
 
@@ -256,8 +256,8 @@ class CalibratorController(object):
     pass
 
   def OnFilterCheck(self, evt):
-    pass
-
+    i = FILTER_IDS.index(evt.Id)
+    self.view.panel.filter_panel.set_filter_enabled(i, evt.Checked())
 
 class CalibratorApp(wx.App):
   def __init__(self, *args, **kwargs):

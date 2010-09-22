@@ -26,7 +26,8 @@ ID_LOAD_SCAN        = wx.NewId()
 
 WILDCARD_CALIB = "Calibration Files (*.calib)|*.calib|Data Files (*.dat)|*.dat|Text Files (*.txt)|*.txt|All Files|*"
 WILDCARD_EXPOSURE = "TIF Files (*.tif)|*.tif|All Files|*"
-WILDCARD_XTAL = "Calibration Files (*.calib)|*.calib|Crystal Files (*.xtal)|*.xtal|Text Files (*.txt)|*.txt|All Files|*"
+WILDCARD_XTAL = "Crystal Files (*.xtal)|*.xtal|Calibration Files (*.calib)|*.calib|Text Files (*.txt)|*.txt|All Files|*"
+WILDCARD_XTAL_EXPORT = "Crystal Files (*.xtal)|*.xtal"
 WILDCARD_SCAN = "Scan Files (*.nnnn)|*.????|Text Files (*.txt)|*.txt|All Files|*"
 
 class CalibratorModel(mxinfo.CalibrationInfo):
@@ -377,6 +378,8 @@ class CalibratorController(object):
           (wx.ID_EXIT, self.OnExit),
           (wx.ID_OPEN, self.OnOpen),
           (wx.ID_SAVE, self.OnSave),
+          (ID_IMPORT_XTALS, self.OnImportXtals),
+          (ID_EXPORT_XTALS, self.OnExportXtals),
           (wx.ID_ABOUT, self.OnAbout),
           ]),
         (wx.EVT_TEXT, [
@@ -450,6 +453,24 @@ class CalibratorController(object):
     if filename:
       self.view_to_model()
       self.model.save(filename)
+
+  def OnImportXtals(self, evt):
+    filename = self.FileDialog(
+        'xtals',
+        'Select file to import crystals from',
+        wildcard=WILDCARD_XTAL,
+        )
+
+    #XXX implement
+
+  def OnExportXtals(self, evt):
+    filename = self.FileDialog(
+        'xtals',
+        'Select file to export crystals to',
+        wildcard=WILDCARD_XTAL_EXPORT
+        )
+
+    #XXX implement
 
   def OnExit(self, evt):
     self.view.Close(True)

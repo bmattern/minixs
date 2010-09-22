@@ -42,6 +42,7 @@ class LoadEnergiesPanel(wx.Panel):
 
     self.grid = wx.FlexGridSizer(2, 3, HPAD, VPAD)
 
+    # text file
     label = wx.StaticText(self, wx.ID_ANY, 'Text File:')
     self.grid.Add(label, 0, wx.ALIGN_CENTER_VERTICAL)
 
@@ -49,9 +50,9 @@ class LoadEnergiesPanel(wx.Panel):
     self.grid.Add(self.file_entry, 1, wx.EXPAND)
 
     b = wx.Button(self, ID_LOAD_SCAN, '...')
-    b.Bind(wx.EVT_BUTTON, self.OnChoose)
     self.grid.Add(b)
 
+    # column
     label = wx.StaticText(self, wx.ID_ANY, 'Column:')
     self.grid.Add(label, 0, wx.ALIGN_CENTER_VERTICAL)
 
@@ -62,21 +63,8 @@ class LoadEnergiesPanel(wx.Panel):
 
     self.SetSizerAndFit(self.grid)
 
-  def OnChoose(self, evt):
-    dlg = wx.FileDialog(self, 'Select a text file', self.directory, style=wx.FD_OPEN)
-    ret = dlg.ShowModal()
-
-    if ret == wx.ID_OK:
-      self.directory = dlg.GetDirectory()
-      self.filename = dlg.GetFilename()
-
-      self.file_entry.SetValue(self.filename)
-      self.fill_column_names()
-
-    dlg.Destroy()
-
-  def fill_column_names(self):
-    columns = util.read_scan_column_names(os.path.join(self.directory, self.filename))
+  def fill_column_names(self, filename):
+    columns = util.read_scan_column_names(filename)
     sel = self.combo.GetSelection()
     if columns:
       self.combo.SetItems(columns)
@@ -91,7 +79,7 @@ class LoadEnergiesPanel(wx.Panel):
         self.combo.SetSelection(sel)
 
   def get_info(self):
-    return (self.directory, self.filename, self.combo.GetSelection())
+    return (self.file_entry.GetValue(), self.combo.GetSelection())
 
 class LoadEnergiesDialog(wx.Dialog):
   def __init__(self, *args, **kwargs):
@@ -120,6 +108,10 @@ class LoadEnergiesDialog(wx.Dialog):
     vbox.Add(hbox, 0, wx.EXPAND)
 
     self.SetSizerAndFit(vbox)
+
+  def set_filename(self, filename):
+    self.panel.file_entry.SetValue(filename)
+    self.panel.fill_column_names(filename)
 
   def get_info(self):
     return self.panel.get_info()
@@ -230,7 +222,6 @@ class ExposureList(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):
 
   def AppendEnergy(self, energy):
     s = '%.2f' % energy
-    print s
 
     if self.num_energies >= self.num_rows:
       self.InsertStringItem(self.num_rows, 'hmm')
@@ -373,10 +364,6 @@ class CalibratorController(object):
 
     self.dialog_dirs = {
         'last': '',
-        'exposures': '',
-        'energies': '',
-        'open': '',
-        'save': ''
         }
 
     self.BindCallbacks()
@@ -421,18 +408,14 @@ class CalibratorController(object):
     self.model.dataset_name = evt.GetString()
 
   def OnReadEnergies(self, evt):
-    if not self.dialog_dirs['energies']:
-      self.dialog_dirs['energies'] = self.dialog_dirs['last']
-
-    dlg = LoadEnergiesDialog(self.view, directory=self.dialog_dirs['energies'])
+    dlg = LoadEnergiesDialog(self.view)
+    dlg.Bind(wx.EVT_BUTTON, self.OnLoadScan, id=ID_LOAD_SCAN)
+    self.scan_dialog = dlg
     ret = dlg.ShowModal()
 
     if ret == wx.ID_OK:
-      directory, filename, column = dlg.get_info()
-      self.dialog_dirs['energies'] = self.dialog_dirs['last'] = directory
-
-      energies = mx.read_scan_info(os.path.join(directory, filename),
-          [column])[0]
+      filename, column = dlg.get_info()
+      energies = mx.read_scan_info(filename, [column])[0]
 
       for e in energies:
         self.view.panel.exposure_list.AppendEnergy(e)
@@ -440,6 +423,17 @@ class CalibratorController(object):
       self.changed(self.CHANGED_EXPOSURES)
 
     dlg.Destroy()
+    self.scan_dialog = None
+
+  def OnLoadScan(self, evt):
+    filename = self.FileDialog(
+        'scan',
+        'Select a text file',
+        WILDCARD_SCAN
+        )
+
+    if filename:
+      self.scan_dialog.set_filename(filename)
 
   def OnClearEnergies(self, evt):
     self.view.panel.exposure_list.ClearEnergies()
@@ -462,7 +456,7 @@ class CalibratorController(object):
     """
     Show a file dialog and return selected paths
     """
-    if not self.dialog_dirs[type]:
+    if type not in self.dialog_dirs.keys() or not self.dialog_dirs[type]:
       self.dialog_dirs[type] = self.dialog_dirs['last']
 
     style = 0

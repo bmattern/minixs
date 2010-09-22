@@ -1,6 +1,7 @@
 import os, sys
 import minixs as mx
 import minixs.info as mxinfo
+import numpy as np
 import wx
 import util
 from frame import MenuFrame
@@ -15,9 +16,9 @@ ID_READ_ENERGIES    = wx.NewId()
 ID_SELECT_EXPOSURES = wx.NewId()
 ID_CLEAR_ENERGIES   = wx.NewId()
 ID_CLEAR_EXPOSURES  = wx.NewId()
-ID_LOAD_EXPOSURES   = wx.NewId()
 ID_DISPERSIVE_DIR   = wx.NewId()
 ID_EXPOSURE_SLIDER  = wx.NewId()
+ID_CALIBRATE        = wx.NewId()
 
 ID_IMPORT_XTALS     = wx.NewId()
 ID_EXPORT_XTALS     = wx.NewId()
@@ -73,12 +74,12 @@ class ImagePanel(wx.Panel):
 
     self.coord_cb = None
 
-  def set_pixels(self, pixels):
+  def set_pixels(self, pixels, colormap=cm.Greys_r):
     if pixels is None:
       self.bitmap = None
     else:
-      h,w = pixels.shape
-      p = cm.Greys_r(pixels, bytes=True)[:,:,0:3]
+      h,w = pixels.shape[0:2]
+      p = colormap(pixels, bytes=True)[:,:,0:3]
       self.bitmap = wx.BitmapFromBuffer(w, h, p.tostring())
     self.Refresh()
 
@@ -509,10 +510,6 @@ class CalibratorPanel(wx.Panel):
 
     vbox.Add(hbox, 0, wx.EXPAND | wx.BOTTOM, VPAD)
 
-    # load exposures button
-    button = wx.Button(self, ID_LOAD_EXPOSURES, "Load Exposures")
-    vbox.Add(button, 0, wx.EXPAND | wx.BOTTOM, VPAD)
-   
     # add filters and image view
     hbox = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -524,7 +521,12 @@ class CalibratorPanel(wx.Panel):
     hbox.Add(panel, 1)
     self.exposure_panel = panel
 
-    vbox.Add(hbox, 0, wx.EXPAND)
+    vbox.Add(hbox, 0, wx.EXPAND | wx.BOTTOM, VPAD)
+
+    # load calibrate button
+    button = wx.Button(self, ID_CALIBRATE, "Calibrate")
+    vbox.Add(button, 0, wx.EXPAND)
+    self.calibrate_button = button
 
     self.SetSizerAndFit(vbox)
 
@@ -593,7 +595,7 @@ class CalibratorController(object):
           (ID_CLEAR_ENERGIES, self.OnClearEnergies),
           (ID_SELECT_EXPOSURES, self.OnSelectExposures),
           (ID_CLEAR_EXPOSURES, self.OnClearExposures),
-          (ID_LOAD_EXPOSURES, self.OnLoadExposures),
+          (ID_CALIBRATE, self.OnCalibrate),
           ]),
         (wx.EVT_SLIDER, [
           (ID_EXPOSURE_SLIDER, self.OnExposureSlider),
@@ -793,9 +795,6 @@ class CalibratorController(object):
     self.view.panel.exposure_list.ClearExposures()
     self.changed(self.CHANGED_EXPOSURES)
 
-  def OnLoadExposures(self, evt):
-    self.changed(self.CHANGED_EXPOSURES)
-
   def OnFilterSpin(self, evt):
     self.filters= self.view.panel.filter_panel.get_filters()
     self.changed(self.CHANGED_FILTERS)
@@ -809,6 +808,34 @@ class CalibratorController(object):
   def OnExposureSlider(self, evt):
     i = evt.GetInt()
     self.SelectExposure(i)
+
+  def OnCalibrate(self, evt):
+    valid, energies, exposures = self.view.panel.exposure_list.GetData()
+    if not valid or len(energies) == 0:
+      #XXX pop up dialog
+      return
+    self.model.energies = energies
+    self.model.exposures = exposures
+
+    c = mx.Calibrator(self.model.energies, self.model.exposure_files, self.model.dispersive_direction)
+
+    do_low, low_val = self.filters[FILTER_LOW]
+    do_high, high_val = self.filters[FILTER_HIGH]
+    do_nbor, nbor_val = self.filters[FILTER_NBOR]
+    if not do_low: low_val = None
+    if not do_high: high_val = None
+    if not do_nbor: nbor_val = 0
+
+    # XXX bad_pixels?
+    c.filter_images(low_val, high_val, nbor_val, [])
+    c.calibrate(self.model.xtals)
+
+    self.model.calibration_matrix = c.calib
+
+    min_cal = c.calib[np.where(c.calib>0)].min()
+    max_cal = c.calib.max()
+    p = colors.Normalize(min_cal, max_cal)(c.calib)
+    self.view.panel.exposure_panel.SetPixels(p, cm.jet)
 
   def SelectExposure(self, num):
     num_exposures = len(self.exposures)
@@ -847,7 +874,8 @@ class CalibratorController(object):
     p = exposure.pixels
     if min_vis is None: min_vis = p.min()
     if max_vis is None: max_vis = p.max()
-    return colors.Normalize(min_vis, max_vis)(p)
+    p = colors.Normalize(min_vis, max_vis)(p)
+    return p
    
   def changed(self, flag):
     self.changed_flag |= flag

@@ -634,6 +634,14 @@ class CalibratorController(object):
         'last': '',
         }
 
+    a = wx.AboutDialogInfo()
+    a.SetName("minIXS Calibrator")
+    a.SetDescription("Mini X-ray Spectrometer Calibrator")
+    a.SetVersion("0.0.1")
+    a.SetCopyright("(c) Seidler Group 2010")
+    a.AddDeveloper("Brian Mattern (bmattern@uw.edu)")
+    self.about_info = a
+
     self.BindCallbacks()
 
   def BindCallbacks(self):
@@ -783,7 +791,7 @@ class CalibratorController(object):
     self.view.Close(True)
 
   def OnAbout(self, evt):
-    pass
+    wx.AboutBox(self.about_info)
 
   def OnDatasetName(self, evt):
     self.model.dataset_name = evt.GetString()

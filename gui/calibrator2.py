@@ -326,7 +326,8 @@ class ExposurePanel(wx.Panel):
     vbox.Add(panel, 0, wx.EXPAND | wx.BOTTOM, VPAD)
     self.image_panel = panel
 
-    slider = wx.Slider(self, ID_EXPOSURE_SLIDER, 1,1,2)
+    slider = wx.Slider(self, ID_EXPOSURE_SLIDER, 0,0,1)
+    slider.Enable(False)
     vbox.Add(slider, 0, wx.EXPAND)
     self.slider = slider
 
@@ -761,9 +762,12 @@ class CalibratorController(object):
       num_exposures = len(self.exposures)
       if num_exposures <= 1:
         self.view.panel.exposure_panel.slider.Enable(False)
+        self.view.panel.exposure_panel.slider.SetRange(0,1)
+        self.view.panel.exposure_panel.slider.SetValue(0)
       else:
         self.view.panel.exposure_panel.slider.Enable(True)
         self.view.panel.exposure_panel.slider.SetRange(1,num_exposures)
+
       if self.selected_exposure > num_exposures:
         self.selected_exposure = num_exposures
       if self.selected_exposure < 1:

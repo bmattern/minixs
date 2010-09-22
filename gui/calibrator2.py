@@ -256,8 +256,7 @@ class CalibratorController(object):
     pass
 
   def OnFilterCheck(self, evt):
-    print dir(evt)
-    print evt.id
+    pass
 
 
 class CalibratorApp(wx.App):

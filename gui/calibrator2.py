@@ -77,6 +77,13 @@ class FilterPanel(wx.Panel):
 
     self.SetSizerAndFit(grid)
 
+  def set_filter_value(self, filter_type, value):
+    self.spins[filter_type].SetValue(int(value))
+
+  def set_filter_enabled(self, filter_type, enabled):
+    self.checks[filter_type].SetValue(enabled)
+    self.spins[filter_type].Enable(enabled)
+
 class ImagePanel(wx.Panel):
   def __init__(self, *args, **kwargs):
     wx.Panel.__init__(self, *args, **kwargs)
@@ -146,7 +153,6 @@ class CalibratorPanel(wx.Panel):
     # load exposures button
     button = wx.Button(self, ID_LOAD_EXPOSURES, "Load Exposures")
     vbox.Add(button, 0, wx.EXPAND | wx.BOTTOM, VPAD)
-
    
     # add filters and image view
     hbox = wx.BoxSizer(wx.HORIZONTAL)
@@ -229,7 +235,7 @@ class CalibratorController(object):
     pass
 
   def OnDatasetName(self, evt):
-    pass
+    self.model.dataset_name = evt.GetString()
 
   def OnReadEnergies(self, evt):
     pass
@@ -250,7 +256,8 @@ class CalibratorController(object):
     pass
 
   def OnFilterCheck(self, evt):
-    pass
+    print dir(evt)
+    print evt.id
 
 
 class CalibratorApp(wx.App):

@@ -415,8 +415,8 @@ class ExposurePanel(wx.Panel):
 
     self.SetSizerAndFit(vbox)
 
-  def SetPixels(self, pixels):
-    self.image_panel.set_pixels(pixels)
+  def SetPixels(self, pixels, colormap=cm.Greys_r):
+    self.image_panel.set_pixels(pixels, colormap)
 
 import wx.lib.mixins.listctrl as listmix
 class ExposureList(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):
@@ -637,6 +637,8 @@ class CalibratorController(object):
     self.view.panel.filter_panel.dispersive_direction.SetSelection(self.model.dispersive_direction)
 
     # set exposures and energies
+    self.view.panel.exposure_list.ClearExposures()
+    self.view.panel.exposure_list.ClearEnergies()
     for f in self.model.exposure_files:
       self.view.panel.exposure_list.AppendExposure(f)
     for e in self.model.energies:
@@ -645,9 +647,16 @@ class CalibratorController(object):
     # set filters
     filters = [(False, val) for enabled,val in self.view.panel.filter_panel.filter_defaults]
 
+    self.view.panel.filter_panel.filter_emission_check.SetValue(False)
+    self.view.panel.filter_panel.filter_emission_choice.Enable(False)
     for name, val in self.model.filters:
-      i = FILTER_NAMES.index(name)
-      filters[i] = (True, val)
+      if name == 'Filter Emission':
+        self.view.panel.filter_panel.filter_emission_check.SetValue(True)
+        self.view.panel.filter_panel.filter_emission_choice.Enable()
+        self.view.panel.filter_panel.filter_emission_choice.SetSelection(val)
+      else:
+        i = FILTER_NAMES.index(name)
+        filters[i] = (True, val)
 
     self.view.panel.filter_panel.set_filters(filters)
 
@@ -672,6 +681,10 @@ class CalibratorController(object):
     for i, (enabled, val) in enumerate(filters):
       if enabled:
         self.model.filters.append( (FILTER_NAMES[i], val) )
+    self.model.filters.append((
+        'Filter Emission',
+        self.view.panel.filter_panel.filter_emission_choice.GetSelection()
+        ))
 
     # get xtals
     self.model.xtals = self.view.panel.exposure_panel.image_panel.xtals
@@ -845,25 +858,24 @@ class CalibratorController(object):
     self.model.energies = energies
     self.model.exposures = exposures
 
+    self.view.SetStatusText("Calibrating... Please Wait...")
+
     c = mx.Calibrator(self.model.energies, self.model.exposure_files, self.model.dispersive_direction)
 
-    do_low, low_val = self.filters[FILTER_LOW]
-    do_high, high_val = self.filters[FILTER_HIGH]
-    do_nbor, nbor_val = self.filters[FILTER_NBOR]
-    if not do_low: low_val = None
-    if not do_high: high_val = None
-    if not do_nbor: nbor_val = 0
+    for energy, exposure in zip(c.energies, c.images):
+      self.ApplyFilters(energy, exposure)
 
-    # XXX bad_pixels?
-    c.filter_images(low_val, high_val, nbor_val, [])
     c.calibrate(self.model.xtals)
-
     self.model.calibration_matrix = c.calib
 
+    # show calibration matrix
+    # XXX move this to separate function and add toggle to flip b/w cal & exposures
     min_cal = c.calib[np.where(c.calib>0)].min()
     max_cal = c.calib.max()
     p = colors.Normalize(min_cal, max_cal)(c.calib)
     self.view.panel.exposure_panel.SetPixels(p, cm.jet)
+
+    self.view.SetStatusText("")
 
   def SelectExposure(self, num):
     num_exposures = len(self.exposures)

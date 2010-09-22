@@ -561,10 +561,10 @@ class CalibratorController(object):
   def view_to_model(self):
     self.model.dataset_name = self.view.panel.dataset_name.GetValue()
     self.model.dispersive_direction = self.view.panel.filter_panel.dispersive_direction.GetSelection()
-    valid, energies, exposure_files = self.view_panel.exposure_list.GetData()
+    valid, energies, exposure_files = self.view.panel.exposure_list.GetData()
     if valid:
       self.model.energies = energies
-      self.model.exposures = exposures
+      self.model.exposure_files = exposure_files
     else:
       raise ValueError("Number of energies and exposures in list differ")
 
@@ -759,7 +759,11 @@ class CalibratorController(object):
         self.view.SetStatusText("")
 
       num_exposures = len(self.exposures)
-      self.view.panel.exposure_panel.slider.SetRange(1,num_exposures)
+      if num_exposures <= 1:
+        self.view.panel.exposure_panel.slider.Enable(False)
+      else:
+        self.view.panel.exposure_panel.slider.Enable(True)
+        self.view.panel.exposure_panel.slider.SetRange(1,num_exposures)
       if self.selected_exposure > num_exposures:
         self.selected_exposure = num_exposures
       if self.selected_exposure < 1:
@@ -769,6 +773,8 @@ class CalibratorController(object):
 
     if self.changed_flag & (self.CHANGED_EXPOSURES|self.CHANGED_SELECTED_EXPOSURE):
       i = self.selected_exposure - 1
+      if i >= len(self.exposures):
+        i = len(self.exposures) - 1
       if i == -1:
         self.view.panel.exposure_panel.label.SetLabel("No Exposures Loaded...")
       else:

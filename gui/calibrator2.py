@@ -69,8 +69,7 @@ class ImagePanel(wx.Panel):
     self.Bind(wx.EVT_MOTION, self.OnMotion)
 
     self.action = ACTION_NONE
-    self.resize_dir = 0
-    self.resize_xtal = None
+    self.active_xtal = None
 
     self.coord_cb = None
 
@@ -154,6 +153,8 @@ class ImagePanel(wx.Panel):
   def OnMotion(self, evt):
     x,y = evt.GetPosition()
 
+    # XXX check if x,y is outside of panel. if os don't perform actions
+
     # XXX replace this with a wx Event
     if self.coord_cb:
       self.coord_cb(x,y)
@@ -161,12 +162,19 @@ class ImagePanel(wx.Panel):
     if self.action == ACTION_NONE or self.action & ACTION_PROPOSED:
       xtal, action = self.get_xtal_action(x,y)
 
+      needs_refresh = False
+      if self.action & ~ACTION_PROPOSED != action or xtal != self.active_xtal:
+        needs_refresh = True
+
       if xtal:
         self.action = action | ACTION_PROPOSED
         self.active_xtal = xtal
       else:
         self.action = ACTION_NONE
         self.active_xtal = None
+
+      if needs_refresh:
+        self.Refresh()
 
     elif self.action & ACTION_RESIZE:
 
@@ -198,11 +206,29 @@ class ImagePanel(wx.Panel):
     if self.bitmap:
       dc.DrawBitmap(self.bitmap, 0, 0)
 
+      #XXX store initialized pens and reuse
       dc.SetBrush(wx.Brush('#aa0000', wx.TRANSPARENT))
-      dc.SetPen(wx.Pen('#33dd33', 1, wx.DOT_DASH))
       for xtal in self.xtals:
+        if xtal == self.active_xtal:
+          dc.SetPen(wx.Pen('#ffff22', 1, wx.DOT_DASH))
+        else:
+          dc.SetPen(wx.Pen('#33dd33', 1, wx.DOT_DASH))
         (x1,y1), (x2,y2) = xtal
         dc.DrawRectangle(x1,y1,x2-x1,y2-y1)
+
+      if self.active_xtal and self.action & ACTION_RESIZE:
+
+        dc.SetPen(wx.Pen('#22ffff', 1, wx.SOLID))
+        (x1,y1),(x2,y2) = self.active_xtal
+
+        if self.action & ACTION_RESIZE_L:
+          dc.DrawLine(x1,y1,x1,y2)
+        if self.action & ACTION_RESIZE_R:
+          dc.DrawLine(x2-1,y1,x2-1,y2)
+        if self.action & ACTION_RESIZE_T:
+          dc.DrawLine(x1,y1,x2,y1)
+        if self.action & ACTION_RESIZE_B:
+          dc.DrawLine(x1,y2-1,x2,y2-1)
 
 
 class LoadEnergiesPanel(wx.Panel):
@@ -587,11 +613,13 @@ class CalibratorController(object):
 
     self.view.panel.filter_panel.dispersive_direction.SetSelection(self.model.dispersive_direction)
 
+    # set exposures and energies
     for f in self.model.exposure_files:
       self.view.panel.exposure_list.AppendExposure(f)
     for e in self.model.energies:
       self.view.panel.exposure_list.AppendEnergy(e)
 
+    # set filters
     filters = [(False, val) for enabled,val in self.view.panel.filter_panel.filter_defaults]
 
     for name, val in self.model.filters:
@@ -600,9 +628,14 @@ class CalibratorController(object):
 
     self.view.panel.filter_panel.set_filters(filters)
 
+    # set xtals
+    self.view.panel.exposure_panel.image_panel.xtals = self.model.xtals
+
   def view_to_model(self):
     self.model.dataset_name = self.view.panel.dataset_name.GetValue()
     self.model.dispersive_direction = self.view.panel.filter_panel.dispersive_direction.GetSelection()
+
+    # get energies and exposures
     valid, energies, exposure_files = self.view.panel.exposure_list.GetData()
     if valid:
       self.model.energies = energies
@@ -610,12 +643,15 @@ class CalibratorController(object):
     else:
       raise ValueError("Number of energies and exposures in list differ")
 
+    # get filters
     self.model.filters = []
     filters = self.view.panel.filter_panel.get_filters()
     for i, (enabled, val) in enumerate(filters):
       if enabled:
         self.model.filters.append( (FILTER_NAMES[i], val) )
 
+    # get xtals
+    self.model.xtals = self.view.panel.exposure_panel.image_panel.xtals
 
   def OnOpen(self, evt):
     filename = self.FileDialog(

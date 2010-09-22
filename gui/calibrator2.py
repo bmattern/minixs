@@ -208,9 +208,11 @@ class ExposuresPanel(wx.Panel):
 
     self.SetSizerAndFit(vbox)
 
-class ExposureList(wx.ListCtrl):
+import wx.lib.mixins.listctrl as listmix
+class ExposureList(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):
   def __init__(self, *args, **kwargs):
     wx.ListCtrl.__init__(self, *args, **kwargs)
+    listmix.ListCtrlAutoWidthMixin.__init__(self)
 
     self.InsertColumn(0, 'Incident Energy', width=200)
     self.InsertColumn(1, 'Exposure File', width=200)

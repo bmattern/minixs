@@ -19,6 +19,13 @@ ID_LOAD_EXPOSURES   = wx.NewId()
 ID_DISPERSIVE_DIR   = wx.NewId()
 ID_EXPOSURE_SLIDER  = wx.NewId()
 
+ID_LOAD_SCAN        = wx.NewId()
+
+WILDCARD_CALIB = "Calibration Files (*.calib)|*.calib|Data Files (*.dat)|*.dat|Text Files (*.txt)|*.txt|All Files|*"
+WILDCARD_EXPOSURE = "TIF Files (*.tif)|*.tif|All Files|*"
+WILDCARD_XTAL = "Calibration Files (*.calib)|*.calib|Crystal Files (*.xtal)|*.xtal|Text Files (*.txt)|*.txt|All Files|*"
+WILDCARD_SCAN = "Scan Files (*.nnnn)|*.????|Text Files (*.txt)|*.txt|All Files|*"
+
 class CalibratorModel(object):
   def __init__(self):
     calib = mxinfo.CalibrationInfo()
@@ -41,7 +48,7 @@ class LoadEnergiesPanel(wx.Panel):
     self.file_entry = wx.TextCtrl(self)
     self.grid.Add(self.file_entry, 1, wx.EXPAND)
 
-    b = wx.Button(self, wx.ID_ANY, '...')
+    b = wx.Button(self, ID_LOAD_SCAN, '...')
     b.Bind(wx.EVT_BUTTON, self.OnChoose)
     self.grid.Add(b)
 
@@ -439,25 +446,54 @@ class CalibratorController(object):
     self.changed(self.CHANGED_EXPOSURES)
 
   def OnSelectExposures(self, evt):
-    if not self.dialog_dirs['exposures']:
-      self.dialog_dirs['exposures'] = self.dialog_dirs['last']
+    filenames = self.FileDialog(
+        'exposures',
+        'Select Exposure Files',
+        wildcard=WILDCARD_EXPOSURE,
+        multiple=True
+        )
+    for f in filenames:
+      self.view.panel.exposure_list.AppendExposure(f)
 
-    dlg = wx.FileDialog(self.view, 'Select Exposure Files',
-        self.dialog_dirs['exposures'],
-        style=wx.FD_MULTIPLE)
-
-    ret = dlg.ShowModal()
-    if ret == wx.ID_OK:
-      directory = dlg.GetDirectory()
-      self.dialog_dirs['exposures'] = self.dialog_dirs['last'] = directory
-      filenames = dlg.GetFilenames()
-
-      for filename in filenames:
-        self.view.panel.exposure_list.AppendExposure(filename)
-
+    if filenames:
       self.changed(self.CHANGED_EXPOSURES)
 
+  def FileDialog(self, type, title, wildcard='', save=False, multiple=False):
+    """
+    Show a file dialog and return selected paths
+    """
+    if not self.dialog_dirs[type]:
+      self.dialog_dirs[type] = self.dialog_dirs['last']
+
+    style = 0
+    if save:
+      style |= wx.FD_SAVE
+    else:
+      style |= wx.FD_OPEN
+    if multiple:
+      style |= wx.FD_MULTIPLE
+
+    dlg = wx.FileDialog(self.view, title,
+        self.dialog_dirs[type],
+        wildcard=wildcard,
+        style=style)
+
+    ret = dlg.ShowModal()
+
+    paths = []
+    if ret == wx.ID_OK:
+      directory = dlg.GetDirectory()
+      self.dialog_dirs[type] = self.dialog_dirs['last'] = directory
+      filenames = dlg.GetFilenames()
+
+      paths = [os.path.join(directory, f) for f in filenames]
+
     dlg.Destroy()
+
+    if multiple:
+      return paths
+    else:
+      return paths[0]
 
   def OnClearExposures(self, evt):
     self.view.panel.exposure_list.ClearExposures()

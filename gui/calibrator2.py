@@ -80,7 +80,7 @@ class LoadEnergiesPanel(wx.Panel):
             self.combo.SetSelection(i)
             break
       else:
-        self.combo.SetSelection(-1)
+        self.combo.SetSelection(-1) # force update even if sel is same
         self.combo.SetSelection(sel)
 
   def get_info(self):

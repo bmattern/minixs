@@ -21,6 +21,9 @@ ID_EXPOSURE_SLIDER  = wx.NewId()
 ID_CALIBRATE        = wx.NewId()
 ID_FILTER_EMISSION  = wx.NewId()
 
+ID_VIEW_TYPE        = wx.NewId()
+ID_SHOW_XTALS       = wx.NewId()
+
 ID_IMPORT_XTALS     = wx.NewId()
 ID_EXPORT_XTALS     = wx.NewId()
 
@@ -73,6 +76,8 @@ class ImagePanel(wx.Panel):
     self.action = ACTION_NONE
     self.active_xtal = None
 
+    self.show_xtals = True
+
     self.coord_cb = None
 
   def set_pixels(self, pixels, colormap=cm.Greys_r):
@@ -114,7 +119,13 @@ class ImagePanel(wx.Panel):
 
       return (None, ACTION_NONE)
 
+  def ShowXtals(self, show):
+    self.show_xtals = show
+    self.Refresh()
+
   def OnLeftDown(self, evt):
+    if not self.show_xtals: return
+
     x,y = evt.GetPosition()
 
     #xtal, action = self.get_xtal_action(x,y)
@@ -133,6 +144,8 @@ class ImagePanel(wx.Panel):
       self.action = ACTION_RESIZE_BR
 
   def OnLeftUp(self, evt):
+    if not self.show_xtals: return
+
     if self.action & ACTION_RESIZE:
       (x1,y1), (x2,y2) = self.active_xtal
 
@@ -153,6 +166,7 @@ class ImagePanel(wx.Panel):
       self.Refresh()
 
   def OnMotion(self, evt):
+    if not self.show_xtals: return
     x,y = evt.GetPosition()
 
     # XXX check if x,y is outside of panel. if os don't perform actions
@@ -207,6 +221,8 @@ class ImagePanel(wx.Panel):
     dc = wx.PaintDC(self)
     if self.bitmap:
       dc.DrawBitmap(self.bitmap, 0, 0)
+
+      if not self.show_xtals: return
 
       #XXX store initialized pens and reuse
       dc.SetBrush(wx.Brush('#aa0000', wx.TRANSPARENT))
@@ -486,6 +502,23 @@ class ExposureList(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):
 
     return (valid, energies, files)
 
+class ToolsPanel(wx.Panel):
+  def __init__(self, *args, **kwargs):
+    wx.Panel.__init__(self, *args, **kwargs)
+
+    vbox = wx.BoxSizer(wx.VERTICAL)
+
+    choices = ['Exposures', 'Calibration Matrix']
+    radio = wx.RadioBox(self, ID_VIEW_TYPE, 'View', choices=choices,
+        majorDimension=1)
+    vbox.Add(radio, 0, wx.EXPAND | wx.BOTTOM, VPAD)
+
+    check = wx.CheckBox(self, ID_SHOW_XTALS, 'Show Crystals')
+    check.SetValue(True)
+    vbox.Add(check)
+
+    self.SetSizerAndFit(vbox)
+
 class CalibratorPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
     wx.Panel.__init__(self, *args, **kwargs)
@@ -538,8 +571,12 @@ class CalibratorPanel(wx.Panel):
     self.filter_panel = panel
 
     panel = ExposurePanel(self, wx.ID_ANY)
-    hbox.Add(panel, 1)
+    hbox.Add(panel, 0, wx.RIGHT, HPAD)
     self.exposure_panel = panel
+
+    panel = ToolsPanel(self, wx.ID_ANY)
+    hbox.Add(panel, 1)
+    self.tools_panel = panel
 
     vbox.Add(hbox, 0, wx.EXPAND | wx.BOTTOM, VPAD)
 
@@ -584,6 +621,8 @@ class CalibratorController(object):
     self.view = view
     self.model = model
 
+    self.show_calibration_matrix = False
+
     self.changed_flag = 0
     self.changed_timeout = None
 
@@ -622,6 +661,10 @@ class CalibratorController(object):
           ]),
         (wx.EVT_CHECKBOX, [
           (ID_FILTER_EMISSION, self.OnFilterEmissionCheck),
+          (ID_SHOW_XTALS, self.OnShowXtals),
+          ]),
+        (wx.EVT_RADIOBOX, [
+          (ID_VIEW_TYPE, self.OnViewType),
           ]),
         (wx.EVT_CHOICE, [
           (ID_FILTER_EMISSION, self.OnFilterEmissionChoice),
@@ -856,6 +899,16 @@ class CalibratorController(object):
     i = evt.GetInt()
     self.SelectExposure(i)
 
+  def OnViewType(self, evt):
+    if evt.GetInt() == 1:
+      self.ShowCalibrationMatrix()
+    else:
+      self.show_calibration_matrix = False
+      self.changed(self.CHANGED_SELECTED_EXPOSURE)
+
+  def OnShowXtals(self, evt):
+    self.view.panel.exposure_panel.image_panel.ShowXtals(evt.Checked())
+
   def OnCalibrate(self, evt):
     valid, energies, exposures = self.view.panel.exposure_list.GetData()
     if not valid or len(energies) == 0:
@@ -874,14 +927,18 @@ class CalibratorController(object):
     c.calibrate(self.model.xtals)
     self.model.calibration_matrix = c.calib
 
-    # show calibration matrix
-    # XXX move this to separate function and add toggle to flip b/w cal & exposures
-    min_cal = c.calib[np.where(c.calib>0)].min()
-    max_cal = c.calib.max()
-    p = colors.Normalize(min_cal, max_cal)(c.calib)
-    self.view.panel.exposure_panel.SetPixels(p, cm.jet)
+    self.ShowCalibrationMatrix()
 
     self.view.SetStatusText("")
+
+  def ShowCalibrationMatrix(self):
+    self.show_calibration_matrix = True
+    c = self.model.calibration_matrix
+    if len(c) == 0: return
+    min_cal = c[np.where(c>0)].min()
+    max_cal = c.max()
+    p = colors.Normalize(min_cal, max_cal)(c)
+    self.view.panel.exposure_panel.SetPixels(p, cm.jet)
 
   def SelectExposure(self, num):
     num_exposures = len(self.exposures)
@@ -949,6 +1006,9 @@ class CalibratorController(object):
       self.changed_timeout.Restart(delay)
 
   def OnChangeTimeout(self):
+    if self.show_calibration_matrix:
+      return
+
     if self.changed_flag & self.CHANGED_EXPOSURES:
       # update list of exposures
       valid, self.energies, self.exposures = self.view.panel.exposure_list.GetData()

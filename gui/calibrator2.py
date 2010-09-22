@@ -4,7 +4,7 @@ import minixs.info as mxinfo
 import wx
 import util
 from frame import MenuFrame
-from matplotlib import cm
+from matplotlib import cm, colors
 
 HPAD = 10
 VPAD = 5
@@ -74,7 +74,7 @@ class ImagePanel(wx.Panel):
     self.coord_cb = None
 
   def set_pixels(self, pixels):
-    if pixels == None:
+    if pixels is None:
       self.bitmap = None
     else:
       h,w = pixels.shape
@@ -663,6 +663,7 @@ class CalibratorController(object):
     if (filename):
       self.model.load(filename)
       self.model_to_view()
+      self.filters = self.view.panel.filter_panel.get_filters()
       self.changed(self.CHANGED_EXPOSURES)
 
   def OnSave(self, evt):
@@ -817,6 +818,37 @@ class CalibratorController(object):
     self.selected_exposure = num
     self.changed(self.CHANGED_SELECTED_EXPOSURE)
 
+  def ApplyFilters(self, exposure):
+    min_vis = None
+    max_vis = None
+    low_cutoff = None
+    high_cutoff = None
+    neighbors = None
+
+    for i, (enabled, val) in enumerate(self.filters):
+      if not enabled:
+        continue
+
+      if i == FILTER_MIN:
+        min_vis = val
+      elif i == FILTER_MAX:
+        max_vis = val
+      elif i == FILTER_LOW:
+        low_cutoff = val
+      elif i == FILTER_HIGH:
+        high_cutoff = val
+      elif i == FILTER_NBOR:
+        neighbors = val
+
+    exposure.filter_low_high(low_cutoff, high_cutoff)
+    if neighbors:
+      exposure.filter_neighbors(neighbors)
+
+    p = exposure.pixels
+    if min_vis is None: min_vis = p.min()
+    if max_vis is None: max_vis = p.max()
+    return colors.Normalize(min_vis, max_vis)(p)
+   
   def changed(self, flag):
     self.changed_flag |= flag
     delay = 1000./30.
@@ -827,10 +859,7 @@ class CalibratorController(object):
       self.changed_timeout.Restart(delay)
 
   def OnChangeTimeout(self):
-    print "Changed: ", self.changed_flag
-
     if self.changed_flag & self.CHANGED_EXPOSURES:
-
       # update list of exposures
       valid, self.energies, self.exposures = self.view.panel.exposure_list.GetData()
 
@@ -850,10 +879,11 @@ class CalibratorController(object):
         self.view.panel.exposure_panel.slider.Enable(True)
         self.view.panel.exposure_panel.slider.SetRange(1,num_exposures)
 
+    if self.changed_flag & (self.CHANGED_EXPOSURES | self.CHANGED_FILTERS):
       # mark calibration matrix as invalid
       self.calib_invalid = True
 
-    if self.changed_flag & (self.CHANGED_EXPOSURES|self.CHANGED_SELECTED_EXPOSURE):
+    if self.changed_flag & (self.CHANGED_EXPOSURES|self.CHANGED_SELECTED_EXPOSURE|self.CHANGED_FILTERS):
       # get index of selected exposure and ensure it is within range
       i = self.selected_exposure - 1
       if i >= len(self.exposures):
@@ -867,13 +897,11 @@ class CalibratorController(object):
         energy = self.energies[i]
 
         e = mx.Exposure(filename)
-        self.view.panel.exposure_panel.SetPixels(e.pixels)
+        p = self.ApplyFilters(e)
+        self.view.panel.exposure_panel.SetPixels(p)
 
         text = '%d/%d %s - %.2f eV' % (self.selected_exposure, len(self.exposures), os.path.basename(filename), energy)
         self.view.panel.exposure_panel.label.SetLabel(text)
-
-    if self.changed_flag & self.CHANGED_FILTERS:
-      pass
 
     self.changed_flag = 0
 

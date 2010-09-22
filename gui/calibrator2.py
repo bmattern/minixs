@@ -3,6 +3,7 @@ import minixs as mx
 import minixs.info as mxinfo
 import wx
 import wxmpl
+import util
 from frame import MenuFrame
 
 HPAD = 10
@@ -21,6 +22,100 @@ ID_EXPOSURE_SLIDER  = wx.NewId()
 class CalibratorModel(object):
   def __init__(self):
     calib = mxinfo.CalibrationInfo()
+
+class LoadEnergiesPanel(wx.Panel):
+  def __init__(self, *args, **kwargs):
+    if 'directory' in kwargs.keys():
+      self.directory = kwargs['directory']
+      del(kwargs['directory'])
+    else:
+      self.directory = ''
+
+    wx.Panel.__init__(self, *args, **kwargs)
+
+    self.grid = wx.FlexGridSizer(2, 3, HPAD, VPAD)
+
+    label = wx.StaticText(self, wx.ID_ANY, 'Text File:')
+    self.grid.Add(label, 0, wx.ALIGN_CENTER_VERTICAL)
+
+    self.file_entry = wx.TextCtrl(self)
+    self.grid.Add(self.file_entry, 1, wx.EXPAND)
+
+    b = wx.Button(self, wx.ID_ANY, '...')
+    b.Bind(wx.EVT_BUTTON, self.OnChoose)
+    self.grid.Add(b)
+
+    label = wx.StaticText(self, wx.ID_ANY, 'Column:')
+    self.grid.Add(label, 0, wx.ALIGN_CENTER_VERTICAL)
+
+    self.combo = wx.ComboBox(self, wx.ID_ANY, style=wx.CB_READONLY)
+    self.grid.Add(self.combo, 1, wx.EXPAND)
+
+    self.grid.AddGrowableCol(1, 1)
+
+    self.SetSizerAndFit(self.grid)
+
+  def OnChoose(self, evt):
+    dlg = wx.FileDialog(self, 'Select a text file', self.directory, style=wx.FD_OPEN)
+    ret = dlg.ShowModal()
+
+    if ret == wx.ID_OK:
+      self.directory = dlg.GetDirectory()
+      self.filename = dlg.GetFilename()
+
+      self.file_entry.SetValue(self.filename)
+      self.fill_column_names()
+
+    dlg.Destroy()
+
+  def fill_column_names(self):
+    columns = util.read_scan_column_names(os.path.join(self.directory, self.filename))
+    sel = self.combo.GetSelection()
+    if columns:
+      self.combo.SetItems(columns)
+
+      if sel == -1:
+        for i in range(len(columns)):
+          if 'energy' in columns[i].lower():
+            self.combo.SetSelection(i)
+            break
+      else:
+        self.combo.SetSelection(-1)
+        self.combo.SetSelection(sel)
+
+  def get_info(self):
+    return (self.directory, self.filename, self.combo.GetSelection())
+
+class LoadEnergiesDialog(wx.Dialog):
+  def __init__(self, *args, **kwargs):
+    directory = ''
+    if 'directory' in kwargs.keys():
+      directory = kwargs['directory']
+      del(kwargs['directory'])
+
+    wx.Dialog.__init__(self, *args, **kwargs)
+
+    vbox = wx.BoxSizer(wx.VERTICAL)
+
+    self.panel = LoadEnergiesPanel(self, directory=directory)
+    vbox.Add(self.panel, 1, wx.EXPAND | wx.BOTTOM, VPAD)
+
+    hbox = wx.StdDialogButtonSizer()
+
+    b = wx.Button(self, wx.ID_CANCEL, 'Cancel')
+    hbox.AddButton(b)
+
+    b = wx.Button(self, wx.ID_OK, 'Add')
+    hbox.AddButton(b)
+
+    hbox.Realize()
+
+    vbox.Add(hbox, 0, wx.EXPAND)
+
+    self.SetSizerAndFit(vbox)
+
+  def get_info(self):
+    return self.panel.get_info()
 
 
 FILTER_MIN  = 0
@@ -126,9 +221,10 @@ class ExposureList(wx.ListCtrl):
 
   def AppendEnergy(self, energy):
     s = '%.2f' % energy
+    print s
 
-    if self.num_energies < self.num_rows:
-      self.InsertStringItem(self.num_rows, s)
+    if self.num_energies >= self.num_rows:
+      self.InsertStringItem(self.num_rows, 'hmm')
       self.num_rows += 1
 
     self.SetStringItem(self.num_energies, 0, s)
@@ -316,7 +412,25 @@ class CalibratorController(object):
     self.model.dataset_name = evt.GetString()
 
   def OnReadEnergies(self, evt):
-    self.changed(self.CHANGED_EXPOSURES)
+    if not self.dialog_dirs['energies']:
+      self.dialog_dirs['energies'] = self.dialog_dirs['last']
+
+    dlg = LoadEnergiesDialog(self.view, directory=self.dialog_dirs['energies'])
+    ret = dlg.ShowModal()
+
+    if ret == wx.ID_OK:
+      directory, filename, column = dlg.get_info()
+      self.dialog_dirs['energies'] = self.dialog_dirs['last'] = directory
+
+      energies = mx.read_scan_info(os.path.join(directory, filename),
+          [column])[0]
+
+      for e in energies:
+        self.view.panel.exposure_list.AppendEnergy(e)
+
+      self.changed(self.CHANGED_EXPOSURES)
+
+    dlg.Destroy()
 
   def OnClearEnergies(self, evt):
     self.view.panel.exposure_list.ClearEnergies()

@@ -128,10 +128,11 @@ class ExposureList(wx.ListCtrl):
     s = '%.2f' % energy
 
     if self.num_energies < self.num_rows:
-      self.SetStringItem(self.num_energies, 0, s)
-    else:
       self.InsertStringItem(self.num_rows, s)
       self.num_rows += 1
+
+    self.SetStringItem(self.num_energies, 0, s)
+    self.EnsureVisible(self.num_energies)
 
     self.num_energies += 1
 
@@ -141,7 +142,19 @@ class ExposureList(wx.ListCtrl):
       self.num_rows += 1
 
     self.SetStringItem(self.num_exposures, 1, exposure)
+    self.EnsureVisible(self.num_exposures)
+
     self.num_exposures += 1
+
+  def ClearEnergies(self):
+    for i in range(self.num_energies):
+      self.SetStringItem(i, 0, '')
+    self.num_energies = 0
+
+  def ClearExposures(self):
+    for i in range(self.num_exposures):
+      self.SetStringItem(i, 1, '')
+    self.num_exposures = 0
 
   def GetData(self):
     nr = self.GetItemCount()
@@ -306,6 +319,7 @@ class CalibratorController(object):
     self.changed(self.CHANGED_EXPOSURES)
 
   def OnClearEnergies(self, evt):
+    self.view.panel.exposure_list.ClearEnergies()
     self.changed(self.CHANGED_EXPOSURES)
 
   def OnSelectExposures(self, evt):
@@ -322,7 +336,7 @@ class CalibratorController(object):
       self.dialog_dirs['exposures'] = self.dialog_dirs['last'] = directory
       filenames = dlg.GetFilenames()
 
-      for f in filenames:
+      for filename in filenames:
         self.view.panel.exposure_list.AppendExposure(filename)
 
       self.changed(self.CHANGED_EXPOSURES)
@@ -330,6 +344,7 @@ class CalibratorController(object):
     dlg.Destroy()
 
   def OnClearExposures(self, evt):
+    self.view.panel.exposure_list.ClearExposures()
     self.changed(self.CHANGED_EXPOSURES)
 
   def OnLoadExposures(self, evt):

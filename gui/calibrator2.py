@@ -84,6 +84,9 @@ class FilterPanel(wx.Panel):
     self.checks[filter_type].SetValue(enabled)
     self.spins[filter_type].Enable(enabled)
 
+  def get_filter_info(self):
+    return [ (self.checks[i].GetValue(), self.spins[i].GetValue()) for i in range(NUM_FILTERS) ]
+
 class ImagePanel(wx.Panel):
   def __init__(self, *args, **kwargs):
     wx.Panel.__init__(self, *args, **kwargs)
@@ -191,9 +194,15 @@ class CalibratorFrame(MenuFrame):
     self.SetSizerAndFit(box)
 
 class CalibratorController(object):
+  CHANGED_FILTERS = 1
+  CHANGED_EXPOSURES = 2
+
   def __init__(self, view, model):
     self.view = view
     self.model = model
+
+    self.changed_flag = 0
+    self.changed_timeout = None
 
     self.BindCallbacks()
 
@@ -224,7 +233,6 @@ class CalibratorController(object):
       self.view.Bind(wx.EVT_SPINCTRL, self.OnFilterSpin, id=id)
       self.view.Bind(wx.EVT_CHECKBOX, self.OnFilterCheck, id=id)
 
-
   def OnOpen(self, evt):
     pass
 
@@ -253,11 +261,34 @@ class CalibratorController(object):
     pass
 
   def OnFilterSpin(self, evt):
-    pass
+    self.filter_info = self.view.panel.filter_panel.get_filter_info()
+    self.changed(self.CHANGED_FILTERS)
 
   def OnFilterCheck(self, evt):
     i = FILTER_IDS.index(evt.Id)
     self.view.panel.filter_panel.set_filter_enabled(i, evt.Checked())
+    self.filter_info = self.view.panel.filter_panel.get_filter_info()
+    self.changed(self.CHANGED_FILTERS)
+
+  def changed(self, flag):
+    self.changed_flag |= flag
+    delay = 1000./30.
+
+    if self.changed_timeout is None:
+      self.changed_timeout = wx.CallLater(delay, self.OnChangeTimeout)
+    elif not self.changed_timeout.IsRunning():
+      self.changed_timeout.Restart(delay)
+
+  def OnChangeTimeout(self):
+    print "Changed: ", self.changed_flag
+
+    if self.changed_flag & self.CHANGED_EXPOSURES:
+      pass
+
+    if self.changed_flag & self.CHANGED_FILTERS:
+      pass
+
+    self.changed_flag = 0
 
 class CalibratorApp(wx.App):
   def __init__(self, *args, **kwargs):

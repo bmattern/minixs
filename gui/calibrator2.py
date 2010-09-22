@@ -323,7 +323,7 @@ class CalibratorController(object):
       filenames = dlg.GetFilenames()
 
       for f in filenames:
-        self.AppendExposure(os.path.join(directory, f))
+        self.view.panel.exposure_list.AppendExposure(filename)
 
       self.changed(self.CHANGED_EXPOSURES)
 
@@ -344,10 +344,6 @@ class CalibratorController(object):
     self.view.panel.filter_panel.set_filter_enabled(i, evt.Checked())
     self.filter_info = self.view.panel.filter_panel.get_filter_info()
     self.changed(self.CHANGED_FILTERS)
-
-
-  def AppendExposure(self, filename):
-    self.view.panel.exposure_list.AppendExposure(filename)
 
   def changed(self, flag):
     self.changed_flag |= flag

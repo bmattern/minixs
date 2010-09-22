@@ -70,9 +70,12 @@ class ImagePanel(wx.Panel):
     self.coord_cb = None
 
   def set_pixels(self, pixels):
-    h,w = pixels.shape
-    p = cm.Greys_r(pixels, bytes=True)[:,:,0:3]
-    self.bitmap = wx.BitmapFromBuffer(w, h, p.tostring())
+    if pixels == None:
+      self.bitmap = None
+    else:
+      h,w = pixels.shape
+      p = cm.Greys_r(pixels, bytes=True)[:,:,0:3]
+      self.bitmap = wx.BitmapFromBuffer(w, h, p.tostring())
     self.Refresh()
 
   def OnLeftDown(self, evt):
@@ -753,12 +756,17 @@ class CalibratorController(object):
     print "Changed: ", self.changed_flag
 
     if self.changed_flag & self.CHANGED_EXPOSURES:
+
+      # update list of exposures
       valid, self.energies, self.exposures = self.view.panel.exposure_list.GetData()
+
+      # set status text to indicate wheterh list is valid or not
       if not valid:
         self.view.SetStatusText("Exposure List Invalid")
       else:
         self.view.SetStatusText("")
 
+      # update slider
       num_exposures = len(self.exposures)
       if num_exposures <= 1:
         self.view.panel.exposure_panel.slider.Enable(False)
@@ -768,14 +776,18 @@ class CalibratorController(object):
         self.view.panel.exposure_panel.slider.Enable(True)
         self.view.panel.exposure_panel.slider.SetRange(1,num_exposures)
 
+      # mark calibration matrix as invalid
       self.calib_invalid = True
 
     if self.changed_flag & (self.CHANGED_EXPOSURES|self.CHANGED_SELECTED_EXPOSURE):
+      # get index of selected exposure and ensure it is within range
       i = self.selected_exposure - 1
       if i >= len(self.exposures):
         i = len(self.exposures) - 1
       if i == -1:
+        # no exposures
         self.view.panel.exposure_panel.label.SetLabel("No Exposures Loaded...")
+        self.view.panel.exposure_panel.SetPixels(None)
       else:
         filename = self.exposures[i]
         energy = self.energies[i]

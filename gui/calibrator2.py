@@ -324,7 +324,7 @@ class CalibratorPanel(wx.Panel):
 
     panel = ExposuresPanel(self, wx.ID_ANY)
     hbox.Add(panel, 1)
-    self.exposures_panel = panel
+    self.exposure_panel = panel
 
     vbox.Add(hbox, 0, wx.EXPAND)
 
@@ -358,6 +358,7 @@ class CalibratorFrame(MenuFrame):
 class CalibratorController(object):
   CHANGED_FILTERS = 1
   CHANGED_EXPOSURES = 2
+  CHANGED_SELECTED_EXPOSURE = 4
 
   def __init__(self, view, model):
     self.view = view
@@ -365,6 +366,8 @@ class CalibratorController(object):
 
     self.changed_flag = 0
     self.changed_timeout = None
+
+    self.selected_exposure = 1
 
     self.dialog_dirs = {
         'last': '',
@@ -391,6 +394,9 @@ class CalibratorController(object):
           (ID_SELECT_EXPOSURES, self.OnSelectExposures),
           (ID_CLEAR_EXPOSURES, self.OnClearExposures),
           (ID_LOAD_EXPOSURES, self.OnLoadExposures),
+          ]),
+        (wx.EVT_SLIDER, [
+          (ID_EXPOSURE_SLIDER, self.OnExposureSlider),
           ]),
         ]
 
@@ -423,7 +429,7 @@ class CalibratorController(object):
   def view_to_model(self):
     self.model.dataset_name = self.view.panel.dataset_name.GetValue()
     self.model.dispersive_direction = self.view.panel.filter_panel.dispersive_direction.GetSelection()
-    self.model.exposure_files, self.model.energies = self.view.panel.exposure_list.GetData()
+    self.model.energies, self.model.exposure_files = self.view.panel.exposure_list.GetData()
 
     self.model.filters = []
     filters = self.view.panel.filter_panel.get_filters()
@@ -442,6 +448,7 @@ class CalibratorController(object):
     if (filename):
       self.model.load(filename)
       self.model_to_view()
+      self.changed(self.CHANGED_EXPOSURES)
 
   def OnSave(self, evt):
     filename = self.FileDialog(
@@ -583,6 +590,14 @@ class CalibratorController(object):
     self.filters = self.view.panel.filter_panel.get_filters()
     self.changed(self.CHANGED_FILTERS)
 
+  def OnExposureSlider(self, evt):
+    i = evt.GetInt()
+    self.SelectExposure(i)
+
+  def SelectExposure(self, num):
+    self.selected_exposure = num
+    self.changed(self.CHANGED_SELECTED_EXPOSURE)
+
   def changed(self, flag):
     self.changed_flag |= flag
     delay = 1000./30.
@@ -596,7 +611,24 @@ class CalibratorController(object):
     print "Changed: ", self.changed_flag
 
     if self.changed_flag & self.CHANGED_EXPOSURES:
-      pass
+      self.energies, self.exposures = self.view.panel.exposure_list.GetData()
+      num_exposures = len(self.exposures)
+      self.view.panel.exposure_panel.slider.SetRange(1,num_exposures)
+      if self.selected_exposure > num_exposures:
+        self.selected_exposure = num_exposures
+
+      self.calib_invalid = True
+
+    if self.changed_flag & (self.CHANGED_EXPOSURES|self.CHANGED_SELECTED_EXPOSURE):
+      i = self.selected_exposure - 1
+      filename = self.exposures[i]
+      energy = self.energies[i]
+
+      #e = mx.Exposure(filename)
+      #XXX load into image panel
+
+      text = '%d/%d %s - %.2f eV' % (self.selected_exposure, len(self.exposures), os.path.basename(filename), energy)
+      self.view.panel.exposure_panel.label.SetLabel(text)
 
     if self.changed_flag & self.CHANGED_FILTERS:
       pass

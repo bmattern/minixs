@@ -19,6 +19,7 @@ ID_CLEAR_EXPOSURES  = wx.NewId()
 ID_DISPERSIVE_DIR   = wx.NewId()
 ID_EXPOSURE_SLIDER  = wx.NewId()
 ID_CALIBRATE        = wx.NewId()
+ID_FILTER_EMISSION  = wx.NewId()
 
 ID_IMPORT_XTALS     = wx.NewId()
 ID_EXPORT_XTALS     = wx.NewId()
@@ -323,6 +324,11 @@ FILTER_NAMES = [
     'Neighbors'
     ]
 
+FILTER_EMISSION_TYPE_FE_KBETA = 0
+FILTER_EMISSION_TYPE_NAMES = [
+    "Fe Kbeta"
+    ]
+
 FILTER_IDS = [ wx.NewId() for n in FILTER_NAMES ]
 
 class FilterPanel(wx.Panel):
@@ -355,6 +361,14 @@ class FilterPanel(wx.Panel):
 
       self.checks.append(check)
       self.spins.append(spin)
+
+    check = wx.CheckBox(self, ID_FILTER_EMISSION, 'Filter Emission')
+    choice = wx.Choice(self, ID_FILTER_EMISSION, choices=FILTER_EMISSION_TYPE_NAMES)
+    choice.Enable(False)
+    grid.Add(check)
+    grid.Add(choice)
+    self.filter_emission_check = check
+    self.filter_emission_choice = choice
 
     label = wx.StaticText(self, wx.ID_ANY, 'Dispersive Dir.')
     choice = wx.Choice(self, ID_DISPERSIVE_DIR, choices=mx.DIRECTION_NAMES)
@@ -600,6 +614,13 @@ class CalibratorController(object):
         (wx.EVT_SLIDER, [
           (ID_EXPOSURE_SLIDER, self.OnExposureSlider),
           ]),
+        (wx.EVT_CHECKBOX, [
+          (ID_FILTER_EMISSION, self.OnFilterEmissionCheck),
+          ]),
+        (wx.EVT_CHOICE, [
+          (ID_FILTER_EMISSION, self.OnFilterEmissionChoice),
+          (ID_DISPERSIVE_DIR, self.OnDispersiveDir),
+          ]),
         ]
 
     for event, bindings in callbacks:
@@ -665,8 +686,7 @@ class CalibratorController(object):
     if (filename):
       self.model.load(filename)
       self.model_to_view()
-      self.filters = self.view.panel.filter_panel.get_filters()
-      self.changed(self.CHANGED_EXPOSURES)
+      self.changed(self.CHANGED_EXPOSURES | self.CHANGED_FILTERS)
 
   def OnSave(self, evt):
     filename = self.FileDialog(
@@ -796,14 +816,22 @@ class CalibratorController(object):
     self.changed(self.CHANGED_EXPOSURES)
 
   def OnFilterSpin(self, evt):
-    self.filters= self.view.panel.filter_panel.get_filters()
     self.changed(self.CHANGED_FILTERS)
 
   def OnFilterCheck(self, evt):
     i = FILTER_IDS.index(evt.Id)
     self.view.panel.filter_panel.set_filter_enabled(i, evt.Checked())
-    self.filters = self.view.panel.filter_panel.get_filters()
     self.changed(self.CHANGED_FILTERS)
+
+  def OnFilterEmissionCheck(self, evt):
+    self.view.panel.filter_panel.filter_emission_choice.Enable(evt.Checked())
+    self.changed(self.CHANGED_FILTERS)
+
+  def OnFilterEmissionChoice(self, evt):
+    self.changed(self.CHANGED_FILTERS)
+
+  def OnDispersiveDir(self, evt):
+    self.calib_invalid = True
 
   def OnExposureSlider(self, evt):
     i = evt.GetInt()
@@ -845,12 +873,28 @@ class CalibratorController(object):
     self.selected_exposure = num
     self.changed(self.CHANGED_SELECTED_EXPOSURE)
 
-  def ApplyFilters(self, exposure):
+  def FilterEmission(self, energy, exposure, emission_type):
+    if emission_type == FILTER_EMISSION_TYPE_FE_KBETA:
+      if energy >= 7090:
+        z = 1.3214 * energy - 9235.82 - 12
+        exposure.pixels[0:z,:] = 0
+    else:
+      raise ValueError("Unimplemented Emission Filter")
+
+  def ApplyFilters(self, energy, exposure):
     min_vis = None
     max_vis = None
     low_cutoff = None
     high_cutoff = None
     neighbors = None
+
+    filter_emission = self.view.panel.filter_panel.filter_emission_check.GetValue()
+
+    if filter_emission:
+      emission_type = self.view.panel.filter_panel.filter_emission_choice.GetSelection()
+      self.FilterEmission(energy, exposure, emission_type)
+
+    self.filters = self.view.panel.filter_panel.get_filters()
 
     for i, (enabled, val) in enumerate(self.filters):
       if not enabled:
@@ -925,7 +969,7 @@ class CalibratorController(object):
         energy = self.energies[i]
 
         e = mx.Exposure(filename)
-        p = self.ApplyFilters(e)
+        p = self.ApplyFilters(energy, e)
         self.view.panel.exposure_panel.SetPixels(p)
 
         text = '%d/%d %s - %.2f eV' % (self.selected_exposure, len(self.exposures), os.path.basename(filename), energy)

@@ -768,11 +768,6 @@ class CalibratorController(object):
         self.view.panel.exposure_panel.slider.Enable(True)
         self.view.panel.exposure_panel.slider.SetRange(1,num_exposures)
 
-      if self.selected_exposure > num_exposures:
-        self.selected_exposure = num_exposures
-      if self.selected_exposure < 1:
-        self.selected_exposure = 1
-
       self.calib_invalid = True
 
     if self.changed_flag & (self.CHANGED_EXPOSURES|self.CHANGED_SELECTED_EXPOSURE):

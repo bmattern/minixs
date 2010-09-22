@@ -503,7 +503,8 @@ class CalibratorPanel(wx.Panel):
 
     # exposures list
     listctrl = ExposureList(self, ID_EXPOSURE_LIST,
-        style=wx.LC_REPORT|wx.LC_HRULES|wx.LC_VRULES)
+        style=wx.LC_REPORT|wx.LC_HRULES|wx.LC_VRULES,
+        size=(200,200))
     vbox.Add(listctrl, 1, wx.EXPAND | wx.BOTTOM, VPAD)
     self.exposure_list = listctrl
 

@@ -204,7 +204,7 @@ class CalibratorController(object):
           (wx.ID_OPEN, self.OnOpen),
           (wx.ID_ABOUT, self.OnAbout),
           ]),
-        (wx.EVT_TEXTBOX, [
+        (wx.EVT_TEXT, [
           (ID_DATASET_NAME, self.OnDatasetName),
           ]),
         (wx.EVT_BUTTON, [

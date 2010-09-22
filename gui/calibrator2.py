@@ -501,29 +501,34 @@ class CalibratorPanel(wx.Panel):
     vbox.Add(hbox, 0, wx.EXPAND | wx.BOTTOM, VPAD)
     self.dataset_name = entry
 
-    # exposures list
-    listctrl = ExposureList(self, ID_EXPOSURE_LIST,
-        style=wx.LC_REPORT|wx.LC_HRULES|wx.LC_VRULES,
-        size=(200,200))
-    vbox.Add(listctrl, 1, wx.EXPAND | wx.BOTTOM, VPAD)
-    self.exposure_list = listctrl
 
     # buttons to control exposure list
     hbox = wx.BoxSizer(wx.HORIZONTAL)
 
+    # exposures list
+    listctrl = ExposureList(self, ID_EXPOSURE_LIST,
+        style=wx.LC_REPORT|wx.LC_HRULES|wx.LC_VRULES,
+        size=(200,200))
+    hbox.Add(listctrl, 1, wx.EXPAND | wx.RIGHT, HPAD)
+    self.exposure_list = listctrl
+
+    vbox2= wx.BoxSizer(wx.VERTICAL)
+
     button = wx.Button(self, ID_READ_ENERGIES, "Read Energies...")
-    hbox.Add(button, 1, wx.EXPAND | wx.RIGHT, HPAD)
+    vbox2.Add(button, 1, wx.EXPAND | wx.BOTTOM, VPAD)
 
     button = wx.Button(self, ID_SELECT_EXPOSURES, "Select Exposures...")
-    hbox.Add(button, 1, wx.EXPAND | wx.RIGHT, HPAD)
+    vbox2.Add(button, 1, wx.EXPAND | wx.BOTTOM, VPAD)
 
     button = wx.Button(self, ID_CLEAR_ENERGIES, "Clear Energies")
-    hbox.Add(button, 1, wx.EXPAND | wx.RIGHT, HPAD)
+    vbox2.Add(button, 1, wx.EXPAND | wx.BOTTOM, VPAD)
 
     button = wx.Button(self, ID_CLEAR_EXPOSURES, "Clear Exposures")
-    hbox.Add(button, 1, wx.EXPAND)
+    vbox2.Add(button, 1, wx.EXPAND)
 
-    vbox.Add(hbox, 0, wx.EXPAND | wx.BOTTOM, VPAD)
+    hbox.Add(vbox2, 0, wx.EXPAND)
+
+    vbox.Add(hbox, 1, wx.EXPAND | wx.BOTTOM, VPAD)
 
     # add filters and image view
     hbox = wx.BoxSizer(wx.HORIZONTAL)

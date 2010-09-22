@@ -32,12 +32,6 @@ class CalibratorModel(object):
 
 class LoadEnergiesPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
-    if 'directory' in kwargs.keys():
-      self.directory = kwargs['directory']
-      del(kwargs['directory'])
-    else:
-      self.directory = ''
-
     wx.Panel.__init__(self, *args, **kwargs)
 
     self.grid = wx.FlexGridSizer(2, 3, HPAD, VPAD)
@@ -83,16 +77,11 @@ class LoadEnergiesPanel(wx.Panel):
 
 class LoadEnergiesDialog(wx.Dialog):
   def __init__(self, *args, **kwargs):
-    directory = ''
-    if 'directory' in kwargs.keys():
-      directory = kwargs['directory']
-      del(kwargs['directory'])
-
     wx.Dialog.__init__(self, *args, **kwargs)
 
     vbox = wx.BoxSizer(wx.VERTICAL)
 
-    self.panel = LoadEnergiesPanel(self, directory=directory)
+    self.panel = LoadEnergiesPanel(self)
     vbox.Add(self.panel, 1, wx.EXPAND | wx.BOTTOM, VPAD)
 
     hbox = wx.StdDialogButtonSizer()

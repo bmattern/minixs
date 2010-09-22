@@ -1,3 +1,4 @@
+import os, sys
 import minixs as mx
 import minixs.info as mxinfo
 import wx
@@ -112,6 +113,56 @@ class ExposuresPanel(wx.Panel):
 
     self.SetSizerAndFit(vbox)
 
+class ExposureList(wx.ListCtrl):
+  def __init__(self, *args, **kwargs):
+    wx.ListCtrl.__init__(self, *args, **kwargs)
+
+    self.InsertColumn(0, 'Incident Energy', width=200)
+    self.InsertColumn(1, 'Exposure File', width=200)
+
+    self.num_rows = 0
+    self.num_energies = 0
+    self.num_exposures = 0
+
+  def AppendEnergy(self, energy):
+    s = '%.2f' % energy
+
+    if self.num_energies < self.num_rows:
+      self.SetStringItem(self.num_energies, 0, s)
+    else:
+      self.InsertStringItem(self.num_rows, s)
+      self.num_rows += 1
+
+    self.num_energies += 1
+
+  def AppendExposure(self, exposure):
+    if self.num_exposures >= self.num_rows:
+      self.InsertStringItem(self.num_rows, '')
+      self.num_rows += 1
+
+    self.SetStringItem(self.num_exposures, 1, exposure)
+    self.num_exposures += 1
+
+  def GetData(self):
+    nr = self.GetItemCount()
+    nc = self.GetColumnCount()
+    strings = [
+        [self.GetItem(i,j).GetText() for j in range(nc)]
+        for i in range(nr)
+        ]
+
+    energies = []
+    files = []
+    for row in strings:
+      e,f = row
+      if e == '' and f == '':
+        continue
+      if e == '' or f == '':
+        raise ValueError("Empty cells are not allowed")
+      energies.append(float(e))
+      files.append(f)
+
+    return (energies, files)
 
 class CalibratorPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
@@ -129,10 +180,8 @@ class CalibratorPanel(wx.Panel):
     self.dataset_name = entry
 
     # exposures list
-    listctrl = wx.ListCtrl(self, ID_EXPOSURE_LIST,
+    listctrl = ExposureList(self, ID_EXPOSURE_LIST,
         style=wx.LC_REPORT|wx.LC_HRULES|wx.LC_VRULES)
-    listctrl.InsertColumn(0, 'Incident Energy', width=200)
-    listctrl.InsertColumn(1, 'Exposure File', width=200)
     vbox.Add(listctrl, 1, wx.EXPAND | wx.BOTTOM, VPAD)
     self.exposure_list = listctrl
 
@@ -204,6 +253,14 @@ class CalibratorController(object):
     self.changed_flag = 0
     self.changed_timeout = None
 
+    self.dialog_dirs = {
+        'last': '',
+        'exposures': '',
+        'energies': '',
+        'open': '',
+        'save': ''
+        }
+
     self.BindCallbacks()
 
   def BindCallbacks(self):
@@ -246,19 +303,37 @@ class CalibratorController(object):
     self.model.dataset_name = evt.GetString()
 
   def OnReadEnergies(self, evt):
-    pass
+    self.changed(self.CHANGED_EXPOSURES)
 
   def OnClearEnergies(self, evt):
-    pass
+    self.changed(self.CHANGED_EXPOSURES)
 
   def OnSelectExposures(self, evt):
-    pass
+    if not self.dialog_dirs['exposures']:
+      self.dialog_dirs['exposures'] = self.dialog_dirs['last']
+
+    dlg = wx.FileDialog(self.view, 'Select Exposure Files',
+        self.dialog_dirs['exposures'],
+        style=wx.FD_MULTIPLE)
+
+    ret = dlg.ShowModal()
+    if ret == wx.ID_OK:
+      directory = dlg.GetDirectory()
+      self.dialog_dirs['exposures'] = self.dialog_dirs['last'] = directory
+      filenames = dlg.GetFilenames()
+
+      for f in filenames:
+        self.AppendExposure(os.path.join(directory, f))
+
+      self.changed(self.CHANGED_EXPOSURES)
+
+    dlg.Destroy()
 
   def OnClearExposures(self, evt):
-    pass
+    self.changed(self.CHANGED_EXPOSURES)
 
   def OnLoadExposures(self, evt):
-    pass
+    self.changed(self.CHANGED_EXPOSURES)
 
   def OnFilterSpin(self, evt):
     self.filter_info = self.view.panel.filter_panel.get_filter_info()
@@ -269,6 +344,10 @@ class CalibratorController(object):
     self.view.panel.filter_panel.set_filter_enabled(i, evt.Checked())
     self.filter_info = self.view.panel.filter_panel.get_filter_info()
     self.changed(self.CHANGED_FILTERS)
+
+
+  def AppendExposure(self, filename):
+    self.view.panel.exposure_list.AppendExposure(filename)
 
   def changed(self, flag):
     self.changed_flag |= flag

@@ -114,20 +114,22 @@ class ImagePanel(wx.Panel):
       return (None, ACTION_NONE)
 
   def OnLeftDown(self, evt):
-    if self.action == ACTION_NONE:
-      x,y = evt.GetPosition()
+    x,y = evt.GetPosition()
 
-      xtal, action = self.get_xtal_action(x,y)
+    #xtal, action = self.get_xtal_action(x,y)
 
-      if xtal:
-        self.action = action 
-        self.active_xtal = xtal
+    #if xtal:
+    #  self.action = action 
+    #  self.active_xtal = xtal
 
-      else:
-        xtal = [[x,y],[x+1,y+1]]
-        self.xtals.append(xtal)
-        self.active_xtal = xtal
-        self.action = ACTION_RESIZE_BR
+    if self.action & ACTION_PROPOSED:
+      self.action &= ~ACTION_PROPOSED
+      self.action_start = (x,y)
+    else:
+      xtal = [[x,y],[x+1,y+1]]
+      self.xtals.append(xtal)
+      self.active_xtal = xtal
+      self.action = ACTION_RESIZE_BR
 
   def OnLeftUp(self, evt):
     if self.action & ACTION_RESIZE:
@@ -139,20 +141,15 @@ class ImagePanel(wx.Panel):
       if y2 < y1:
         self.active_xtal[0][1], self.active_xtal[1][1] = y2, y1
 
-      self.active_xtal = None
-      self.action = ACTION_NONE
+    self.active_xtal = None
+    self.action = ACTION_NONE
 
   def OnRightUp(self, evt):
-    if self.action == ACTION_NONE:
-      for xtal in self.xtals:
-        x,y = evt.GetPosition()
-        (x1,y1), (x2,y2) = xtal
-
-        if x1 <= x <= x2 and y1 <= y <= y2:
-          self.xtals.remove(xtal)
-          self.Refresh()
-          break
-
+    if self.action & ACTION_PROPOSED:
+      self.xtals.remove(self.active_xtal)
+      self.active_xtal = None
+      self.action = ACTION_NONE
+      self.Refresh()
 
   def OnMotion(self, evt):
     x,y = evt.GetPosition()
@@ -161,7 +158,17 @@ class ImagePanel(wx.Panel):
     if self.coord_cb:
       self.coord_cb(x,y)
 
-    if self.action & ACTION_RESIZE:
+    if self.action == ACTION_NONE or self.action & ACTION_PROPOSED:
+      xtal, action = self.get_xtal_action(x,y)
+
+      if xtal:
+        self.action = action | ACTION_PROPOSED
+        self.active_xtal = xtal
+      else:
+        self.action = ACTION_NONE
+        self.active_xtal = None
+
+    elif self.action & ACTION_RESIZE:
 
       if self.action & ACTION_RESIZE_L:
         self.active_xtal[0][0] = x
@@ -171,6 +178,18 @@ class ImagePanel(wx.Panel):
         self.active_xtal[0][1] = y
       elif self.action & ACTION_RESIZE_B:
         self.active_xtal[1][1] = y
+
+      self.Refresh()
+
+    elif self.action & ACTION_MOVE:
+      x0,y0 = self.action_start
+      dx, dy = x - x0, y - y0
+      print x0,y0,dx,dy
+      self.active_xtal[0][0] += dx
+      self.active_xtal[0][1] += dy
+      self.active_xtal[1][0] += dx
+      self.active_xtal[1][1] += dy
+      self.action_start = (x,y)
 
       self.Refresh()
 

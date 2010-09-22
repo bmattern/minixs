@@ -34,18 +34,23 @@ class CalibratorModel(mxinfo.CalibrationInfo):
   def __init__(self):
     mxinfo.CalibrationInfo.__init__(self)
 
-ACTION_NONE = 0
 ACTION_RESIZE = 1
 
-RESIZE_L = 0x01
-RESIZE_R = 0x02
-RESIZE_T = 0x04
-RESIZE_B = 0x08
+ACTION_NONE = 0
+ACTION_RESIZE_L = 0x01
+ACTION_RESIZE_R = 0x02
+ACTION_RESIZE_T = 0x04
+ACTION_RESIZE_B = 0x08
+ACTION_MOVE     = 0x10
+ACTION_PROPOSED = 0x100
 
-RESIZE_TL = RESIZE_T | RESIZE_L
-RESIZE_TR = RESIZE_T | RESIZE_R
-RESIZE_BL = RESIZE_B | RESIZE_L
-RESIZE_BR = RESIZE_B | RESIZE_R
+ACTION_RESIZE_TL = ACTION_RESIZE_T | ACTION_RESIZE_L
+ACTION_RESIZE_TR = ACTION_RESIZE_T | ACTION_RESIZE_R
+ACTION_RESIZE_BL = ACTION_RESIZE_B | ACTION_RESIZE_L
+ACTION_RESIZE_BR = ACTION_RESIZE_B | ACTION_RESIZE_R
+
+ACTION_RESIZE = ACTION_RESIZE_L | ACTION_RESIZE_R | \
+                ACTION_RESIZE_T | ACTION_RESIZE_B
 
 class ImagePanel(wx.Panel):
   def __init__(self, *args, **kwargs):
@@ -78,50 +83,63 @@ class ImagePanel(wx.Panel):
       self.bitmap = wx.BitmapFromBuffer(w, h, p.tostring())
     self.Refresh()
 
-  def OnLeftDown(self, evt):
-    if self.action == ACTION_NONE:
-      x,y = evt.GetPosition()
-
+  def get_xtal_action(self, x, y):
       off = 4
       resize_dir = 0
+      action = ACTION_NONE
+      active_xtal = None
 
       for xtal in self.xtals:
         (x1,y1),(x2,y2) = xtal
 
         if y1 - off < y < y2 + off:
           if abs(x1 - x) < off:
-            resize_dir |= RESIZE_L
+            action |= ACTION_RESIZE_L
+            active_xtal = xtal
           elif abs(x2 - x) < off:
-            resize_dir |= RESIZE_R
+            action |= ACTION_RESIZE_R
         if x1 - off < x < x2 + off:
           if abs(y1 - y) < off:
-            resize_dir |= RESIZE_T
+            action |= ACTION_RESIZE_T
           elif abs(y2 - y) < off:
-            resize_dir |= RESIZE_B
+            action |= ACTION_RESIZE_B
 
-        if resize_dir != 0:
-          self.resize_dir = resize_dir
-          self.resize_xtal = xtal
-          break
+        if action == ACTION_NONE:
+          if x1 < x < x2 and y1 < y < y2:
+            action = ACTION_MOVE
 
-      if not self.resize_xtal:
+        if action != ACTION_NONE:
+          return (xtal, action)
+
+      return (None, ACTION_NONE)
+
+  def OnLeftDown(self, evt):
+    if self.action == ACTION_NONE:
+      x,y = evt.GetPosition()
+
+      xtal, action = self.get_xtal_action(x,y)
+
+      if xtal:
+        self.action = action 
+        self.active_xtal = xtal
+
+      else:
         xtal = [[x,y],[x+1,y+1]]
         self.xtals.append(xtal)
-        self.resize_xtal = xtal
-        self.resize_dir = RESIZE_BR
-
-      self.action = ACTION_RESIZE
+        self.active_xtal = xtal
+        self.action = ACTION_RESIZE_BR
 
   def OnLeftUp(self, evt):
-    if self.action == ACTION_RESIZE:
-      (x1,y1), (x2,y2) = self.resize_xtal
+    if self.action & ACTION_RESIZE:
+      (x1,y1), (x2,y2) = self.active_xtal
 
+      # normalize rect coords so x1<x2 and y1<y2
       if x2 < x1:
-        self.resize_xtal[0][0], self.resize_xtal[1][0] = x2, x1
+        self.active_xtal[0][0], self.active_xtal[1][0] = x2, x1
       if y2 < y1:
-        self.resize_xtal[0][1], self.resize_xtal[1][1] = y2, y1
+        self.active_xtal[0][1], self.active_xtal[1][1] = y2, y1
 
-      self.resize_xtal = None
+      self.active_xtal = None
       self.action = ACTION_NONE
 
   def OnRightUp(self, evt):
@@ -139,19 +157,20 @@ class ImagePanel(wx.Panel):
   def OnMotion(self, evt):
     x,y = evt.GetPosition()
 
+    # XXX replace this with a wx Event
     if self.coord_cb:
       self.coord_cb(x,y)
 
-    if self.action == ACTION_RESIZE:
+    if self.action & ACTION_RESIZE:
 
-      if self.resize_dir & RESIZE_L:
-        self.resize_xtal[0][0] = x
-      elif self.resize_dir & RESIZE_R:
-        self.resize_xtal[1][0] = x
-      if self.resize_dir & RESIZE_T:
-        self.resize_xtal[0][1] = y
-      elif self.resize_dir & RESIZE_B:
-        self.resize_xtal[1][1] = y
+      if self.action & ACTION_RESIZE_L:
+        self.active_xtal[0][0] = x
+      elif self.action & ACTION_RESIZE_R:
+        self.active_xtal[1][0] = x
+      if self.action & ACTION_RESIZE_T:
+        self.active_xtal[0][1] = y
+      elif self.action & ACTION_RESIZE_B:
+        self.active_xtal[1][1] = y
 
       self.Refresh()
 

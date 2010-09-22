@@ -19,6 +19,9 @@ ID_LOAD_EXPOSURES   = wx.NewId()
 ID_DISPERSIVE_DIR   = wx.NewId()
 ID_EXPOSURE_SLIDER  = wx.NewId()
 
+ID_IMPORT_XTALS     = wx.NewId()
+ID_EXPORT_XTALS     = wx.NewId()
+
 ID_LOAD_SCAN        = wx.NewId()
 
 WILDCARD_CALIB = "Calibration Files (*.calib)|*.calib|Data Files (*.dat)|*.dat|Text Files (*.txt)|*.txt|All Files|*"
@@ -158,6 +161,7 @@ class FilterPanel(wx.Panel):
     choice = wx.Choice(self, ID_DISPERSIVE_DIR, choices=mx.DIRECTION_NAMES)
     grid.Add(label, 0, wx.ALIGN_CENTER_VERTICAL)
     grid.Add(choice)
+    self.dispersive_direction = choice
 
     self.SetSizerAndFit(grid)
 
@@ -329,7 +333,11 @@ class CalibratorFrame(MenuFrame):
   def __init__(self, *args, **kwargs):
     kwargs['menu_info'] = [
         ('&File', [
-          ('&Open', wx.ID_OPEN, 'Load File'),
+          ('&Open', wx.ID_OPEN, 'Load Calibration'),
+          ('&Save', wx.ID_SAVE, 'Save Calibration'),
+          ('', None, None), # separator
+          ('&Import Crystals', ID_IMPORT_XTALS, 'Import Crystals'),
+          ('&Export Crystals', ID_EXPORT_XTALS, 'Export Crystals'),
           ('', None, None), # separator
           ('E&xit', wx.ID_EXIT, 'Terminate this program'),
           ]),
@@ -368,6 +376,7 @@ class CalibratorController(object):
         (wx.EVT_MENU, [
           (wx.ID_EXIT, self.OnExit),
           (wx.ID_OPEN, self.OnOpen),
+          (wx.ID_SAVE, self.OnSave),
           (wx.ID_ABOUT, self.OnAbout),
           ]),
         (wx.EVT_TEXT, [
@@ -393,6 +402,8 @@ class CalibratorController(object):
   def model_to_view(self):
     self.view.panel.dataset_name.SetValue(self.model.dataset_name)
 
+    self.view.panel.filter_panel.dispersive_direction.SetSelection(self.model.dispersive_direction)
+
     for f in self.model.exposure_files:
       self.view.panel.exposure_list.AppendExposure(f)
     for e in self.model.energies:
@@ -407,7 +418,16 @@ class CalibratorController(object):
     self.view.panel.filter_panel.set_filters(filters)
 
   def view_to_model(self):
-    pass
+    self.model.dataset_name = self.view.panel.dataset_name.GetValue()
+    self.model.dispersive_direction = self.view.panel.filter_panel.dispersive_direction.GetSelection()
+    self.model.exposure_files, self.model.energies = self.view.panel.exposure_list.GetData()
+
+    self.model.filters = []
+    filters = self.view.panel.filter_panel.get_filters()
+    for i, (enabled, val) in enumerate(filters):
+      if enabled:
+        self.model.filters.append( (FILTER_NAMES[i], val) )
+
 
   def OnOpen(self, evt):
     filename = self.FileDialog(
@@ -419,6 +439,17 @@ class CalibratorController(object):
     if (filename):
       self.model.load(filename)
       self.model_to_view()
+
+  def OnSave(self, evt):
+    filename = self.FileDialog(
+        'save',
+        'Select file to save calibration to',
+        wildcard=WILDCARD_CALIB,
+        save=True
+        )
+    if filename:
+      self.view_to_model()
+      self.model.save(filename)
 
   def OnExit(self, evt):
     self.view.Close(True)

@@ -776,16 +776,57 @@ class CalibratorController(object):
         wildcard=WILDCARD_XTAL,
         )
 
-    #XXX implement
+    if not filename:
+      return
+
+    t = mxinfo.determine_filetype(filename)
+
+    if t == mxinfo.FILE_XTALS:
+      with open(filename) as f:
+        xtals = []
+        for line in f:
+          if line[0] == "#": 
+            continue
+          x1,y1,x2,y2 = [int(s.strip()) for s in line.split()]
+          xtals.append([[x1,y1],[x2,y2]])
+        self.model.xtals = xtals
+
+    elif t == mxinfo.FILE_CALIBRATION:
+      ci = mxinfo.CalibrationInfo()
+      ci.load(filename, header_only=True)
+      self.model.xtals = ci.xtals
+
+    else:
+      errdlg = wx.MessageDialog(self.view, "Unkown Filetype", "Error", wx.OK | wx.ICON_ERROR)
+      errdlg.ShowModal()
+      errdlg.Destroy()
+
+    self.view.panel.exposure_panel.image_panel.xtals = self.model.xtals
+    self.view.panel.exposure_panel.image_panel.Refresh()
 
   def OnExportXtals(self, evt):
     filename = self.FileDialog(
         'xtals',
         'Select file to export crystals to',
-        wildcard=WILDCARD_XTAL_EXPORT
+        wildcard=WILDCARD_XTAL_EXPORT,
+        save=True
         )
 
-    #XXX implement
+    if not filename:
+      return
+
+    if os.path.exists(filename):
+      qdlg = wx.MessageDialog(self.view, "Overwrite File?", "Warning", wx.YES | wx.NO | wx.ICON_WARNING)
+      ret = qdlg.ShowModal()
+      qdlg.Destroy()
+      if ret == wx.NO:
+        return
+
+    with open(filename, 'w') as f:
+      f.write("# minIXS crystal boundaries\n")
+      f.write("# x1\ty1\tx2\ty2\n")
+      for (x1,y1),(x2,y2) in self.model.xtals:
+        f.write("%d\t%d\t%d\t%d\n" % (x1,y1,x2,y2))
 
   def OnExit(self, evt):
     self.view.Close(True)

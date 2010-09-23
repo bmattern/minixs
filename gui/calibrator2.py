@@ -517,6 +517,7 @@ class ToolsPanel(wx.Panel):
     radio = wx.RadioBox(self, ID_VIEW_TYPE, 'View', choices=choices,
         majorDimension=1)
     vbox.Add(radio, 0, wx.EXPAND | wx.BOTTOM, VPAD)
+    self.view_type = radio
 
     check = wx.CheckBox(self, ID_SHOW_XTALS, 'Show Crystals')
     check.SetValue(True)
@@ -987,12 +988,15 @@ class CalibratorController(object):
 
   def ShowCalibrationMatrix(self):
     self.show_calibration_matrix = True
+
     c = self.model.calibration_matrix
     if len(c) == 0: return
     min_cal = c[np.where(c>0)].min()
     max_cal = c.max()
     p = colors.Normalize(min_cal, max_cal)(c)
     self.view.panel.exposure_panel.SetPixels(p, cm.jet)
+
+    self.view.panel.tools_panel.view_type.SetSelection(1)
 
   def SelectExposure(self, num):
     num_exposures = len(self.exposures)

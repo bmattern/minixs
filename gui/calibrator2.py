@@ -78,8 +78,6 @@ class ImagePanel(wx.Panel):
 
     self.show_xtals = True
 
-    self.coord_cb = None
-
   def set_pixels(self, pixels, colormap=cm.Greys_r):
     if pixels is None:
       self.bitmap = None
@@ -169,11 +167,7 @@ class ImagePanel(wx.Panel):
     if not self.show_xtals: return
     x,y = evt.GetPosition()
 
-    # XXX check if x,y is outside of panel. if os don't perform actions
-
-    # XXX replace this with a wx Event
-    if self.coord_cb:
-      self.coord_cb(x,y)
+    w,h = self.GetSize()
 
     if self.action == ACTION_NONE or self.action & ACTION_PROPOSED:
       xtal, action = self.get_xtal_action(x,y)
@@ -193,6 +187,11 @@ class ImagePanel(wx.Panel):
         self.Refresh()
 
     elif self.action & ACTION_RESIZE:
+      # clamp mouse to within panel
+      if x < 0: x = 0
+      if x > w: x = w
+      if y < 0: y = 0
+      if y > h: y = h
 
       if self.action & ACTION_RESIZE_L:
         self.active_xtal[0][0] = x
@@ -206,9 +205,15 @@ class ImagePanel(wx.Panel):
       self.Refresh()
 
     elif self.action & ACTION_MOVE:
-      x0,y0 = self.action_start
-      dx, dy = x - x0, y - y0
-      print x0,y0,dx,dy
+      (x1, y1), (x2, y2) = self.active_xtal
+      xs,ys = self.action_start
+      dx, dy = x - xs, y - ys
+
+      if dx < -x1: dx = -x1
+      if dy < -y1: dy = -y1
+      if dx > w-x2: dx = w-x2
+      if dy > h-y2: dy = h-y2
+
       self.active_xtal[0][0] += dx
       self.active_xtal[0][1] += dy
       self.active_xtal[1][0] += dx

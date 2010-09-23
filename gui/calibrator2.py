@@ -797,7 +797,7 @@ class CalibratorController(object):
       self.model.xtals = ci.xtals
 
     else:
-      errdlg = wx.MessageDialog(self.view, "Unkown Filetype", "Error", wx.OK | wx.ICON_ERROR)
+      errdlg = wx.MessageDialog(self.view, "Unknown Filetype", "Error", wx.OK | wx.ICON_ERROR)
       errdlg.ShowModal()
       errdlg.Destroy()
 

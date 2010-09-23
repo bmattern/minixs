@@ -72,6 +72,8 @@ class ImagePanel(wx.Panel):
     self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
     self.Bind(wx.EVT_RIGHT_UP, self.OnRightUp)
     self.Bind(wx.EVT_MOTION, self.OnMotion)
+    self.Bind(wx.EVT_ENTER_WINDOW, self.OnEnterWindow)
+    self.Bind(wx.EVT_LEAVE_WINDOW, self.OnLeaveWindow)
 
     self.action = ACTION_NONE
     self.active_xtal = None
@@ -225,6 +227,15 @@ class ImagePanel(wx.Panel):
       self.active_xtal[1][1] += dy
       self.action_start = (x,y)
 
+      self.Refresh()
+
+  def OnEnterWindow(self, evt):
+    pass
+
+  def OnLeaveWindow(self, evt):
+    if self.action & ACTION_PROPOSED:
+      self.action = ACTION_NONE
+      self.active_xtal = None
       self.Refresh()
 
   def OnPaint(self, evt):

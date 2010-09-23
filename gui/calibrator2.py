@@ -78,6 +78,11 @@ class ImagePanel(wx.Panel):
 
     self.show_xtals = True
 
+    self.xtal_brush = wx.Brush('#aa0000', wx.TRANSPARENT)
+    self.xtal_pen = wx.Pen('#ffff22', 1, wx.DOT_DASH)
+    self.active_xtal_pen = wx.Pen('#33dd33', 1, wx.DOT_DASH)
+    self.action_pen = wx.Pen('#22ffff', 1, wx.SOLID)
+
   def set_pixels(self, pixels, colormap=cm.Greys_r):
     if pixels is None:
       self.bitmap = None
@@ -230,18 +235,18 @@ class ImagePanel(wx.Panel):
       if not self.show_xtals: return
 
       #XXX store initialized pens and reuse
-      dc.SetBrush(wx.Brush('#aa0000', wx.TRANSPARENT))
+      dc.SetBrush(self.xtal_brush)
       for xtal in self.xtals:
         if xtal == self.active_xtal:
-          dc.SetPen(wx.Pen('#ffff22', 1, wx.DOT_DASH))
+          dc.SetPen(self.active_xtal_pen)
         else:
-          dc.SetPen(wx.Pen('#33dd33', 1, wx.DOT_DASH))
+          dc.SetPen(self.xtal_pen)
         (x1,y1), (x2,y2) = xtal
         dc.DrawRectangle(x1,y1,x2-x1,y2-y1)
 
       if self.active_xtal and self.action & ACTION_RESIZE:
 
-        dc.SetPen(wx.Pen('#22ffff', 1, wx.SOLID))
+        dc.SetPen(self.action_pen)
         (x1,y1),(x2,y2) = self.active_xtal
 
         if self.action & ACTION_RESIZE_L:

@@ -14,6 +14,8 @@ ID_DATASET_NAME     = wx.NewId()
 ID_EXPOSURE_LIST    = wx.NewId()
 ID_READ_ENERGIES    = wx.NewId()
 ID_SELECT_EXPOSURES = wx.NewId()
+ID_APPEND_ROW       = wx.NewId()
+ID_DELETE_ROW       = wx.NewId()
 ID_CLEAR_ENERGIES   = wx.NewId()
 ID_CLEAR_EXPOSURES  = wx.NewId()
 ID_DISPERSIVE_DIR   = wx.NewId()
@@ -489,35 +491,63 @@ class ExposureList(wx.ListCtrl,
     print "label: ", evt.GetLabel()
     print '-------------'
 
+  def FindLastEmptyItem(self, column):
+    count = self.GetItemCount()
+    # find last empty energy
+    i = count
+    while i >= 0:
+      text = self.GetItem(i,column).GetText()
+      if text != '':
+        break
+
+      i -= 1
+    index = i+1
+
+    return index
+
   def AppendEnergy(self, energy):
     s = '%.2f' % energy
 
-    if self.num_energies >= self.num_rows:
-      self.InsertStringItem(self.num_rows, '')
-      self.num_rows += 1
+    count = self.GetItemCount()
+    index = self.FindLastEmptyItem(0)
 
-    self.SetStringItem(self.num_energies, 0, s)
-    self.EnsureVisible(self.num_energies)
+    if index >= count:
+      self.InsertStringItem(index, '')
 
-    self.num_energies += 1
+    self.SetStringItem(index, 0, s)
+    self.EnsureVisible(index)
 
   def AppendExposure(self, exposure):
-    if self.num_exposures >= self.num_rows:
-      self.InsertStringItem(self.num_rows, '')
-      self.num_rows += 1
+    count = self.GetItemCount()
+    index = self.FindLastEmptyItem(1)
 
-    self.SetStringItem(self.num_exposures, 1, exposure)
-    self.EnsureVisible(self.num_exposures)
+    if index >= count:
+      self.InsertStringItem(index, '')
 
-    self.num_exposures += 1
+    self.SetStringItem(index, 1, exposure)
+    self.EnsureVisible(index)
+
+  def AppendRow(self):
+    """Add empty row to end of listctrl"""
+    self.InsertStringItem(self.num_rows, '')
+    self.num_rows += 1
+
+  def DeleteRow(self, index=None):
+    if index is None:
+      index = self.GetFirstSelected()
+      while index != -1:
+        self.DeleteItem(index)
+        index = self.GetFirstSelected()
+    else:
+      self.Delete(index)
 
   def ClearEnergies(self):
-    for i in range(self.num_energies):
+    for i in range(self.GetItemCount()):
       self.SetStringItem(i, 0, '')
     self.num_energies = 0
 
   def ClearExposures(self):
-    for i in range(self.num_exposures):
+    for i in range(self.GetItemCount()):
       self.SetStringItem(i, 1, '')
     self.num_exposures = 0
 
@@ -594,6 +624,12 @@ class CalibratorPanel(wx.Panel):
     vbox2.Add(button, 1, wx.EXPAND | wx.BOTTOM, VPAD)
 
     button = wx.Button(self, ID_SELECT_EXPOSURES, "Select Exposures...")
+    vbox2.Add(button, 1, wx.EXPAND | wx.BOTTOM, VPAD)
+
+    button = wx.Button(self, ID_APPEND_ROW, "Append Row")
+    vbox2.Add(button, 1, wx.EXPAND | wx.BOTTOM, VPAD)
+
+    button = wx.Button(self, ID_DELETE_ROW, "Delete Row(s)")
     vbox2.Add(button, 1, wx.EXPAND | wx.BOTTOM, VPAD)
 
     button = wx.Button(self, ID_CLEAR_ENERGIES, "Clear Energies")
@@ -702,8 +738,10 @@ class CalibratorController(object):
           ]),
         (wx.EVT_BUTTON, [
           (ID_READ_ENERGIES, self.OnReadEnergies),
-          (ID_CLEAR_ENERGIES, self.OnClearEnergies),
           (ID_SELECT_EXPOSURES, self.OnSelectExposures),
+          (ID_APPEND_ROW, self.OnAppendRow),
+          (ID_DELETE_ROW, self.OnDeleteRow),
+          (ID_CLEAR_ENERGIES, self.OnClearEnergies),
           (ID_CLEAR_EXPOSURES, self.OnClearExposures),
           (ID_CALIBRATE, self.OnCalibrate),
           ]),
@@ -924,6 +962,12 @@ class CalibratorController(object):
 
     if filenames:
       self.changed(self.CHANGED_EXPOSURES)
+
+  def OnAppendRow(self, evt):
+    self.view.panel.exposure_list.AppendRow()
+
+  def OnDeleteRow(self, evt):
+    self.view.panel.exposure_list.DeleteRow()
 
   def FileDialog(self, type, title, wildcard='', save=False, multiple=False):
     """

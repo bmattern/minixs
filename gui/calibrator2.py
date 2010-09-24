@@ -474,23 +474,6 @@ class ExposureList(wx.ListCtrl,
     self.num_energies = 0
     self.num_exposures = 0
 
-    self.Bind(wx.EVT_LIST_BEGIN_LABEL_EDIT, self.OnListBeginLabelEdit)
-    self.Bind(wx.EVT_LIST_END_LABEL_EDIT, self.OnListEndLabelEdit)
-
-  def OnListBeginLabelEdit(self, evt):
-    print "Begin Edit", evt.GetString()
-    print type(evt)
-    print "label: ", evt.GetLabel()
-    print "index: ", evt.GetIndex()
-    print "column: ", evt.GetColumn()
-    print '-------------'
-
-  def OnListEndLabelEdit(self, evt):
-    print "EndEdit", evt.GetString()
-    print type(evt)
-    print "label: ", evt.GetLabel()
-    print '-------------'
-
   def FindLastEmptyItem(self, column):
     count = self.GetItemCount()
     # find last empty energy
@@ -744,6 +727,9 @@ class CalibratorController(object):
           (ID_CLEAR_ENERGIES, self.OnClearEnergies),
           (ID_CLEAR_EXPOSURES, self.OnClearExposures),
           (ID_CALIBRATE, self.OnCalibrate),
+          ]),
+        (wx.EVT_LIST_END_LABEL_EDIT, [
+          (ID_EXPOSURE_LIST, self.OnListEndLabelEdit),
           ]),
         (wx.EVT_SLIDER, [
           (ID_EXPOSURE_SLIDER, self.OnExposureSlider),
@@ -1011,6 +997,9 @@ class CalibratorController(object):
 
   def OnClearExposures(self, evt):
     self.view.panel.exposure_list.ClearExposures()
+    self.changed(self.CHANGED_EXPOSURES)
+
+  def OnListEndLabelEdit(self, evt):
     self.changed(self.CHANGED_EXPOSURES)
 
   def OnFilterSpin(self, evt):

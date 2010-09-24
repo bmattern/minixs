@@ -322,7 +322,7 @@ class LoadEnergiesDialog(wx.Dialog):
     vbox = wx.BoxSizer(wx.VERTICAL)
 
     self.panel = LoadEnergiesPanel(self)
-    vbox.Add(self.panel, 1, wx.EXPAND | wx.BOTTOM, VPAD)
+    vbox.Add(self.panel, 1, wx.EXPAND | wx.ALL, VPAD)
 
     hbox = wx.StdDialogButtonSizer()
 
@@ -334,7 +334,7 @@ class LoadEnergiesDialog(wx.Dialog):
 
     hbox.Realize()
 
-    vbox.Add(hbox, 0, wx.EXPAND)
+    vbox.Add(hbox, 0, wx.EXPAND|wx.ALL, VPAD)
 
     self.SetSizerAndFit(vbox)
 
@@ -986,7 +986,7 @@ class CalibratorController(object):
       #XXX pop up dialog
       return
     self.model.energies = energies
-    self.model.exposures = exposures
+    self.model.exposure_files = exposures
 
     self.view.SetStatusText("Calibrating... Please Wait...")
 

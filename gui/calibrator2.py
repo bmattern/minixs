@@ -456,10 +456,14 @@ class ExposurePanel(wx.Panel):
     self.image_panel.set_pixels(pixels, colormap)
 
 import wx.lib.mixins.listctrl as listmix
-class ExposureList(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):
+class ExposureList(wx.ListCtrl,
+                   listmix.ListCtrlAutoWidthMixin,
+                   listmix.TextEditMixin
+                   ):
   def __init__(self, *args, **kwargs):
     wx.ListCtrl.__init__(self, *args, **kwargs)
     listmix.ListCtrlAutoWidthMixin.__init__(self)
+    listmix.TextEditMixin.__init__(self)
 
     self.InsertColumn(0, 'Incident Energy', width=200)
     self.InsertColumn(1, 'Exposure File', width=200)
@@ -467,6 +471,23 @@ class ExposureList(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):
     self.num_rows = 0
     self.num_energies = 0
     self.num_exposures = 0
+
+    self.Bind(wx.EVT_LIST_BEGIN_LABEL_EDIT, self.OnListBeginLabelEdit)
+    self.Bind(wx.EVT_LIST_END_LABEL_EDIT, self.OnListEndLabelEdit)
+
+  def OnListBeginLabelEdit(self, evt):
+    print "Begin Edit", evt.GetString()
+    print type(evt)
+    print "label: ", evt.GetLabel()
+    print "index: ", evt.GetIndex()
+    print "column: ", evt.GetColumn()
+    print '-------------'
+
+  def OnListEndLabelEdit(self, evt):
+    print "EndEdit", evt.GetString()
+    print type(evt)
+    print "label: ", evt.GetLabel()
+    print '-------------'
 
   def AppendEnergy(self, energy):
     s = '%.2f' % energy

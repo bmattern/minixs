@@ -1115,7 +1115,11 @@ class CalibratorController(object):
 
     c = self.model.calibration_matrix
     if len(c) == 0: return
-    min_cal = c[np.where(c>0)].min()
+    nonzero = c[np.where(c>0)]
+    if len(nonzero) == 0:
+      min_cal = 0
+    else:
+      min_cal = c[np.where(c>0)].min()
     max_cal = c.max()
     p = colors.Normalize(min_cal, max_cal)(c)
     self.view.panel.exposure_panel.SetPixels(p, cm.jet)

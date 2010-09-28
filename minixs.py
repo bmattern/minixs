@@ -233,6 +233,10 @@ class Calibrator:
           ))
       x,y,z = points[index].T
 
+      if len(x) == 0:
+        print "Warning: No points in xtal ", xtal
+        continue
+
       # fit to quadratic
       #A = vstack([x**2, y**2, x*y, x, y, ones(x.shape)]).T
       A = vstack([x**3,y**3,x**2*y,x*y**2,x**2, y**2, x*y, x, y, ones(x.shape)]).T

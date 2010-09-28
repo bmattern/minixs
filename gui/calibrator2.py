@@ -797,11 +797,10 @@ class CalibratorController(object):
 
     # get energies and exposures
     valid, energies, exposure_files = self.view.panel.exposure_list.GetData()
-    if valid:
-      self.model.energies = energies
-      self.model.exposure_files = exposure_files
-    else:
-      raise ValueError("Number of energies and exposures in list differ")
+    self.exposure_list_valid = valid
+
+    self.model.energies = energies
+    self.model.exposure_files = exposure_files
 
     # get filters
     self.model.filters = []
@@ -1054,12 +1053,16 @@ class CalibratorController(object):
     self.view.panel.exposure_panel.image_panel.ShowXtals(evt.Checked())
 
   def OnCalibrate(self, evt):
-    valid, energies, exposures = self.view.panel.exposure_list.GetData()
-    if not valid or len(energies) == 0:
-      #XXX pop up dialog
+    self.view_to_model()
+    valid, errors = self.Validate()
+
+    if not valid:
+      errors = [ '% 2d) %s' % (i+1, err) for i, err in enumerate(errors) ]
+      message = 'The following must be fixed before calibrating:\n\n' + '\n\n'.join(errors)
+      errdlg = wx.MessageDialog(self.view, message, "Error", wx.OK | wx.ICON_ERROR)
+      errdlg.ShowModal()
+      errdlg.Destroy()
       return
-    self.model.energies = energies
-    self.model.exposure_files = exposures
 
     self.view.SetStatusText("Calibrating... Please Wait...")
 
@@ -1074,6 +1077,24 @@ class CalibratorController(object):
     self.ShowCalibrationMatrix()
 
     self.view.SetStatusText("")
+
+  def Validate(self):
+    errors = []
+    valid = True
+
+    if not self.exposure_list_valid:
+      valid = False
+      errors.append("The exposure list is invalid. Make sure that each row contains an energy and an exposure filename.")
+
+    if len(self.model.energies) < 2:
+      valid = False
+      errors.append("At least two calibration exposures are required for calibration. A larger number of exposures will give a better fit.")
+
+    if len(self.model.xtals) < 1:
+      valid = False
+      errors.append("Define the boundary of at least one crystal.")
+
+    return valid, errors
 
   def ShowCalibrationMatrix(self):
     self.show_calibration_matrix = True
@@ -1159,6 +1180,7 @@ class CalibratorController(object):
     if self.changed_flag & self.CHANGED_EXPOSURES:
       # update list of exposures
       valid, self.energies, self.exposures = self.view.panel.exposure_list.GetData()
+      self.exposure_list_valid = valid
 
       # set status text to indicate wheterh list is valid or not
       if not valid:

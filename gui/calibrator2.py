@@ -35,6 +35,7 @@ ID_LOAD_SCAN        = wx.NewId()
 
 EventActionChanged, EVT_ACTION_CHANGED = wx.lib.newevent.NewCommandEvent()
 EventXtalsChanged, EVT_XTALS_CHANGED = wx.lib.newevent.NewCommandEvent()
+EventCoords, EVT_COORDS = wx.lib.newevent.NewCommandEvent()
 
 WILDCARD_CALIB = "Calibration Files (*.calib)|*.calib|Data Files (*.dat)|*.dat|Text Files (*.txt)|*.txt|All Files|*"
 WILDCARD_EXPOSURE = "TIF Files (*.tif)|*.tif|All Files|*"
@@ -143,6 +144,10 @@ class ImagePanel(wx.Panel):
     evt = EventActionChanged(ID_IMAGE_PANEL, action=self.action, xtal=self.active_xtal, in_window=in_window)
     wx.PostEvent(self, evt)
 
+  def PostEventCoords(self, x, y):
+    evt = EventCoords(ID_IMAGE_PANEL, x=x, y=y)
+    wx.PostEvent(self, evt)
+
   def OnLeftDown(self, evt):
     if not self.show_xtals: return
 
@@ -186,6 +191,8 @@ class ImagePanel(wx.Panel):
   def OnMotion(self, evt):
     if not self.show_xtals: return
     x,y = evt.GetPosition()
+
+    self.PostEventCoords(x,y)
 
     w,h = self.GetSize()
 
@@ -255,6 +262,7 @@ class ImagePanel(wx.Panel):
       self.active_xtal = None
 
       self.PostEventActionChanged(in_window=False)
+      self.PostEventCoords(-1,-1)
       self.Refresh()
 
   def OnPaint(self, evt):
@@ -770,6 +778,7 @@ class CalibratorController(object):
           ]),
         (EVT_ACTION_CHANGED, [ (ID_IMAGE_PANEL, self.OnImageAction), ]),
         (EVT_XTALS_CHANGED, [ (ID_IMAGE_PANEL, self.OnImageXtals), ]),
+        (EVT_COORDS, [ (ID_IMAGE_PANEL, self.OnImageCoords), ]),
         ]
 
     for event, bindings in callbacks:
@@ -1032,6 +1041,10 @@ class CalibratorController(object):
   def OnImageXtals(self, evt):
     self.CalibrationValid(False)
     self.Changed()
+
+  def OnImageCoords(self, evt):
+    #XXX get value under pixel and show coords in status bar somewhere
+    pass
 
   def FileDialog(self, type, title, wildcard='', save=False, multiple=False):
     """

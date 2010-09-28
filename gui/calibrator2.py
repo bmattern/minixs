@@ -194,7 +194,7 @@ class ImagePanel(wx.Panel):
         self.action = ACTION_NONE
         self.active_xtal = None
 
-      evt = EventActionChanged(ID_IMAGE_PANEL, action=self.action, xtal=self.active_xtal)
+      evt = EventActionChanged(ID_IMAGE_PANEL, action=self.action, xtal=self.active_xtal, in_window=True)
       wx.PostEvent(self, evt)
 
       if needs_refresh:
@@ -240,9 +240,13 @@ class ImagePanel(wx.Panel):
     pass
 
   def OnLeaveWindow(self, evt):
-    if self.action & ACTION_PROPOSED:
+    if self.action & ACTION_PROPOSED or self.action == ACTION_NONE:
       self.action = ACTION_NONE
       self.active_xtal = None
+
+      evt = EventActionChanged(ID_IMAGE_PANEL, action=self.action, xtal=self.active_xtal, in_window=False)
+      wx.PostEvent(self, evt)
+
       self.Refresh()
 
   def OnPaint(self, evt):
@@ -971,7 +975,10 @@ class CalibratorController(object):
     status = ""
     #coords = self.view.panel.exposure_panel.image_panel.GetCoords()
     if evt.xtal is None:
-      status = "L: Click and drag to define crystal boundary"
+      if evt.in_window:
+        status = "L: Click and drag to define crystal boundary"
+      else:
+        status == ""
     elif action & ACTION_PROPOSED:
       if action & ACTION_MOVE:
         status = "L: Move crystal  R: Delete crystal"

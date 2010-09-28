@@ -707,6 +707,8 @@ class CalibratorController(object):
     self.update_view_flag = 0
     self.update_view_timeout = None
 
+    self.changed = False
+
     self.selected_exposure = 1
     self.exposures = []
     self.energies = []
@@ -847,6 +849,7 @@ class CalibratorController(object):
       self.model_to_view()
       self.UpdateView(self.UPDATE_EXPOSURES | self.UPDATE_FILTERS)
       self.CalibrationValid(True)
+      self.Changed(False)
 
   def OnSave(self, evt):
     header_only = False
@@ -905,6 +908,7 @@ class CalibratorController(object):
     self.view.panel.exposure_panel.image_panel.xtals = self.model.xtals
     self.view.panel.exposure_panel.image_panel.Refresh()
     self.CalibrationValid(False)
+    self.Changed()
 
   def OnExportXtals(self, evt):
     filename = self.FileDialog(
@@ -931,6 +935,15 @@ class CalibratorController(object):
         f.write("%d\t%d\t%d\t%d\n" % (x1,y1,x2,y2))
 
   def OnExit(self, evt):
+    if self.changed:
+      message = "There are unsaved changes. Continuing will exit without saving these."
+      errdlg = wx.MessageDialog(self.view, message, "Warning", wx.OK | wx.CANCEL | wx.ICON_WARNING)
+      ret = errdlg.ShowModal()
+      errdlg.Destroy()
+
+      if ret != wx.ID_OK:
+        return
+
     self.view.Close(True)
 
   def OnAbout(self, evt):
@@ -938,6 +951,7 @@ class CalibratorController(object):
 
   def OnDatasetName(self, evt):
     self.model.dataset_name = evt.GetString()
+    self.Changed()
 
   def OnReadEnergies(self, evt):
     dlg = LoadEnergiesDialog(self.view)
@@ -954,6 +968,7 @@ class CalibratorController(object):
 
       self.UpdateView(self.UPDATE_EXPOSURES)
       self.CalibrationValid(False)
+      self.Changed()
 
     dlg.Destroy()
     self.scan_dialog = None
@@ -972,6 +987,7 @@ class CalibratorController(object):
     self.view.panel.exposure_list.ClearEnergies()
     self.UpdateView(self.UPDATE_EXPOSURES)
     self.CalibrationValid(False)
+    self.Changed()
 
   def OnSelectExposures(self, evt):
     filenames = self.FileDialog(
@@ -989,9 +1005,11 @@ class CalibratorController(object):
 
   def OnAppendRow(self, evt):
     self.view.panel.exposure_list.AppendRow()
+    self.Changed()
 
   def OnDeleteRow(self, evt):
     self.view.panel.exposure_list.DeleteRow()
+    self.Changed()
 
   def OnImageAction(self, evt):
     action = evt.action
@@ -1013,6 +1031,7 @@ class CalibratorController(object):
 
   def OnImageXtals(self, evt):
     self.CalibrationValid(False)
+    self.Changed()
 
   def FileDialog(self, type, title, wildcard='', save=False, multiple=False):
     """
@@ -1058,32 +1077,39 @@ class CalibratorController(object):
     self.view.panel.exposure_list.ClearExposures()
     self.UpdateView(self.UPDATE_EXPOSURES)
     self.CalibrationValid(False)
+    self.Changed()
 
   def OnListEndLabelEdit(self, evt):
     self.UpdateView(self.UPDATE_EXPOSURES)
     self.CalibrationValid(False)
+    self.Changed()
 
   def OnFilterSpin(self, evt):
     self.UpdateView(self.UPDATE_FILTERS)
     self.CalibrationValid(False)
+    self.Changed()
 
   def OnFilterCheck(self, evt):
     i = FILTER_IDS.index(evt.Id)
     self.view.panel.filter_panel.set_filter_enabled(i, evt.Checked())
     self.UpdateView(self.UPDATE_FILTERS)
     self.CalibrationValid(False)
+    self.Changed()
 
   def OnFilterEmissionCheck(self, evt):
     self.view.panel.filter_panel.filter_emission_choice.Enable(evt.Checked())
     self.UpdateView(self.UPDATE_FILTERS)
     self.CalibrationValid(False)
+    self.Changed()
 
   def OnFilterEmissionChoice(self, evt):
     self.UpdateView(self.UPDATE_FILTERS)
     self.CalibrationValid(False)
+    self.Changed()
 
   def OnDispersiveDir(self, evt):
     self.CalibrationValid(False)
+    self.Changed()
 
   def OnExposureSlider(self, evt):
     i = evt.GetInt()
@@ -1125,6 +1151,7 @@ class CalibratorController(object):
     #XXX check that calib seems reasonable (monotonic, etc)
     # also, report residues from fit
     self.CalibrationValid(True)
+    self.Changed()
 
     self.ShowCalibrationMatrix()
 
@@ -1237,6 +1264,11 @@ class CalibratorController(object):
   def CalibrationValid(self, valid):
     self.calibration_valid = valid
     self.view.panel.calibrate_button.Enable(not valid)
+
+  def Changed(self, changed=True):
+    """Set whether data has changed since last save"""
+    self.changed = changed
+    #XXX indicate somehow that save is required
 
   def UpdateView(self, flag):
     self.update_view_flag |= flag

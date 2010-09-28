@@ -721,7 +721,7 @@ class CalibratorController(object):
 
     a = wx.AboutDialogInfo()
     a.SetName("minIXS Calibrator")
-    a.SetDescription("Mini X-ray Spectrometer Calibrator")
+    a.SetDescription("Mini Inelastic X-ray Spectrometer Calibrator")
     a.SetVersion("0.0.1")
     a.SetCopyright("(c) Seidler Group 2010")
     a.AddDeveloper("Brian Mattern (bmattern@uw.edu)")

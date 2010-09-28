@@ -102,7 +102,7 @@ class ImagePanel(wx.Panel):
       action = ACTION_NONE
       active_xtal = None
 
-      for xtal in self.xtals:
+      for xtal in self.xtals[::-1]:
         (x1,y1),(x2,y2) = xtal
 
         if y1 - off < y < y2 + off:

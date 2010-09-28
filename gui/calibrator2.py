@@ -1236,7 +1236,7 @@ class CalibratorController(object):
 
   def CalibrationValid(self, valid):
     self.calibration_valid = valid
-    #XXX indicate *somewhere* that calibration is now invalid
+    self.view.panel.calibrate_button.Enable(not valid)
 
   def changed(self, flag):
     self.changed_flag |= flag

@@ -160,6 +160,10 @@ class ImagePanel(wx.Panel):
       if y2 < y1:
         self.active_xtal[0][1], self.active_xtal[1][1] = y2, y1
 
+      if abs(x2 - x1) < 2 or abs(y2 - y1) < 2:
+        self.xtals.remove(self.active_xtal)
+        self.Refresh()
+
     self.active_xtal = None
     self.action = ACTION_NONE
 

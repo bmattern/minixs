@@ -521,13 +521,16 @@ class ExposureList(wx.ListCtrl,
     self.num_rows += 1
 
   def DeleteRow(self, index=None):
+    if index is None and self.GetItemCount() == 1:
+      self.DeleteItem(0)
+
     if index is None:
       index = self.GetFirstSelected()
       while index != -1:
         self.DeleteItem(index)
         index = self.GetFirstSelected()
     else:
-      self.Delete(index)
+      self.DeleteItem(index)
 
   def ClearEnergies(self):
     for i in range(self.GetItemCount()):

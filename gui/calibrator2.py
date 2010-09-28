@@ -189,7 +189,7 @@ class ImagePanel(wx.Panel):
       self.Refresh()
 
   def OnMotion(self, evt):
-    if not self.show_xtals: return
+    if not self.show_xtals or self.bitmap is None: return
     x,y = evt.GetPosition()
 
     self.PostEventCoords(x,y)

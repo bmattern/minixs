@@ -135,12 +135,6 @@ class ImagePanel(wx.Panel):
 
     x,y = evt.GetPosition()
 
-    #xtal, action = self.get_xtal_action(x,y)
-
-    #if xtal:
-    #  self.action = action 
-    #  self.active_xtal = xtal
-
     if self.action & ACTION_PROPOSED:
       self.action &= ~ACTION_PROPOSED
       self.action_start = (x,y)

@@ -865,6 +865,8 @@ class CalibratorController(object):
       self.model.load(filename)
       self.model_to_view()
       self.UpdateView(self.UPDATE_EXPOSURES | self.UPDATE_FILTERS)
+      if self.show_calibration_matrix:
+        self.ShowCalibrationMatrix()
       self.CalibrationValid(True)
       self.Changed(False)
 
@@ -1150,9 +1152,12 @@ class CalibratorController(object):
   def OnViewType(self, evt):
     if evt.GetInt() == 1:
       self.ShowCalibrationMatrix()
+      self.view.panel.exposure_panel.slider.Enable(False)
     else:
       self.show_calibration_matrix = False
       self.UpdateView(self.UPDATE_SELECTED_EXPOSURE)
+      if len(self.exposures) > 0:
+        self.view.panel.exposure_panel.slider.Enable(True)
 
   def OnShowXtals(self, evt):
     self.view.panel.exposure_panel.image_panel.ShowXtals(evt.Checked())

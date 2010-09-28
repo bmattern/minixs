@@ -694,9 +694,9 @@ class CalibratorFrame(MenuFrame):
     self.SetSizerAndFit(box)
 
 class CalibratorController(object):
-  CHANGED_FILTERS = 1
-  CHANGED_EXPOSURES = 2
-  CHANGED_SELECTED_EXPOSURE = 4
+  UPDATE_FILTERS = 1
+  UPDATE_EXPOSURES = 2
+  UPDATE_SELECTED_EXPOSURE = 4
 
   def __init__(self, view, model):
     self.view = view
@@ -704,8 +704,8 @@ class CalibratorController(object):
 
     self.show_calibration_matrix = False
 
-    self.changed_flag = 0
-    self.changed_timeout = None
+    self.update_view_flag = 0
+    self.update_view_timeout = None
 
     self.selected_exposure = 1
     self.exposures = []
@@ -845,7 +845,7 @@ class CalibratorController(object):
     if (filename):
       self.model.load(filename)
       self.model_to_view()
-      self.changed(self.CHANGED_EXPOSURES | self.CHANGED_FILTERS)
+      self.UpdateView(self.UPDATE_EXPOSURES | self.UPDATE_FILTERS)
       self.CalibrationValid(True)
 
   def OnSave(self, evt):
@@ -952,7 +952,7 @@ class CalibratorController(object):
       for e in energies:
         self.view.panel.exposure_list.AppendEnergy(e)
 
-      self.changed(self.CHANGED_EXPOSURES)
+      self.UpdateView(self.UPDATE_EXPOSURES)
       self.CalibrationValid(False)
 
     dlg.Destroy()
@@ -970,7 +970,7 @@ class CalibratorController(object):
 
   def OnClearEnergies(self, evt):
     self.view.panel.exposure_list.ClearEnergies()
-    self.changed(self.CHANGED_EXPOSURES)
+    self.UpdateView(self.UPDATE_EXPOSURES)
     self.CalibrationValid(False)
 
   def OnSelectExposures(self, evt):
@@ -984,7 +984,7 @@ class CalibratorController(object):
       self.view.panel.exposure_list.AppendExposure(f)
 
     if filenames:
-      self.changed(self.CHANGED_EXPOSURES)
+      self.UpdateView(self.UPDATE_EXPOSURES)
       self.CalibrationValid(False)
 
   def OnAppendRow(self, evt):
@@ -1056,30 +1056,30 @@ class CalibratorController(object):
 
   def OnClearExposures(self, evt):
     self.view.panel.exposure_list.ClearExposures()
-    self.changed(self.CHANGED_EXPOSURES)
+    self.UpdateView(self.UPDATE_EXPOSURES)
     self.CalibrationValid(False)
 
   def OnListEndLabelEdit(self, evt):
-    self.changed(self.CHANGED_EXPOSURES)
+    self.UpdateView(self.UPDATE_EXPOSURES)
     self.CalibrationValid(False)
 
   def OnFilterSpin(self, evt):
-    self.changed(self.CHANGED_FILTERS)
+    self.UpdateView(self.UPDATE_FILTERS)
     self.CalibrationValid(False)
 
   def OnFilterCheck(self, evt):
     i = FILTER_IDS.index(evt.Id)
     self.view.panel.filter_panel.set_filter_enabled(i, evt.Checked())
-    self.changed(self.CHANGED_FILTERS)
+    self.UpdateView(self.UPDATE_FILTERS)
     self.CalibrationValid(False)
 
   def OnFilterEmissionCheck(self, evt):
     self.view.panel.filter_panel.filter_emission_choice.Enable(evt.Checked())
-    self.changed(self.CHANGED_FILTERS)
+    self.UpdateView(self.UPDATE_FILTERS)
     self.CalibrationValid(False)
 
   def OnFilterEmissionChoice(self, evt):
-    self.changed(self.CHANGED_FILTERS)
+    self.UpdateView(self.UPDATE_FILTERS)
     self.CalibrationValid(False)
 
   def OnDispersiveDir(self, evt):
@@ -1094,7 +1094,7 @@ class CalibratorController(object):
       self.ShowCalibrationMatrix()
     else:
       self.show_calibration_matrix = False
-      self.changed(self.CHANGED_SELECTED_EXPOSURE)
+      self.UpdateView(self.UPDATE_SELECTED_EXPOSURE)
 
   def OnShowXtals(self, evt):
     self.view.panel.exposure_panel.image_panel.ShowXtals(evt.Checked())
@@ -1184,7 +1184,7 @@ class CalibratorController(object):
       num = num_exposures
 
     self.selected_exposure = num
-    self.changed(self.CHANGED_SELECTED_EXPOSURE)
+    self.UpdateView(self.UPDATE_SELECTED_EXPOSURE)
 
   def FilterEmission(self, energy, exposure, emission_type):
     if emission_type == FILTER_EMISSION_TYPE_FE_KBETA:
@@ -1238,20 +1238,20 @@ class CalibratorController(object):
     self.calibration_valid = valid
     self.view.panel.calibrate_button.Enable(not valid)
 
-  def changed(self, flag):
-    self.changed_flag |= flag
+  def UpdateView(self, flag):
+    self.update_view_flag |= flag
     delay = 1000./30.
 
-    if self.changed_timeout is None:
-      self.changed_timeout = wx.CallLater(delay, self.OnChangeTimeout)
-    elif not self.changed_timeout.IsRunning():
-      self.changed_timeout.Restart(delay)
+    if self.update_view_timeout is None:
+      self.update_view_timeout = wx.CallLater(delay, self.OnChangeTimeout)
+    elif not self.update_view_timeout.IsRunning():
+      self.update_view_timeout.Restart(delay)
 
   def OnChangeTimeout(self):
     if self.show_calibration_matrix:
       return
 
-    if self.changed_flag & self.CHANGED_EXPOSURES:
+    if self.update_view_flag & self.UPDATE_EXPOSURES:
       # update list of exposures
       valid, self.energies, self.exposures = self.view.panel.exposure_list.GetData()
       self.exposure_list_valid = valid
@@ -1272,7 +1272,7 @@ class CalibratorController(object):
         self.view.panel.exposure_panel.slider.Enable(True)
         self.view.panel.exposure_panel.slider.SetRange(1,num_exposures)
 
-    if self.changed_flag & (self.CHANGED_EXPOSURES|self.CHANGED_SELECTED_EXPOSURE|self.CHANGED_FILTERS):
+    if self.update_view_flag & (self.UPDATE_EXPOSURES|self.UPDATE_SELECTED_EXPOSURE|self.UPDATE_FILTERS):
       # get index of selected exposure and ensure it is within range
       i = self.selected_exposure - 1
       if i >= len(self.exposures):
@@ -1292,7 +1292,7 @@ class CalibratorController(object):
         text = '%d/%d %s - %.2f eV' % (self.selected_exposure, len(self.exposures), os.path.basename(filename), energy)
         self.view.panel.exposure_panel.label.SetLabel(text)
 
-    self.changed_flag = 0
+    self.update_view_flag = 0
 
 class CalibratorApp(wx.App):
   def __init__(self, *args, **kwargs):

@@ -1094,6 +1094,20 @@ class CalibratorController(object):
       valid = False
       errors.append("Define the boundary of at least one crystal.")
 
+    intersecting = False
+    for xa in self.model.xtals:
+      if intersecting:
+        break
+
+      for xb in self.model.xtals:
+        if xa == xb:
+          continue
+        if util.xtals_intersect(xa, xb):
+          valid = False
+          errors.append("Crystal boundaries may not overlap.")
+          intersecting = True
+          break
+
     return valid, errors
 
   def ShowCalibrationMatrix(self):

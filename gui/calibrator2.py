@@ -3,6 +3,7 @@ import minixs as mx
 import minixs.info as mxinfo
 import numpy as np
 import wx
+import wx.lib.newevent
 import util
 from frame import MenuFrame
 from matplotlib import cm, colors
@@ -22,6 +23,7 @@ ID_DISPERSIVE_DIR   = wx.NewId()
 ID_EXPOSURE_SLIDER  = wx.NewId()
 ID_CALIBRATE        = wx.NewId()
 ID_FILTER_EMISSION  = wx.NewId()
+ID_IMAGE_PANEL      = wx.NewId()
 
 ID_VIEW_TYPE        = wx.NewId()
 ID_SHOW_XTALS       = wx.NewId()
@@ -30,6 +32,8 @@ ID_IMPORT_XTALS     = wx.NewId()
 ID_EXPORT_XTALS     = wx.NewId()
 
 ID_LOAD_SCAN        = wx.NewId()
+
+EventActionChanged, EVT_ACTION_CHANGED = wx.lib.newevent.NewCommandEvent()
 
 WILDCARD_CALIB = "Calibration Files (*.calib)|*.calib|Data Files (*.dat)|*.dat|Text Files (*.txt)|*.txt|All Files|*"
 WILDCARD_EXPOSURE = "TIF Files (*.tif)|*.tif|All Files|*"
@@ -185,6 +189,9 @@ class ImagePanel(wx.Panel):
       else:
         self.action = ACTION_NONE
         self.active_xtal = None
+
+      evt = EventActionChanged(ID_IMAGE_PANEL, action=self.action, xtal=self.active_xtal)
+      wx.PostEvent(self, evt)
 
       if needs_refresh:
         self.Refresh()
@@ -437,7 +444,7 @@ class ExposurePanel(wx.Panel):
     vbox.Add(label, 0, wx.EXPAND | wx.BOTTOM, VPAD)
     self.label = label
 
-    panel = ImagePanel(self, wx.ID_ANY, size=(487,195))
+    panel = ImagePanel(self, ID_IMAGE_PANEL, size=(488,195))
     vbox.Add(panel, 0, wx.EXPAND | wx.BOTTOM, VPAD)
     self.image_panel = panel
 
@@ -739,6 +746,9 @@ class CalibratorController(object):
           (ID_FILTER_EMISSION, self.OnFilterEmissionChoice),
           (ID_DISPERSIVE_DIR, self.OnDispersiveDir),
           ]),
+        (EVT_ACTION_CHANGED, [
+          (ID_IMAGE_PANEL, self.OnImageAction),
+          ]),
         ]
 
     for event, bindings in callbacks:
@@ -948,6 +958,21 @@ class CalibratorController(object):
 
   def OnDeleteRow(self, evt):
     self.view.panel.exposure_list.DeleteRow()
+
+  def OnImageAction(self, evt):
+    action = evt.action
+
+    status = ""
+    #coords = self.view.panel.exposure_panel.image_panel.GetCoords()
+    if evt.xtal is None:
+      status = "L: Click and drag to define crystal boundary"
+    elif action & ACTION_PROPOSED:
+      if action & ACTION_MOVE:
+        status = "L: Move crystal  R: Delete crystal"
+      elif action & ACTION_RESIZE:
+        status = "L: Resize crystal  R: Delete crystal"
+
+    self.view.SetStatusText(status)
 
   def FileDialog(self, type, title, wildcard='', save=False, multiple=False):
     """

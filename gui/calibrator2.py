@@ -43,6 +43,10 @@ WILDCARD_XTAL = "Crystal Files (*.xtal)|*.xtal|Calibration Files (*.calib)|*.cal
 WILDCARD_XTAL_EXPORT = "Crystal Files (*.xtal)|*.xtal"
 WILDCARD_SCAN = "Scan Files (*.nnnn)|*.????|Text Files (*.txt)|*.txt|All Files|*"
 
+
+STATUS_COORDS  = 0
+STATUS_MESSAGE = 1
+
 class CalibratorModel(mxinfo.CalibrationInfo):
   def __init__(self):
     mxinfo.CalibrationInfo.__init__(self)
@@ -467,7 +471,7 @@ class ExposurePanel(wx.Panel):
     vbox.Add(label, 0, wx.EXPAND | wx.BOTTOM, VPAD)
     self.label = label
 
-    panel = ImagePanel(self, ID_IMAGE_PANEL, size=(488,195))
+    panel = ImagePanel(self, ID_IMAGE_PANEL, size=(487,195))
     vbox.Add(panel, 0, wx.EXPAND | wx.BOTTOM, VPAD)
     self.image_panel = panel
 
@@ -693,7 +697,9 @@ class CalibratorFrame(MenuFrame):
           ]),
         ]
     MenuFrame.__init__(self, *args, **kwargs)
-    self.CreateStatusBar()
+    bar = self.CreateStatusBar()
+    bar.SetFieldsCount(2)
+    bar.SetStatusWidths([-1, -3])
 
     box = wx.BoxSizer(wx.VERTICAL)
     self.panel = CalibratorPanel(self, wx.ID_ANY)
@@ -720,6 +726,8 @@ class CalibratorController(object):
     self.selected_exposure = 1
     self.exposures = []
     self.energies = []
+
+    self.raw_pixels = None
 
     self.CalibrationValid(False)
 
@@ -1036,14 +1044,25 @@ class CalibratorController(object):
       elif action & ACTION_RESIZE:
         status = "L: Resize crystal  R: Delete crystal"
 
-    self.view.SetStatusText(status)
+    self.view.SetStatusText(status, STATUS_MESSAGE)
 
   def OnImageXtals(self, evt):
     self.CalibrationValid(False)
     self.Changed()
 
   def OnImageCoords(self, evt):
-    #XXX get value under pixel and show coords in status bar somewhere
+    if evt.x == -1 and evt.y == -1:
+      coords = ''
+    else:
+      coords = "%3d,%3d" % (evt.x, evt.y)
+      if self.raw_pixels is not None:
+        z = self.raw_pixels[evt.y,evt.x]
+        if z == int(z):
+          coords += " -> %d" % z
+        else:
+          coords += " -> %.2f" % z
+
+    self.view.SetStatusText(coords, STATUS_COORDS)
     pass
 
   def FileDialog(self, type, title, wildcard='', save=False, multiple=False):
@@ -1151,7 +1170,7 @@ class CalibratorController(object):
       self.calibration_invalid = True
       return
 
-    self.view.SetStatusText("Calibrating... Please Wait...")
+    self.view.SetStatusText("Calibrating... Please Wait...", STATUS_MESSAGE)
 
     c = mx.Calibrator(self.model.energies, self.model.exposure_files, self.model.dispersive_direction)
 
@@ -1168,7 +1187,7 @@ class CalibratorController(object):
 
     self.ShowCalibrationMatrix()
 
-    self.view.SetStatusText("")
+    self.view.SetStatusText("", STATUS_MESSAGE)
 
   def Validate(self):
     errors = []
@@ -1206,6 +1225,7 @@ class CalibratorController(object):
     self.show_calibration_matrix = True
 
     c = self.model.calibration_matrix
+    self.raw_pixels = c
     if len(c) == 0: return
     nonzero = c[np.where(c>0)]
     if len(nonzero) == 0:
@@ -1303,9 +1323,9 @@ class CalibratorController(object):
 
       # set status text to indicate whether list is valid or not
       if not valid:
-        self.view.SetStatusText("Exposure List Invalid")
+        self.view.SetStatusText("Exposure List Invalid", STATUS_MESSAGE)
       else:
-        self.view.SetStatusText("")
+        self.view.SetStatusText("", STATUS_MESSAGE)
 
       # update slider
       num_exposures = len(self.exposures)
@@ -1325,12 +1345,14 @@ class CalibratorController(object):
       if i == -1:
         # no exposures
         self.view.panel.exposure_panel.label.SetLabel("No Exposures Loaded...")
+        self.raw_pixels = None
         self.view.panel.exposure_panel.SetPixels(None)
       else:
         filename = self.exposures[i]
         energy = self.energies[i]
 
         e = mx.Exposure(filename)
+        self.raw_pixels = e.pixels.copy()
         p = self.ApplyFilters(energy, e)
         self.view.panel.exposure_panel.SetPixels(p)
 

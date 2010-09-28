@@ -703,6 +703,8 @@ class CalibratorController(object):
     self.exposures = []
     self.energies = []
 
+    self.calibration_valid = False
+
     self.dialog_dirs = {
         'last': '',
         }
@@ -839,6 +841,17 @@ class CalibratorController(object):
       self.changed(self.CHANGED_EXPOSURES | self.CHANGED_FILTERS)
 
   def OnSave(self, evt):
+    header_only = False
+    if self.calibration_valid == False:
+      errdlg = wx.MessageDialog(self.view, "Warning: You have changed parameters since last calibrating. Saving now will only save the parameters, and not the matrix itself.", "Error", wx.OK | wx.CANCEL | wx.ICON_WARNING)
+      ret = errdlg.ShowModal()
+      errdlg.Destroy()
+
+      if ret == wx.ID_OK:
+        header_only = True
+      else:
+        return
+
     filename = self.FileDialog(
         'save',
         'Select file to save calibration to',
@@ -847,7 +860,7 @@ class CalibratorController(object):
         )
     if filename:
       self.view_to_model()
-      self.model.save(filename)
+      self.model.save(filename, header_only=header_only)
 
   def OnImportXtals(self, evt):
     filename = self.FileDialog(
@@ -1049,7 +1062,7 @@ class CalibratorController(object):
     self.changed(self.CHANGED_FILTERS)
 
   def OnDispersiveDir(self, evt):
-    self.calib_invalid = True
+    self.calibration_valid = False
 
   def OnExposureSlider(self, evt):
     i = evt.GetInt()
@@ -1086,6 +1099,10 @@ class CalibratorController(object):
 
     c.calibrate(self.model.xtals)
     self.model.calibration_matrix = c.calib
+
+    #XXX check that calib seems reasonable (monotonic, etc)
+    # also, report residues from fit
+    self.calibration_valid = True
 
     self.ShowCalibrationMatrix()
 
@@ -1231,7 +1248,7 @@ class CalibratorController(object):
 
     if self.changed_flag & (self.CHANGED_EXPOSURES | self.CHANGED_FILTERS):
       # mark calibration matrix as invalid
-      self.calib_invalid = True
+      self.calibration_valid = False
 
     if self.changed_flag & (self.CHANGED_EXPOSURES|self.CHANGED_SELECTED_EXPOSURE|self.CHANGED_FILTERS):
       # get index of selected exposure and ensure it is within range

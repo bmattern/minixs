@@ -190,6 +190,7 @@ class ImagePanel(wx.Panel):
       self.xtals.remove(self.active_xtal)
       self.active_xtal = None
       self.action = ACTION_NONE
+      self.PostEventXtalsChanged()
       self.Refresh()
 
   def OnMotion(self, evt):

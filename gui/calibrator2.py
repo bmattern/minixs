@@ -256,7 +256,6 @@ class ImagePanel(wx.Panel):
 
       if not self.show_xtals: return
 
-      #XXX store initialized pens and reuse
       dc.SetBrush(self.xtal_brush)
       for xtal in self.xtals:
         if xtal == self.active_xtal:

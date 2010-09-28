@@ -1243,11 +1243,11 @@ class CalibratorController(object):
     delay = 1000./30.
 
     if self.update_view_timeout is None:
-      self.update_view_timeout = wx.CallLater(delay, self.OnChangeTimeout)
+      self.update_view_timeout = wx.CallLater(delay, self.OnUpdateViewTimeout)
     elif not self.update_view_timeout.IsRunning():
       self.update_view_timeout.Restart(delay)
 
-  def OnChangeTimeout(self):
+  def OnUpdateViewTimeout(self):
     if self.show_calibration_matrix:
       return
 

@@ -34,6 +34,7 @@ ID_EXPORT_XTALS     = wx.NewId()
 ID_LOAD_SCAN        = wx.NewId()
 
 EventActionChanged, EVT_ACTION_CHANGED = wx.lib.newevent.NewCommandEvent()
+EventXtalsChanged, EVT_XTALS_CHANGED = wx.lib.newevent.NewCommandEvent()
 
 WILDCARD_CALIB = "Calibration Files (*.calib)|*.calib|Data Files (*.dat)|*.dat|Text Files (*.txt)|*.txt|All Files|*"
 WILDCARD_EXPOSURE = "TIF Files (*.tif)|*.tif|All Files|*"
@@ -134,6 +135,14 @@ class ImagePanel(wx.Panel):
     self.show_xtals = show
     self.Refresh()
 
+  def PostEventXtalsChanged(self):
+    evt = EventXtalsChanged(ID_IMAGE_PANEL, xtals=self.xtals)
+    wx.PostEvent(self, evt)
+
+  def PostEventActionChanged(self, in_window):
+    evt = EventActionChanged(ID_IMAGE_PANEL, action=self.action, xtal=self.active_xtal, in_window=in_window)
+    wx.PostEvent(self, evt)
+
   def OnLeftDown(self, evt):
     if not self.show_xtals: return
 
@@ -180,6 +189,7 @@ class ImagePanel(wx.Panel):
 
     w,h = self.GetSize()
 
+    # not currently performing an action
     if self.action == ACTION_NONE or self.action & ACTION_PROPOSED:
       xtal, action = self.get_xtal_action(x,y)
 
@@ -194,9 +204,7 @@ class ImagePanel(wx.Panel):
         self.action = ACTION_NONE
         self.active_xtal = None
 
-      evt = EventActionChanged(ID_IMAGE_PANEL, action=self.action, xtal=self.active_xtal, in_window=True)
-      wx.PostEvent(self, evt)
-
+      self.PostEventActionChanged(in_window=True)
       if needs_refresh:
         self.Refresh()
 
@@ -216,6 +224,7 @@ class ImagePanel(wx.Panel):
       elif self.action & ACTION_RESIZE_B:
         self.active_xtal[1][1] = y
 
+      self.PostEventXtalsChanged()
       self.Refresh()
 
     elif self.action & ACTION_MOVE:
@@ -234,6 +243,7 @@ class ImagePanel(wx.Panel):
       self.active_xtal[1][1] += dy
       self.action_start = (x,y)
 
+      self.PostEventXtalsChanged()
       self.Refresh()
 
   def OnEnterWindow(self, evt):
@@ -244,9 +254,7 @@ class ImagePanel(wx.Panel):
       self.action = ACTION_NONE
       self.active_xtal = None
 
-      evt = EventActionChanged(ID_IMAGE_PANEL, action=self.action, xtal=self.active_xtal, in_window=False)
-      wx.PostEvent(self, evt)
-
+      self.PostEventActionChanged(in_window=False)
       self.Refresh()
 
   def OnPaint(self, evt):
@@ -758,9 +766,8 @@ class CalibratorController(object):
           (ID_FILTER_EMISSION, self.OnFilterEmissionChoice),
           (ID_DISPERSIVE_DIR, self.OnDispersiveDir),
           ]),
-        (EVT_ACTION_CHANGED, [
-          (ID_IMAGE_PANEL, self.OnImageAction),
-          ]),
+        (EVT_ACTION_CHANGED, [ (ID_IMAGE_PANEL, self.OnImageAction), ]),
+        (EVT_XTALS_CHANGED, [ (ID_IMAGE_PANEL, self.OnImageXtals), ]),
         ]
 
     for event, bindings in callbacks:
@@ -839,6 +846,7 @@ class CalibratorController(object):
       self.model.load(filename)
       self.model_to_view()
       self.changed(self.CHANGED_EXPOSURES | self.CHANGED_FILTERS)
+      self.calibration_valid = True
 
   def OnSave(self, evt):
     header_only = False
@@ -896,6 +904,7 @@ class CalibratorController(object):
 
     self.view.panel.exposure_panel.image_panel.xtals = self.model.xtals
     self.view.panel.exposure_panel.image_panel.Refresh()
+    self.calibration_valid = False
 
   def OnExportXtals(self, evt):
     filename = self.FileDialog(
@@ -944,6 +953,7 @@ class CalibratorController(object):
         self.view.panel.exposure_list.AppendEnergy(e)
 
       self.changed(self.CHANGED_EXPOSURES)
+      self.calibration_valid = False
 
     dlg.Destroy()
     self.scan_dialog = None
@@ -961,6 +971,7 @@ class CalibratorController(object):
   def OnClearEnergies(self, evt):
     self.view.panel.exposure_list.ClearEnergies()
     self.changed(self.CHANGED_EXPOSURES)
+    self.calibration_valid = False
 
   def OnSelectExposures(self, evt):
     filenames = self.FileDialog(
@@ -974,6 +985,7 @@ class CalibratorController(object):
 
     if filenames:
       self.changed(self.CHANGED_EXPOSURES)
+      self.calibration_valid = False
 
   def OnAppendRow(self, evt):
     self.view.panel.exposure_list.AppendRow()
@@ -998,6 +1010,9 @@ class CalibratorController(object):
         status = "L: Resize crystal  R: Delete crystal"
 
     self.view.SetStatusText(status)
+
+  def OnImageXtals(self, evt):
+    self.calibration_valid = False
 
   def FileDialog(self, type, title, wildcard='', save=False, multiple=False):
     """
@@ -1042,24 +1057,30 @@ class CalibratorController(object):
   def OnClearExposures(self, evt):
     self.view.panel.exposure_list.ClearExposures()
     self.changed(self.CHANGED_EXPOSURES)
+    self.calibration_valid = False
 
   def OnListEndLabelEdit(self, evt):
     self.changed(self.CHANGED_EXPOSURES)
+    self.calibration_valid = False
 
   def OnFilterSpin(self, evt):
     self.changed(self.CHANGED_FILTERS)
+    self.calibration_valid = False
 
   def OnFilterCheck(self, evt):
     i = FILTER_IDS.index(evt.Id)
     self.view.panel.filter_panel.set_filter_enabled(i, evt.Checked())
     self.changed(self.CHANGED_FILTERS)
+    self.calibration_valid = False
 
   def OnFilterEmissionCheck(self, evt):
     self.view.panel.filter_panel.filter_emission_choice.Enable(evt.Checked())
     self.changed(self.CHANGED_FILTERS)
+    self.calibration_valid = False
 
   def OnFilterEmissionChoice(self, evt):
     self.changed(self.CHANGED_FILTERS)
+    self.calibration_valid = False
 
   def OnDispersiveDir(self, evt):
     self.calibration_valid = False
@@ -1088,6 +1109,7 @@ class CalibratorController(object):
       errdlg = wx.MessageDialog(self.view, message, "Error", wx.OK | wx.ICON_ERROR)
       errdlg.ShowModal()
       errdlg.Destroy()
+      self.calibration_invalid = True
       return
 
     self.view.SetStatusText("Calibrating... Please Wait...")
@@ -1245,10 +1267,6 @@ class CalibratorController(object):
       else:
         self.view.panel.exposure_panel.slider.Enable(True)
         self.view.panel.exposure_panel.slider.SetRange(1,num_exposures)
-
-    if self.changed_flag & (self.CHANGED_EXPOSURES | self.CHANGED_FILTERS):
-      # mark calibration matrix as invalid
-      self.calibration_valid = False
 
     if self.changed_flag & (self.CHANGED_EXPOSURES|self.CHANGED_SELECTED_EXPOSURE|self.CHANGED_FILTERS):
       # get index of selected exposure and ensure it is within range

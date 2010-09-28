@@ -48,7 +48,7 @@ class CalibrationInfo:
 
     self.filename = None
 
-  def save(self, filename=None):
+  def save(self, filename=None, header_only=False):
     if filename is None:
       filename = self.filename
     else:
@@ -74,7 +74,8 @@ class CalibrationInfo:
         f.write("#   %3d %3d %3d %3d\n" % (x1,y1,x2,y2))
       f.write("#\n")
 
-      if (self.calibration_matrix is not None and
+      if (not header_only and
+          self.calibration_matrix is not None and
           len(self.calibration_matrix) > 0 and 
           len(self.calibration_matrix.shape) == 2):
         f.write("# %d x %d matrix follows\n" % self.calibration_matrix.shape)
@@ -180,7 +181,7 @@ class XESInfo:
   def set_spectrum(self, spectrum):
     self.spectrum = spectrum
  
-  def save(self, filename=None):
+  def save(self, filename=None, header_only=False):
     if filename is None:
       filename = self.filename
     else:
@@ -197,11 +198,12 @@ class XESInfo:
         f.write("#   %s\n" % ef)
       f.write("#\n")
 
-      f.write("# E_emission    Intensity  Uncertainty  Raw_Counts   Num_Pixels\n")
-      if len(self.spectrum.shape) == 2 and self.spectrum.shape[1] == 5:
-        np.savetxt(f, self.spectrum, fmt=('%12.2f','%.6e','%.6e','% 11d',' % 11d'))
-      elif len(self.spectrum) > 0:
-        raise Exception("Invalid shape for spectrum array")
+      if not header_only:
+        f.write("# E_emission    Intensity  Uncertainty  Raw_Counts   Num_Pixels\n")
+        if len(self.spectrum.shape) == 2 and self.spectrum.shape[1] == 5:
+          np.savetxt(f, self.spectrum, fmt=('%12.2f','%.6e','%.6e','% 11d',' % 11d'))
+        elif len(self.spectrum) > 0:
+          raise Exception("Invalid shape for spectrum array")
       
 
   def load(self, filename=None, header_only=False):

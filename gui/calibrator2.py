@@ -1157,7 +1157,7 @@ class CalibratorController(object):
     else:
       self.show_calibration_matrix = False
       self.UpdateView(self.UPDATE_SELECTED_EXPOSURE)
-      if len(self.exposures) > 0:
+      if len(self.exposures) > 1:
         self.view.panel.exposure_panel.slider.Enable(True)
 
   def OnShowXtals(self, evt):
@@ -1230,9 +1230,12 @@ class CalibratorController(object):
   def ShowCalibrationMatrix(self):
     self.show_calibration_matrix = True
 
+    self.view.panel.exposure_panel.label.SetLabel("Calibration Matrix")
     c = self.model.calibration_matrix
     self.raw_pixels = c
-    if len(c) == 0: return
+    if len(c) == 0:
+      self.view.panel.exposure_panel.SetPixels(None)
+      return
     nonzero = c[np.where(c>0)]
     if len(nonzero) == 0:
       min_cal = 0

@@ -1256,7 +1256,7 @@ class CalibratorController(object):
       valid, self.energies, self.exposures = self.view.panel.exposure_list.GetData()
       self.exposure_list_valid = valid
 
-      # set status text to indicate wheterh list is valid or not
+      # set status text to indicate whether list is valid or not
       if not valid:
         self.view.SetStatusText("Exposure List Invalid")
       else:

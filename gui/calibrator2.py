@@ -672,11 +672,11 @@ class CalibratorFrame(MenuFrame):
   def __init__(self, *args, **kwargs):
     kwargs['menu_info'] = [
         ('&File', [
-          ('&Open', wx.ID_OPEN, 'Load Calibration'),
-          ('&Save', wx.ID_SAVE, 'Save Calibration'),
+          ('&Open...', wx.ID_OPEN, 'Load Calibration'),
+          ('&Save...', wx.ID_SAVE, 'Save Calibration'),
           ('', None, None), # separator
-          ('&Import Crystals', ID_IMPORT_XTALS, 'Import Crystals'),
-          ('&Export Crystals', ID_EXPORT_XTALS, 'Export Crystals'),
+          ('&Import Crystals...', ID_IMPORT_XTALS, 'Import Crystals'),
+          ('&Export Crystals...', ID_EXPORT_XTALS, 'Export Crystals'),
           ('', None, None), # separator
           ('E&xit', wx.ID_EXIT, 'Terminate this program'),
           ]),

@@ -711,7 +711,7 @@ class CalibratorController(object):
     self.exposures = []
     self.energies = []
 
-    self.calibration_valid = False
+    self.CalibrationValid(False)
 
     self.dialog_dirs = {
         'last': '',
@@ -846,7 +846,7 @@ class CalibratorController(object):
       self.model.load(filename)
       self.model_to_view()
       self.changed(self.CHANGED_EXPOSURES | self.CHANGED_FILTERS)
-      self.calibration_valid = True
+      self.CalibrationValid(True)
 
   def OnSave(self, evt):
     header_only = False
@@ -904,7 +904,7 @@ class CalibratorController(object):
 
     self.view.panel.exposure_panel.image_panel.xtals = self.model.xtals
     self.view.panel.exposure_panel.image_panel.Refresh()
-    self.calibration_valid = False
+    self.CalibrationValid(False)
 
   def OnExportXtals(self, evt):
     filename = self.FileDialog(
@@ -953,7 +953,7 @@ class CalibratorController(object):
         self.view.panel.exposure_list.AppendEnergy(e)
 
       self.changed(self.CHANGED_EXPOSURES)
-      self.calibration_valid = False
+      self.CalibrationValid(False)
 
     dlg.Destroy()
     self.scan_dialog = None
@@ -971,7 +971,7 @@ class CalibratorController(object):
   def OnClearEnergies(self, evt):
     self.view.panel.exposure_list.ClearEnergies()
     self.changed(self.CHANGED_EXPOSURES)
-    self.calibration_valid = False
+    self.CalibrationValid(False)
 
   def OnSelectExposures(self, evt):
     filenames = self.FileDialog(
@@ -985,7 +985,7 @@ class CalibratorController(object):
 
     if filenames:
       self.changed(self.CHANGED_EXPOSURES)
-      self.calibration_valid = False
+      self.CalibrationValid(False)
 
   def OnAppendRow(self, evt):
     self.view.panel.exposure_list.AppendRow()
@@ -1012,7 +1012,7 @@ class CalibratorController(object):
     self.view.SetStatusText(status)
 
   def OnImageXtals(self, evt):
-    self.calibration_valid = False
+    self.CalibrationValid(False)
 
   def FileDialog(self, type, title, wildcard='', save=False, multiple=False):
     """
@@ -1057,33 +1057,33 @@ class CalibratorController(object):
   def OnClearExposures(self, evt):
     self.view.panel.exposure_list.ClearExposures()
     self.changed(self.CHANGED_EXPOSURES)
-    self.calibration_valid = False
+    self.CalibrationValid(False)
 
   def OnListEndLabelEdit(self, evt):
     self.changed(self.CHANGED_EXPOSURES)
-    self.calibration_valid = False
+    self.CalibrationValid(False)
 
   def OnFilterSpin(self, evt):
     self.changed(self.CHANGED_FILTERS)
-    self.calibration_valid = False
+    self.CalibrationValid(False)
 
   def OnFilterCheck(self, evt):
     i = FILTER_IDS.index(evt.Id)
     self.view.panel.filter_panel.set_filter_enabled(i, evt.Checked())
     self.changed(self.CHANGED_FILTERS)
-    self.calibration_valid = False
+    self.CalibrationValid(False)
 
   def OnFilterEmissionCheck(self, evt):
     self.view.panel.filter_panel.filter_emission_choice.Enable(evt.Checked())
     self.changed(self.CHANGED_FILTERS)
-    self.calibration_valid = False
+    self.CalibrationValid(False)
 
   def OnFilterEmissionChoice(self, evt):
     self.changed(self.CHANGED_FILTERS)
-    self.calibration_valid = False
+    self.CalibrationValid(False)
 
   def OnDispersiveDir(self, evt):
-    self.calibration_valid = False
+    self.CalibrationValid(False)
 
   def OnExposureSlider(self, evt):
     i = evt.GetInt()
@@ -1124,7 +1124,7 @@ class CalibratorController(object):
 
     #XXX check that calib seems reasonable (monotonic, etc)
     # also, report residues from fit
-    self.calibration_valid = True
+    self.CalibrationValid(True)
 
     self.ShowCalibrationMatrix()
 
@@ -1233,7 +1233,11 @@ class CalibratorController(object):
     if max_vis is None: max_vis = p.max()
     p = colors.Normalize(min_vis, max_vis)(p)
     return p
-   
+
+  def CalibrationValid(self, valid):
+    self.calibration_valid = valid
+    #XXX indicate *somewhere* that calibration is now invalid
+
   def changed(self, flag):
     self.changed_flag |= flag
     delay = 1000./30.

@@ -5,6 +5,11 @@ class Tool(object):
     self.parent = parent
     self.parent.AddTool(self)
 
+    self.active = False
+
+  def SetActive(self, active):
+    self.active = active
+
   def OnLeftDown(self, evt):
     pass
 
@@ -69,14 +74,14 @@ class BoxTool(Tool):
       x1,y1,x2,y2 = r 
       dc.DrawRectangle(x1,y1,x2-x1,y2-y1)
 
-VERTICAL = 1
-HORIZONTAL = 2
+class Crosshair(Tool):
+  VERTICAL = 1
+  HORIZONTAL = 2
 
-class LineTool(Tool):
   def __init__(self, *args, **kwargs):
     Tool.__init__(self, *args, **kwargs)
 
-    self.direction = VERTICAL
+    self.direction = 0
     self.pos = None
 
     self.pen = wx.Pen('#222222', 1, wx.SOLID)
@@ -84,6 +89,25 @@ class LineTool(Tool):
   def SetDirection(self, direction):
     self.direction = direction
     self.parent.Refresh()
+
+  def ToogleDirection(self, direction, on=None):
+    """
+    Toggle crosshair direction
+
+    Parameters
+    ----------
+      direction: Crosshair.VERTICAL or .HORIZONTAL
+      on: True for on, False for off, or None for toggle 
+
+    Note: the directions can be bitwise or'd together. (e.g. Crosshair.VERTICAL | Crosshair.HORIZONTAL)
+    """
+
+    if on is None:
+      self.direction ^= direction
+    elif on:
+      self.direction |= direction
+    else:
+      self.direction &= ~direction
 
   def OnLeftDown(self, evt):
     pass
@@ -105,13 +129,13 @@ class LineTool(Tool):
     w, h = self.parent.GetSize()
     dc.SetPen(self.pen)
 
-    if self.direction & VERTICAL:
+    if self.direction & self.VERTICAL:
       x1 = x2 = self.pos[0]
       y1 = 0
       y2 = h
       dc.DrawLine(x1,y1,x2,y2)
 
-    if self.direction & HORIZONTAL:
+    if self.direction & self.HORIZONTAL:
       y1 = y2 = self.pos[1]
       x1 = 0
       x2 = w
@@ -146,32 +170,39 @@ class ImageView(wx.Panel):
     self.Refresh()
 
   def OnLeftDown(self, evt):
-    if self.active_tool:
-      self.active_tool.OnLeftDown(evt)
+    for tool in self.tools:
+      if tool.active:
+        tool.OnLeftDown(evt)
 
   def OnLeftUp(self, evt):
-    if self.active_tool:
-      self.active_tool.OnLeftUp(evt)
+    for tool in self.tools:
+      if tool.active:
+        tool.OnLeftUp(evt)
 
   def OnRightDown(self, evt):
-    if self.active_tool:
-      self.active_tool.OnRightDown(evt)
+    for tool in self.tools:
+      if tool.active:
+        tool.OnRightDown(evt)
 
   def OnRightUp(self, evt):
-    if self.active_tool:
-      self.active_tool.OnRightUp(evt)
+    for tool in self.tools:
+      if tool.active:
+        tool.OnRightUp(evt)
 
   def OnMotion(self, evt):
-    if self.active_tool:
-      self.active_tool.OnMotion(evt)
+    for tool in self.tools:
+      if tool.active:
+        tool.OnMotion(evt)
 
   def OnEnterWindow(self, evt):
-    if self.active_tool:
-      self.active_tool.OnEnterWindow(evt)
+    for tool in self.tools:
+      if tool.active:
+        tool.OnEnterWindow(evt)
 
   def OnLeaveWindow(self, evt):
-    if self.active_tool:
-      self.active_tool.OnLeaveWindow(evt)
+    for tool in self.tools:
+      if tool.active:
+        tool.OnLeaveWindow(evt)
 
   def OnPaint(self, evt):
     dc = wx.PaintDC(self)
@@ -198,61 +229,59 @@ if __name__ == "__main__":
   ID_BLINE = wx.NewId()
   ID_BOX  = wx.NewId()
 
+  class DemoFrame(wx.Frame):
+    def __init__(self, *args, **kwargs):
+      wx.Frame.__init__(self, *args, **kwargs)
+
+      box = wx.BoxSizer()
+      p = DemoPanel(self, wx.ID_ANY, size=(400,300))
+      box.Add(p, 1, wx.EXPAND | wx.ALL, 5)
+
+      self.SetSizerAndFit(box)
+
   class DemoPanel(wx.Panel):
     def __init__(self, *args, **kwargs):
       wx.Panel.__init__(self, *args, **kwargs)
 
       vbox = wx.BoxSizer(wx.VERTICAL)
 
-      im = ImageView(f)
-      vbox.Add(im, 1, wx.EXPAND | wx.ALL, 5)
+      im = ImageView(self)
+      vbox.Add(im, 1, wx.EXPAND | wx.BOTTOM)
       self.image = im
 
       self.box_tool = BoxTool(im)
-      self.line_tool = LineTool(im)
-      im.SetActiveTool(self.line_tool)
+      self.crosshair = Crosshair(im)
 
-      hbox = wx.BoxSizer(wx.HORIZONTAL)
+      c = wx.CheckBox(self, ID_HLINE, 'Horizontal')
+      vbox.Add(c, 0, wx.EXPAND | wx.BOTTOM, 5)
 
-      b = wx.Button(self, ID_HLINE, 'Horiz. Line')
-      hbox.Add(b, 1, wx.EXPAND | wx.RIGHT, 5)
+      c = wx.CheckBox(self, ID_VLINE, 'Vertical')
+      vbox.Add(c, 0, wx.EXPAND | wx.BOTTOM, 5)
 
-      b = wx.Button(self, ID_VLINE, 'Vert. Line')
-      hbox.Add(b, 1, wx.EXPAND | wx.RIGHT, 5)
+      c = wx.CheckBox(self, ID_BOX, 'Box')
+      vbox.Add(c, 0, wx.EXPAND)
 
-      b = wx.Button(self, ID_BLINE, 'Both Lines')
-      hbox.Add(b, 1, wx.EXPAND | wx.RIGHT, 5)
-
-      b = wx.Button(self, ID_BOX, 'Box')
-      hbox.Add(b, 1, wx.EXPAND | wx.RIGHT, 5)
-
-      vbox.Add(hbox, 0, wx.EXPAND | wx.LEFT, 5)
-
-      self.Bind(wx.EVT_BUTTON, self.OnButton)
+      self.Bind(wx.EVT_CHECKBOX, self.OnCheck)
 
       self.SetSizerAndFit(vbox)
 
-    def OnButton(self, evt):
+    def OnCheck(self, evt):
       id = evt.GetId()
+      checked = evt.IsChecked()
 
       if id == ID_VLINE:
-        self.image.SetActiveTool(self.line_tool)
-        self.line_tool.SetDirection(VERTICAL)
+        self.crosshair.SetActive(dir != 0)
+        self.crosshair.ToogleDirection(Crosshair.VERTICAL, checked)
 
       elif id == ID_HLINE:
-        self.image.SetActiveTool(self.line_tool)
-        self.line_tool.SetDirection(HORIZONTAL)
-
-      elif id == ID_BLINE:
-        self.image.SetActiveTool(self.line_tool)
-        self.line_tool.SetDirection(HORIZONTAL|VERTICAL)
+        self.crosshair.SetActive(dir != 0)
+        self.crosshair.ToogleDirection(Crosshair.HORIZONTAL, checked)
 
       elif id == ID_BOX:
-        self.image.SetActiveTool(self.box_tool)
+        self.box_tool.SetActive(checked)
 
   a = wx.App()
-  f = wx.Frame(None)
-  p = DemoPanel(f)
+  f = DemoFrame(None)
 
   f.Show()
   a.MainLoop()

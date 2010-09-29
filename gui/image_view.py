@@ -234,8 +234,8 @@ if __name__ == "__main__":
       wx.Frame.__init__(self, *args, **kwargs)
 
       box = wx.BoxSizer()
-      p = DemoPanel(self, wx.ID_ANY, size=(400,300))
-      box.Add(p, 1, wx.EXPAND | wx.ALL, 5)
+      p = DemoPanel(self, wx.ID_ANY)
+      box.Add(p, 0, wx.EXPAND | wx.ALL, 5)
 
       self.SetSizerAndFit(box)
 
@@ -245,7 +245,7 @@ if __name__ == "__main__":
 
       vbox = wx.BoxSizer(wx.VERTICAL)
 
-      im = ImageView(self)
+      im = ImageView(self, size=(400,300))
       vbox.Add(im, 1, wx.EXPAND | wx.BOTTOM)
       self.image = im
 

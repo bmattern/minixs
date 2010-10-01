@@ -14,6 +14,7 @@ from image_tools import RangeTool, Crosshair, EVT_RANGE_CHANGED, EVT_RANGE_ACTIO
 HPAD = 10
 VPAD = 5
 
+ID_MAIN_FRAME       = wx.NewId()
 ID_DATASET_NAME     = wx.NewId()
 ID_EXPOSURE_LIST    = wx.NewId()
 ID_READ_ENERGIES    = wx.NewId()
@@ -505,6 +506,7 @@ class CalibratorController(object):
 
   def BindCallbacks(self):
     callbacks = [
+        (wx.EVT_CLOSE, [ (ID_MAIN_FRAME, self.OnClose) ]),
         (wx.EVT_MENU, [
           (wx.ID_EXIT, self.OnExit),
           (wx.ID_OPEN, self.OnOpen),
@@ -711,7 +713,10 @@ class CalibratorController(object):
       for (x1,y1),(x2,y2) in self.model.xtals:
         f.write("%d\t%d\t%d\t%d\n" % (x1,y1,x2,y2))
 
-  def OnExit(self, evt):
+  def OnClose(self, evt):
+    if not evt.CanVeto():
+      self.view.Destroy()
+
     if self.changed:
       message = "There are unsaved changes. Continuing will exit without saving these."
       errdlg = wx.MessageDialog(self.view, message, "Warning", wx.OK | wx.CANCEL | wx.ICON_WARNING)
@@ -719,8 +724,13 @@ class CalibratorController(object):
       errdlg.Destroy()
 
       if ret != wx.ID_OK:
-        return
+        evt.Veto()
+        return False
 
+    self.view.Destroy()
+
+
+  def OnExit(self, evt):
     self.view.Close(True)
 
   def OnAbout(self, evt):
@@ -1141,7 +1151,7 @@ class CalibratorApp(wx.App):
     wx.App.__init__(self, *args, **kwargs)
 
     model = CalibratorModel()
-    view = CalibratorFrame(None, wx.ID_ANY, "minIXS Calibrator")
+    view = CalibratorFrame(None, ID_MAIN_FRAME, "minIXS Calibrator")
     controller = CalibratorController(view, model)
 
     view.Show()

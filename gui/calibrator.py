@@ -2,7 +2,7 @@ import minixs.info as mxinfo
 import wx
 
 from calibrator_controller import CalibratorController
-from calibrator_view import CalibratorFrame
+from calibrator_view import CalibratorView
 from calibrator_const import *
 
 class CalibratorModel(mxinfo.CalibrationInfo):
@@ -14,7 +14,7 @@ class CalibratorApp(wx.App):
     wx.App.__init__(self, *args, **kwargs)
 
     model = CalibratorModel()
-    view = CalibratorFrame(None, ID_MAIN_FRAME, "minIXS Calibrator")
+    view = CalibratorView(None, ID_MAIN_FRAME, "minIXS Calibrator")
     controller = CalibratorController(view, model)
 
     view.Show()

@@ -368,7 +368,7 @@ class CalibratorPanel(wx.Panel):
 
     self.SetSizerAndFit(vbox)
 
-class CalibratorFrame(MenuFrame):
+class CalibratorView(MenuFrame):
   def __init__(self, *args, **kwargs):
     kwargs['menu_info'] = [
         ('&File', [

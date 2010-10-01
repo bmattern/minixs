@@ -1,5 +1,8 @@
 import wx
 
+EventRangeActionChanged, EVT_RANGE_ACTION_CHANGED = wx.lib.newevent.NewCommandEvent()
+EventRangeChanged, EVT_RANGE_CHANGED = wx.lib.newevent.NewCommandEvent()
+
 class Tool(object):
   def __init__(self, parent):
     self.parent = parent
@@ -79,6 +82,23 @@ class RangeTool(Tool):
     self.brush = wx.Brush(wx.Colour(127,127,127,50))
     self.pen = wx.Pen('#ffff22', 1, wx.DOT_DASH)
     self.active_pen = wx.Pen('#33dd33', 1, wx.DOT_DASH)
+
+  def PostEventRangeChanged(self):
+    """
+    Send event indicating that selected range has changed
+    """
+    evt = EventRangeChanged(self.parent.Id, range=self.rects)
+    wx.PostEvent(self.parent, evt)
+
+  def PostEventRangeActionChanged(self, in_window):
+    """
+    Send event indicating that current action has changed
+    """
+    evt = EventRangeActionChanged(self.parent.Id,
+        action=self.action,
+        range=self.active_rect,
+        in_window=in_window)
+    wx.PostEvent(self.parent, evt)
 
   def DetermineAction(self, x, y):
     """
@@ -231,7 +251,7 @@ class RangeTool(Tool):
       self.rects.remove(self.active_rect)
       self.active_rect = None
       self.action = self.ACTION_NONE
-      # XXX self.PostEventXtalsChanged()
+      self.PostEventRangeChanged()
       self.parent.Refresh()
 
   def OnMotion(self, evt):
@@ -251,13 +271,14 @@ class RangeTool(Tool):
         needs_refresh = True
 
       if rect:
-        self.action = action | self.ACTION_PROPOSED
-        self.active_rect = rect
-      else:
-        self.action = self.ACTION_NONE
-        self.active_rect = None
+        action |= self.ACTION_PROPOSED
 
-      # XXX self.PostEventActionChanged(in_window=True)
+      if action != self.action or rect != self.active_rect:
+        self.action = action
+        self.active_rect = rect
+
+        self.PostEventRangeActionChanged(in_window=True)
+
       if needs_refresh:
         self.parent.Refresh()
 
@@ -277,7 +298,7 @@ class RangeTool(Tool):
       elif self.action & self.ACTION_RESIZE_B:
         self.active_rect[1][1] = y
 
-      # XXX self.PostEventXtalsChanged()
+      self.PostEventRangeChanged()
       self.parent.Refresh()
 
     elif self.action & self.ACTION_MOVE:
@@ -298,7 +319,7 @@ class RangeTool(Tool):
         self.active_rect[1][1] += dy
       self.action_start = (x,y)
 
-      # XXX self.PostEventXtalsChanged()
+      self.PostEventRangeChanged()
       self.parent.Refresh()
 
   def OnEnterWindow(self, evt):
@@ -315,8 +336,7 @@ class RangeTool(Tool):
       self.action = self.ACTION_NONE
       self.active_rect = None
 
-      # XXX self.PostEventActionChanged(in_window=False)
-      # XXX self.PostEventCoords(-1,-1)
+      self.PostEventRangeActionChanged(in_window=False)
       self.parent.Refresh()
 
   def OnPaint(self, evt):

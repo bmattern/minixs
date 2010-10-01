@@ -1,4 +1,5 @@
 import wx
+import wx.lib.newevent
 
 class ImageView(wx.Panel):
   def __init__(self, *args, **kwargs):

@@ -38,9 +38,26 @@ class Tool(object):
   def OnPaint(self, evt):
     pass
 
+
 class RangeTool(Tool):
   VERTICAL = 1
   HORIZONTAL = 2
+
+  ACTION_NONE = 0
+  ACTION_RESIZE_L = 0x01
+  ACTION_RESIZE_R = 0x02
+  ACTION_RESIZE_T = 0x04
+  ACTION_RESIZE_B = 0x08
+  ACTION_MOVE     = 0x10
+  ACTION_PROPOSED = 0x100
+
+  ACTION_RESIZE_TL = ACTION_RESIZE_T | ACTION_RESIZE_L
+  ACTION_RESIZE_TR = ACTION_RESIZE_T | ACTION_RESIZE_R
+  ACTION_RESIZE_BL = ACTION_RESIZE_B | ACTION_RESIZE_L
+  ACTION_RESIZE_BR = ACTION_RESIZE_B | ACTION_RESIZE_R
+
+  ACTION_RESIZE = ACTION_RESIZE_L | ACTION_RESIZE_R | \
+                  ACTION_RESIZE_T | ACTION_RESIZE_B
 
   def __init__(self, *args, **kwargs):
     Tool.__init__(self, *args, **kwargs)
@@ -51,9 +68,53 @@ class RangeTool(Tool):
     self.multiple = False
     self.direction = self.VERTICAL | self.HORIZONTAL
 
+    self.action = ACTION_NONE
+
     self.brush = wx.Brush(wx.Colour(127,127,127,50))
     self.pen = wx.Pen('#ffff22', 1, wx.DOT_DASH)
     self.active_pen = wx.Pen('#33dd33', 1, wx.DOT_DASH)
+
+  def DetermineAction(self, x, y):
+    off = 4
+    action = self.ACTION_NONE
+    active_rect = None
+
+    # run through rects backwards (newest are on top)
+    for rect in self.rects[::-1]:
+      (x1,y1),(x2,y2) = rect
+
+      # check if within offset of a rect edge, if so, resize
+      if y1 - off < y < y2 + off:
+        if abs(x1 - x) < off:
+          action |= self.ACTION_RESIZE_L
+          active_rect = rect
+        elif abs(x2 - x) < off:
+          action |= self.ACTION_RESIZE_R
+      if x1 - off < x < x2 + off:
+        if abs(y1 - y) < off:
+          action |= self.ACTION_RESIZE_T
+        elif abs(y2 - y) < off:
+          action |= self.ACTION_RESIZE_B
+
+      # not close to edge, but within rect => move
+      if action == self.ACTION_NONE:
+        if x1 < x < x2 and y1 < y < y2:
+          action = self.ACTION_MOVE
+
+      # only perform actions commensurate with direction
+      mask = ACTION_NONE
+      if self.direction & self.VERTICAL:
+        mask |= self.ACTION_RESIZE_T
+        mask |= self.ACTION_RESIZE_B
+      if self.direction & self.HORIZONTAL:
+        mask |= self.ACTION_RESIZE_L
+        mask |= self.ACTION_RESIZE_R
+      action &= ~mask
+
+      if action != self.ACTION_NONE:
+        return (rect, action)
+
+    return (None, self.ACTION_NONE)
 
   def ToogleDirection(self, direction, on=None):
     """

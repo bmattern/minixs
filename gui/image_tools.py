@@ -1,4 +1,5 @@
 import wx
+import wx.lib.newevent
 
 EventRangeActionChanged, EVT_RANGE_ACTION_CHANGED = wx.lib.newevent.NewCommandEvent()
 EventRangeChanged, EVT_RANGE_CHANGED = wx.lib.newevent.NewCommandEvent()
@@ -161,7 +162,7 @@ class RangeTool(Tool):
   def SetMultiple(self, multiple):
     self.multiple = multiple
 
-  def ToogleDirection(self, direction, on=None):
+  def ToggleDirection(self, direction, on=None):
     """
     Toggle range direction
 
@@ -379,7 +380,7 @@ class Crosshair(Tool):
     self.direction = direction
     self.parent.Refresh()
 
-  def ToogleDirection(self, direction, on=None):
+  def ToggleDirection(self, direction, on=None):
     """
     Toggle crosshair direction
 

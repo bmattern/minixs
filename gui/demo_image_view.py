@@ -69,13 +69,13 @@ if __name__ == "__main__":
 
       if id == ID_VRANGE:
         self.crosshair.SetActive(dir != 0)
-        self.crosshair.ToogleDirection(Crosshair.HORIZONTAL, checked)
-        self.box_tool.ToogleDirection(RangeTool.VERTICAL, checked)
+        self.crosshair.ToggleDirection(Crosshair.HORIZONTAL, checked)
+        self.box_tool.ToggleDirection(RangeTool.VERTICAL, checked)
 
       elif id == ID_HRANGE:
         self.crosshair.SetActive(dir != 0)
-        self.crosshair.ToogleDirection(Crosshair.VERTICAL, checked)
-        self.box_tool.ToogleDirection(RangeTool.HORIZONTAL, checked)
+        self.crosshair.ToggleDirection(Crosshair.VERTICAL, checked)
+        self.box_tool.ToggleDirection(RangeTool.HORIZONTAL, checked)
 
       elif id == ID_MULTIPLE:
         self.box_tool.SetMultiple(checked)

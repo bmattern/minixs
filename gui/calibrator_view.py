@@ -398,8 +398,10 @@ class CalibratorView(MenuFrame):
     # provide shortcuts for gui elements that controller needs access to
     self.image_view = self.panel.exposure_panel.image_view
     self.exposure_list = self.panel.exposure_list
-    self.exposure_slider = self.panel.exposure_panel.slider
     self.dataset_name = self.panel.dataset_name
+    self.exposure_panel = self.panel.exposure_panel
+    self.exposure_label = self.exposure_panel.label
+    self.exposure_slider = self.exposure_panel.slider
 
   def get_filters(self):
     return self.panel.filter_panel.get_filters()

@@ -570,11 +570,11 @@ class CalibratorController(object):
   def ShowCalibrationMatrix(self):
     self.show_calibration_matrix = True
 
-    self.view.panel.exposure_panel.label.SetLabel("Calibration Matrix")
+    self.view.exposure_label.SetLabel("Calibration Matrix")
     c = self.model.calibration_matrix
     self.raw_pixels = c
     if len(c) == 0:
-      self.view.panel.exposure_panel.SetPixels(None)
+      self.view.exposure_panel.SetPixels(None)
       return
     nonzero = c[np.where(c>0)]
     if len(nonzero) == 0:
@@ -583,7 +583,7 @@ class CalibratorController(object):
       min_cal = c[np.where(c>0)].min()
     max_cal = c.max()
     p = colors.Normalize(min_cal, max_cal)(c)
-    self.view.panel.exposure_panel.SetPixels(p, cm.jet)
+    self.view.exposure_panel.SetPixels(p, cm.jet)
 
     self.view.panel.tools_panel.view_type.SetSelection(1)
 
@@ -698,9 +698,9 @@ class CalibratorController(object):
         i = len(self.exposures) - 1
       if i == -1:
         # no exposures
-        self.view.panel.exposure_panel.label.SetLabel("No Exposures Loaded...")
+        self.view.exposure_label.SetLabel("No Exposures Loaded...")
         self.raw_pixels = None
-        self.view.panel.exposure_panel.SetPixels(None)
+        self.view.exposure_panel.SetPixels(None)
       else:
         filename = self.exposures[i]
         energy = self.energies[i]
@@ -708,9 +708,9 @@ class CalibratorController(object):
         e = mx.Exposure(filename)
         self.raw_pixels = e.pixels.copy()
         p = self.ApplyFilters(energy, e)
-        self.view.panel.exposure_panel.SetPixels(p)
+        self.view.exposure_panel.SetPixels(p)
 
         text = '%d/%d %s - %.2f eV' % (self.selected_exposure, len(self.exposures), os.path.basename(filename), energy)
-        self.view.panel.exposure_panel.label.SetLabel(text)
+        self.view.exposure_label.SetLabel(text)
 
     self.update_view_flag = 0

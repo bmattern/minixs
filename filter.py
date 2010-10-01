@@ -1,6 +1,16 @@
 import numpy as np
 
+#########################
+#                       #
+# Abstract Base Classes #
+#                       #
+#########################
 class Filter(object):
+  """
+  Abstract filter base class
+
+  Filters take an array of pixels and process them in some fashion
+  """
   name = ""
   def __init__(self):
     self.enabled = True
@@ -39,6 +49,12 @@ class FloatFilter(Filter):
 
   def get_str(self):
     return "%.2f" % self.val
+
+##################
+#                #
+# Actual Filters #
+#                #
+##################
 
 class MinFilter(DummyFilter):
   name = "Min Visible"

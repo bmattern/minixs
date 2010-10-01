@@ -9,6 +9,7 @@ from frame import MenuFrame
 from matplotlib import cm, colors
 
 from calibrator_const import *
+from wildcards import *
 
 from image_view import ImageView, EVT_COORDS
 from image_tools import RangeTool, Crosshair, EVT_RANGE_CHANGED, EVT_RANGE_ACTION_CHANGED

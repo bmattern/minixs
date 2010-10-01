@@ -156,14 +156,18 @@ class RangeTool(Tool):
         x1 = 0
         x2 = w
 
-      rect = [[x1,y1],[x+1,y+1]]
+      rect = [[x1,y1],[x2,y2]]
       if self.multiple:
         self.rects.append(rect)
       else:
         self.rects = [rect]
 
       self.active_rect = rect
-      self.action = self.ACTION_RESIZE_BR
+      self.action = self.ACTION_NONE
+      if self.direction & self.HORIZONTAL:
+        self.action |= self.ACTION_RESIZE_R
+      if self.direction & self.VERTICAL:
+        self.action |= self.ACTION_RESIZE_B
 
     self.parent.Refresh()
 
@@ -252,10 +256,12 @@ class RangeTool(Tool):
       if dx > w-x2: dx = w-x2
       if dy > h-y2: dy = h-y2
 
-      self.active_rect[0][0] += dx
-      self.active_rect[0][1] += dy
-      self.active_rect[1][0] += dx
-      self.active_rect[1][1] += dy
+      if self.direction & self.HORIZONTAL:
+        self.active_rect[0][0] += dx
+        self.active_rect[1][0] += dx
+      if self.direction & self.VERTICAL:
+        self.active_rect[0][1] += dy
+        self.active_rect[1][1] += dy
       self.action_start = (x,y)
 
       # XXX self.PostEventXtalsChanged()

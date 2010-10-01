@@ -1,6 +1,8 @@
 import wx
 import wx.lib.newevent
 
+EventCoords, EVT_COORDS = wx.lib.newevent.NewCommandEvent()
+
 class ImageView(wx.Panel):
   def __init__(self, *args, **kwargs):
     wx.Panel.__init__(self, *args, **kwargs)
@@ -29,6 +31,10 @@ class ImageView(wx.Panel):
       self.bitmap = wx.BitmapFromBuffer(w, h, p.tostring())
     self.Refresh()
 
+  def PostEventCoords(self, x, y):
+    evt = EventCoords(self.Id, x=x, y=y)
+    wx.PostEvent(self, evt)
+
   def OnLeftDown(self, evt):
     for tool in self.tools:
       if tool.active:
@@ -50,6 +56,9 @@ class ImageView(wx.Panel):
         tool.OnRightUp(evt)
 
   def OnMotion(self, evt):
+    x, y = evt.GetPosition()
+    self.PostEventCoords(x, y)
+
     for tool in self.tools:
       if tool.active:
         tool.OnMotion(evt)
@@ -60,6 +69,8 @@ class ImageView(wx.Panel):
         tool.OnEnterWindow(evt)
 
   def OnLeaveWindow(self, evt):
+    self.PostEventCoords(None, None)
+
     for tool in self.tools:
       if tool.active:
         tool.OnLeaveWindow(evt)

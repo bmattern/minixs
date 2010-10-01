@@ -1,5 +1,5 @@
 import wx
-from image_view import ImageView
+from image_view import ImageView, EVT_COORDS
 from image_tools import RangeTool, Crosshair, EVT_RANGE_CHANGED, EVT_RANGE_ACTION_CHANGED
 
 if __name__ == "__main__":
@@ -47,16 +47,22 @@ if __name__ == "__main__":
 
       self.Bind(EVT_RANGE_ACTION_CHANGED, self.OnRangeActionChanged)
       self.Bind(EVT_RANGE_CHANGED, self.OnRangeChanged)
+      self.Bind(EVT_COORDS, self.OnCoords)
       self.Bind(wx.EVT_CHECKBOX, self.OnCheck)
 
       self.SetSizerAndFit(vbox)
 
     def OnRangeActionChanged(self, evt):
-      print evt.action
+      print "action: ", evt.action
 
     def OnRangeChanged(self, evt):
-      print evt.range
+      print "range: ", evt.range
 
+    def OnCoords(self, evt):
+      if evt.x == None or evt.y == None:
+        print "coords: none"
+      else:
+        print "coords: (%d,%d)" % (evt.x, evt.y)
     def OnCheck(self, evt):
       id = evt.GetId()
       checked = evt.IsChecked()

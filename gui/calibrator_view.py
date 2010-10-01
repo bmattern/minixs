@@ -403,6 +403,7 @@ class CalibratorView(MenuFrame):
     self.exposure_label = self.exposure_panel.label
     self.exposure_slider = self.exposure_panel.slider
     self.view_type = self.panel.tools_panel.view_type
+    self.calibrate_button = self.panel.calibrate_button
 
   def get_filters(self):
     return self.panel.filter_panel.get_filters()

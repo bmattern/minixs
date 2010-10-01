@@ -645,7 +645,7 @@ class CalibratorController(object):
 
   def CalibrationValid(self, valid):
     self.calibration_valid = valid
-    self.view.panel.calibrate_button.Enable(not valid)
+    self.view.calibrate_button.Enable(not valid)
 
   def Changed(self, changed=True):
     """Set whether data has changed since last save"""

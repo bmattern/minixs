@@ -25,3 +25,26 @@ ID_LOAD_SCAN        = wx.NewId()
 
 STATUS_COORDS  = 0
 STATUS_MESSAGE = 1
+
+FILTER_MIN  = 0
+FILTER_MAX  = 1
+FILTER_LOW  = 2
+FILTER_HIGH = 3
+FILTER_NBOR = 4
+NUM_FILTERS = 5
+
+FILTER_NAMES = [
+    'Min Visible',
+    'Max Visible',
+    'Low Cutoff',
+    'High Cutoff',
+    'Neighbors'
+    ]
+
+FILTER_EMISSION_TYPE_FE_KBETA = 0
+FILTER_EMISSION_TYPE_NAMES = [
+    "Fe Kbeta"
+    ]
+
+FILTER_IDS = [ wx.NewId() for n in FILTER_NAMES ]
+

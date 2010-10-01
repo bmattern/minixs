@@ -1,6 +1,6 @@
 import wx
 from image_view import ImageView
-from image_tools import BoxTool, Crosshair
+from image_tools import RangeTool, Crosshair
 if __name__ == "__main__":
 
   ID_HLINE = wx.NewId()
@@ -28,7 +28,8 @@ if __name__ == "__main__":
       vbox.Add(im, 1, wx.EXPAND | wx.BOTTOM)
       self.image = im
 
-      self.box_tool = BoxTool(im)
+      self.box_tool = RangeTool(im)
+      self.box_tool.direction = 0
       self.crosshair = Crosshair(im)
 
       c = wx.CheckBox(self, ID_HLINE, 'Horizontal')
@@ -51,10 +52,12 @@ if __name__ == "__main__":
       if id == ID_VLINE:
         self.crosshair.SetActive(dir != 0)
         self.crosshair.ToogleDirection(Crosshair.VERTICAL, checked)
+        self.box_tool.ToogleDirection(RangeTool.HORIZONTAL, checked)
 
       elif id == ID_HLINE:
         self.crosshair.SetActive(dir != 0)
         self.crosshair.ToogleDirection(Crosshair.HORIZONTAL, checked)
+        self.box_tool.ToogleDirection(RangeTool.VERTICAL, checked)
 
       elif id == ID_BOX:
         self.box_tool.SetActive(checked)

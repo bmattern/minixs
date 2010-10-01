@@ -34,37 +34,82 @@ class Tool(object):
   def OnPaint(self, evt):
     pass
 
-class BoxTool(Tool):
+class RangeTool(Tool):
+  VERTICAL = 1
+  HORIZONTAL = 2
+
   def __init__(self, *args, **kwargs):
     Tool.__init__(self, *args, **kwargs)
 
     self.rects = []
     self.active_rect = None
 
-    self.brush = wx.Brush('#444400', wx.SOLID)
-    self.pen = wx.Pen('#ffff22', 1, wx.DOT_DASH)
-    self.active_pen = wx.Pen('#33dd33', 1, wx.DOT_DASH)
+    self.multiple = True #XXX this isn't handled yet
+    self.direction = self.VERTICAL | self.HORIZONTAL
+
+    self.brush = wx.Brush(wx.Colour(127,127,127,50))
+    self.pen = wx.Pen(wx.Colour(22, 22, 22, 255), 1)
+    self.active_pen = wx.Pen(wx.Colour(33, 200, 33, 255), 1)
+
+  def ToogleDirection(self, direction, on=None):
+    """
+    Toggle range direction
+
+    Parameters
+    ----------
+      direction: Crosshair.VERTICAL or .HORIZONTAL
+      on: True for on, False for off, or None for toggle 
+
+    Note: the directions can be bitwise or'd together. (e.g. RangeTool.VERTICAL | RangeTool.HORIZONTAL)
+    """
+
+    if on is None:
+      self.direction ^= direction
+    elif on:
+      self.direction |= direction
+    else:
+      self.direction &= ~direction
 
   def OnLeftDown(self, evt):
     x, y = evt.GetPosition()
-    r = [x, y, x, y]
+    w, h = self.parent.GetSize()
+
+    if self.direction & self.VERTICAL:
+      y1 = y2 = y
+    else:
+      y1 = 0
+      y2 = h
+    if self.direction & self.HORIZONTAL:
+      x1 = x2 = x
+    else:
+      x1 = 0
+      x2 = w
+
+    r = [[x1, y1], [x2, y2]]
     self.rects.append(r)
     self.active_rect = r
     self.parent.Refresh()
 
   def OnLeftUp(self, evt):
     self.active_rect = None
+    #XXX normalize rect so x2 >= x1 and y2 >= y1
     self.parent.Refresh()
 
   def OnMotion(self, evt):
     if self.active_rect is not None:
       x, y = evt.GetPosition()
-      self.active_rect[2] = x
-      self.active_rect[3] = y
+
+      if self.direction & self.HORIZONTAL:
+        self.active_rect[1][0] = x
+      if self.direction & self.VERTICAL:
+        self.active_rect[1][1] = y
+
       self.parent.Refresh()
 
   def OnPaint(self, evt):
-    dc = wx.PaintDC(self.parent)
+    pdc = wx.PaintDC(self.parent)
+    dc = wx.GCDC(pdc)
+
     dc.SetBrush(self.brush)
     for r in self.rects:
       if r == self.active_rect:
@@ -72,7 +117,7 @@ class BoxTool(Tool):
       else:
         dc.SetPen(self.pen)
 
-      x1,y1,x2,y2 = r 
+      (x1,y1),(x2,y2) = r 
       dc.DrawRectangle(x1,y1,x2-x1,y2-y1)
 
 class Crosshair(Tool):

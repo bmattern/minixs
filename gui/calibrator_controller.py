@@ -125,7 +125,7 @@ class CalibratorController(object):
     """
     Update view to match model
     """
-    self.view.panel.dataset_name.SetValue(self.model.dataset_name)
+    self.view.dataset_name.SetValue(self.model.dataset_name)
 
     self.view.panel.filter_panel.dispersive_direction.SetSelection(self.model.dispersive_direction)
 
@@ -160,7 +160,7 @@ class CalibratorController(object):
     """
     Update model to match view
     """
-    self.model.dataset_name = self.view.panel.dataset_name.GetValue()
+    self.model.dataset_name = self.view.dataset_name.GetValue()
     self.model.dispersive_direction = self.view.panel.filter_panel.dispersive_direction.GetSelection()
 
     # get energies and exposures

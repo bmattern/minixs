@@ -485,7 +485,6 @@ class CalibratorController(object):
 
     self.range_tool = RangeTool(self.view.panel.exposure_panel.image_view)
     self.range_tool.ToggleDirection(RangeTool.HORIZONTAL | RangeTool.VERTICAL, True)
-    self.range_tool.SetActive(True)
     self.range_tool.SetMultiple(True)
 
     self.CalibrationValid(False)
@@ -1100,6 +1099,11 @@ class CalibratorController(object):
 
       # update slider
       num_exposures = len(self.exposures)
+
+      show_xtals = (num_exposures >= 1)
+      self.range_tool.SetActive(show_xtals)
+      self.range_tool.SetVisible(show_xtals)
+
       if num_exposures <= 1:
         self.view.panel.exposure_panel.slider.Enable(False)
         self.view.panel.exposure_panel.slider.SetRange(0,1)

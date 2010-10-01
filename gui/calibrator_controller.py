@@ -130,12 +130,12 @@ class CalibratorController(object):
     self.view.panel.filter_panel.dispersive_direction.SetSelection(self.model.dispersive_direction)
 
     # set exposures and energies
-    self.view.panel.exposure_list.ClearExposures()
-    self.view.panel.exposure_list.ClearEnergies()
+    self.view.exposure_list.ClearExposures()
+    self.view.exposure_list.ClearEnergies()
     for f in self.model.exposure_files:
-      self.view.panel.exposure_list.AppendExposure(f)
+      self.view.exposure_list.AppendExposure(f)
     for e in self.model.energies:
-      self.view.panel.exposure_list.AppendEnergy(e)
+      self.view.exposure_list.AppendEnergy(e)
 
     # set filters
     filters = [(False, val) for enabled,val in self.view.panel.filter_panel.filter_defaults]
@@ -164,7 +164,7 @@ class CalibratorController(object):
     self.model.dispersive_direction = self.view.panel.filter_panel.dispersive_direction.GetSelection()
 
     # get energies and exposures
-    valid, energies, exposure_files = self.view.panel.exposure_list.GetData()
+    valid, energies, exposure_files = self.view.exposure_list.GetData()
     self.exposure_list_valid = valid
 
     self.model.energies = energies
@@ -356,7 +356,7 @@ class CalibratorController(object):
       energies = mx.read_scan_info(filename, [column])[0]
 
       for e in energies:
-        self.view.panel.exposure_list.AppendEnergy(e)
+        self.view.exposure_list.AppendEnergy(e)
 
       self.UpdateView(self.UPDATE_EXPOSURES)
       self.CalibrationValid(False)
@@ -378,7 +378,7 @@ class CalibratorController(object):
       self.scan_dialog.set_filename(filename)
 
   def OnClearEnergies(self, evt):
-    self.view.panel.exposure_list.ClearEnergies()
+    self.view.exposure_list.ClearEnergies()
     self.UpdateView(self.UPDATE_EXPOSURES)
     self.CalibrationValid(False)
     self.Changed()
@@ -393,18 +393,18 @@ class CalibratorController(object):
         multiple=True
         )
     for f in filenames:
-      self.view.panel.exposure_list.AppendExposure(f)
+      self.view.exposure_list.AppendExposure(f)
 
     if filenames:
       self.UpdateView(self.UPDATE_EXPOSURES)
       self.CalibrationValid(False)
 
   def OnAppendRow(self, evt):
-    self.view.panel.exposure_list.AppendRow()
+    self.view.exposure_list.AppendRow()
     self.Changed()
 
   def OnDeleteRow(self, evt):
-    self.view.panel.exposure_list.DeleteRow()
+    self.view.exposure_list.DeleteRow()
     self.Changed()
 
   def OnImageAction(self, evt):
@@ -447,7 +447,7 @@ class CalibratorController(object):
     pass
 
   def OnClearExposures(self, evt):
-    self.view.panel.exposure_list.ClearExposures()
+    self.view.exposure_list.ClearExposures()
     self.UpdateView(self.UPDATE_EXPOSURES)
     self.CalibrationValid(False)
     self.Changed()
@@ -667,7 +667,7 @@ class CalibratorController(object):
 
     if self.update_view_flag & self.UPDATE_EXPOSURES:
       # update list of exposures
-      valid, self.energies, self.exposures = self.view.panel.exposure_list.GetData()
+      valid, self.energies, self.exposures = self.view.exposure_list.GetData()
       self.exposure_list_valid = valid
 
       # set status text to indicate whether list is valid or not

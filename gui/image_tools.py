@@ -48,8 +48,8 @@ class RangeTool(Tool):
     self.direction = self.VERTICAL | self.HORIZONTAL
 
     self.brush = wx.Brush(wx.Colour(127,127,127,50))
-    self.pen = wx.Pen(wx.Colour(22, 22, 22, 255), 1)
-    self.active_pen = wx.Pen(wx.Colour(33, 200, 33, 255), 1)
+    self.pen = wx.Pen('#ffff22', 1, wx.DOT_DASH)
+    self.active_pen = wx.Pen('#33dd33', 1, wx.DOT_DASH)
 
   def ToogleDirection(self, direction, on=None):
     """
@@ -107,10 +107,13 @@ class RangeTool(Tool):
       self.parent.Refresh()
 
   def OnPaint(self, evt):
-    pdc = wx.PaintDC(self.parent)
-    dc = wx.GCDC(pdc)
+    dc = wx.PaintDC(self.parent)
+    gcdc = wx.GCDC(dc)
 
-    dc.SetBrush(self.brush)
+    dc.SetBrush(wx.TRANSPARENT_BRUSH)
+    gcdc.SetBrush(self.brush)
+    gcdc.SetPen(wx.TRANSPARENT_PEN)
+
     for r in self.rects:
       if r == self.active_rect:
         dc.SetPen(self.active_pen)
@@ -119,6 +122,7 @@ class RangeTool(Tool):
 
       (x1,y1),(x2,y2) = r 
       dc.DrawRectangle(x1,y1,x2-x1,y2-y1)
+      gcdc.DrawRectangle(x1,y1,x2-x1,y2-y1)
 
 class Crosshair(Tool):
   VERTICAL = 1

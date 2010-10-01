@@ -140,6 +140,11 @@ class EmissionFilter(Filter):
   def get_str(self):
     return self.TYPE_NAMES[self.type]
 
+###################
+#                 #
+# Filter Registry #
+#                 #
+###################
 FILTERS = [ MinFilter, MaxFilter, LowFilter, HighFilter, NeighborFilter, BadPixelFilter, EmissionFilter ]
 
 filter_map = {}

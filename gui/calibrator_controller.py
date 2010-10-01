@@ -491,12 +491,12 @@ class CalibratorController(object):
   def OnViewType(self, evt):
     if evt.GetInt() == 1:
       self.ShowCalibrationMatrix()
-      self.view.panel.exposure_panel.slider.Enable(False)
+      self.view.exposure_slider.Enable(False)
     else:
       self.show_calibration_matrix = False
       self.UpdateView(self.UPDATE_SELECTED_EXPOSURE)
       if len(self.exposures) > 1:
-        self.view.panel.exposure_panel.slider.Enable(True)
+        self.view.exposure_slider.Enable(True)
 
   def OnShowXtals(self, evt):
     show = evt.Checked()
@@ -684,12 +684,12 @@ class CalibratorController(object):
       self.range_tool.SetVisible(show_xtals)
 
       if num_exposures <= 1:
-        self.view.panel.exposure_panel.slider.Enable(False)
-        self.view.panel.exposure_panel.slider.SetRange(0,1)
-        self.view.panel.exposure_panel.slider.SetValue(0)
+        self.view.exposure_slider.Enable(False)
+        self.view.exposure_slider.SetRange(0,1)
+        self.view.exposure_slider.SetValue(0)
       else:
-        self.view.panel.exposure_panel.slider.Enable(True)
-        self.view.panel.exposure_panel.slider.SetRange(1,num_exposures)
+        self.view.exposure_slider.Enable(True)
+        self.view.exposure_slider.SetRange(1,num_exposures)
 
     if self.update_view_flag & (self.UPDATE_EXPOSURES|self.UPDATE_SELECTED_EXPOSURE|self.UPDATE_FILTERS):
       # get index of selected exposure and ensure it is within range

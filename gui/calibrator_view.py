@@ -398,3 +398,4 @@ class CalibratorView(MenuFrame):
     # provide shortcuts for gui elements that controller needs access to
     self.image_view = self.panel.exposure_panel.image_view
     self.exposure_list = self.panel.exposure_list
+    self.exposure_slider = self.panel.exposure_panel.slider

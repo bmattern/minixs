@@ -44,7 +44,7 @@ class RangeTool(Tool):
     self.rects = []
     self.active_rect = None
 
-    self.multiple = True #XXX this isn't handled yet
+    self.multiple = False
     self.direction = self.VERTICAL | self.HORIZONTAL
 
     self.brush = wx.Brush(wx.Colour(127,127,127,50))
@@ -86,13 +86,29 @@ class RangeTool(Tool):
       x2 = w
 
     r = [[x1, y1], [x2, y2]]
-    self.rects.append(r)
+    if self.multiple:
+      self.rects.append(r)
+    else:
+      self.rects = [r]
+
     self.active_rect = r
     self.parent.Refresh()
 
   def OnLeftUp(self, evt):
+    (x1,y1), (x2,y2) = self.active_rect
+
+    # normalize rect coords so x1<x2 and y1<y2
+    if x2 < x1:
+      self.active_rect[0][0], self.active_rect[1][0] = x2, x1
+    if y2 < y1:
+      self.active_rect[0][1], self.active_rect[1][1] = y2, y1
+
+    # don't keep rects with vanishing size
+    if abs(x2 - x1) < 2 or abs(y2 - y1) < 2:
+      self.rects.remove(self.active_xtal)
+      self.Refresh()
+
     self.active_rect = None
-    #XXX normalize rect so x2 >= x1 and y2 >= y1
     self.parent.Refresh()
 
   def OnMotion(self, evt):

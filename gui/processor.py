@@ -5,6 +5,7 @@ import minixs.info as mxinfo
 import wx
 import wxmpl
 
+from wildcards import *
 
 HPAD = 10
 VPAD = 5
@@ -23,11 +24,6 @@ ID_EXPOSURE_ADD = wx.NewId()
 ID_EXPOSURE_DEL = wx.NewId()
 
 ID_UPDATE_GRAPH = wx.NewId()
-
-WILDCARD_XES = "XES Data Files (*.xes)|*.xes|Data Files (*.dat)|*.dat|Text Files (*.txt)|*.txt"
-WILDCARD_CALIB = "Calibration Files (*.calib)|*.calib|Data Files (*.dat)|*.dat|Text Files (*.txt)|*.txt"
-WILDCARD_EXPOSURE = "TIF Files (*.tif)|*.tif|All Files|*"
-
 
 class ProcessorApp(wx.App):
   def __init__(self, *args, **kwargs):

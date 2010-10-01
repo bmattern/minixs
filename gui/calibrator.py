@@ -275,6 +275,7 @@ class CalibratorController(object):
   def OnClose(self, evt):
     if not evt.CanVeto():
       self.view.Destroy()
+      return True
 
     if self.changed:
       message = "There are unsaved changes. Continuing will exit without saving these."
@@ -288,9 +289,8 @@ class CalibratorController(object):
 
     self.view.Destroy()
 
-
   def OnExit(self, evt):
-    self.view.Close(True)
+    self.view.Close()
 
   def OnAbout(self, evt):
     wx.AboutBox(self.about_info)

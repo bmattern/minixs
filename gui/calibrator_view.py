@@ -395,3 +395,5 @@ class CalibratorView(MenuFrame):
 
     self.SetSizerAndFit(box)
 
+    # provide shortcuts for gui elements that controller needs access to
+    self.image_view = self.panel.exposure_panel.image_view

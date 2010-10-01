@@ -41,11 +41,11 @@ class CalibratorController(object):
 
     self.raw_pixels = None
 
-    self.crosshair = Crosshair(self.view.panel.exposure_panel.image_view)
+    self.crosshair = Crosshair(self.view.image_view)
     self.crosshair.SetActive(True)
     self.crosshair.ToggleDirection(Crosshair.HORIZONTAL | Crosshair.VERTICAL, True)
 
-    self.range_tool = RangeTool(self.view.panel.exposure_panel.image_view)
+    self.range_tool = RangeTool(self.view.image_view)
     self.range_tool.ToggleDirection(RangeTool.HORIZONTAL | RangeTool.VERTICAL, True)
     self.range_tool.SetMultiple(True)
 
@@ -270,7 +270,7 @@ class CalibratorController(object):
       errdlg.Destroy()
 
     self.range_tool.rects = self.model.xtals
-    self.view.panel.exposure_panel.image_view.Refresh()
+    self.view.image_view.Refresh()
     self.CalibrationValid(False)
     self.Changed()
 

@@ -172,7 +172,7 @@ class CalibratorController(object):
 
     # get filters
     self.model.filters = []
-    filters = self.view.panel.filter_panel.get_filters()
+    filters = self.view.get_filters()
     for i, (enabled, val) in enumerate(filters):
       if enabled:
         self.model.filters.append( (FILTER_NAMES[i], val) )
@@ -616,7 +616,7 @@ class CalibratorController(object):
       emission_type = self.view.panel.filter_panel.filter_emission_choice.GetSelection()
       self.FilterEmission(energy, exposure, emission_type)
 
-    self.filters = self.view.panel.filter_panel.get_filters()
+    self.filters = self.view.get_filters()
 
     for i, (enabled, val) in enumerate(self.filters):
       if not enabled:

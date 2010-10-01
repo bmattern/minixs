@@ -401,3 +401,5 @@ class CalibratorView(MenuFrame):
     self.exposure_slider = self.panel.exposure_panel.slider
     self.dataset_name = self.panel.dataset_name
 
+  def get_filters(self):
+    return self.panel.filter_panel.get_filters()

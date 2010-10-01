@@ -585,7 +585,7 @@ class CalibratorController(object):
     p = colors.Normalize(min_cal, max_cal)(c)
     self.view.exposure_panel.SetPixels(p, cm.jet)
 
-    self.view.panel.tools_panel.view_type.SetSelection(1)
+    self.view.view_type.SetSelection(1)
 
   def SelectExposure(self, num):
     num_exposures = len(self.exposures)

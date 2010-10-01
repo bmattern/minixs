@@ -5,6 +5,7 @@ import os, sys
 import util
 import wx
 
+from file_dialog      import FileDialog
 from image_view       import EVT_COORDS
 from image_tools      import RangeTool, Crosshair, EVT_RANGE_CHANGED, EVT_RANGE_ACTION_CHANGED
 from matplotlib       import cm, colors
@@ -187,7 +188,9 @@ class CalibratorController(object):
     """
     File > Open handler
     """
-    filename = self.FileDialog(
+    filename = FileDialog(
+        self.view,
+        self.dialog_dirs,
         'open',
         'Select a calibration file to open',
         wildcard=WILDCARD_CALIB
@@ -217,7 +220,9 @@ class CalibratorController(object):
       else:
         return
 
-    filename = self.FileDialog(
+    filename = FileDialog(
+        self.view,
+        self.dialog_dirs,
         'save',
         'Select file to save calibration to',
         wildcard=WILDCARD_CALIB,
@@ -231,7 +236,9 @@ class CalibratorController(object):
     """
     File > Import Crystals handler
     """
-    filename = self.FileDialog(
+    filename = FileDialog(
+        self.view,
+        self.dialog_dirs,
         'xtals',
         'Select file to import crystals from',
         wildcard=WILDCARD_XTAL,
@@ -271,7 +278,9 @@ class CalibratorController(object):
     """
     File > Export Crystals handler
     """
-    filename = self.FileDialog(
+    filename = FileDialog(
+        self.view,
+        self.dialog_dirs,
         'xtals',
         'Select file to export crystals to',
         wildcard=WILDCARD_XTAL_EXPORT,
@@ -357,7 +366,9 @@ class CalibratorController(object):
     self.scan_dialog = None
 
   def OnLoadScan(self, evt):
-    filename = self.FileDialog(
+    filename = FileDialog(
+        self.view,
+        self.dialog_dirs,
         'scan',
         'Select a text file',
         wildcard=WILDCARD_SCAN
@@ -373,7 +384,9 @@ class CalibratorController(object):
     self.Changed()
 
   def OnSelectExposures(self, evt):
-    filenames = self.FileDialog(
+    filenames = FileDialog(
+        self.view,
+        self.dialog_dirs,
         'exposures',
         'Select Exposure Files',
         wildcard=WILDCARD_EXPOSURE,
@@ -432,46 +445,6 @@ class CalibratorController(object):
 
     self.view.SetStatusText(coords, STATUS_COORDS)
     pass
-
-  def FileDialog(self, type, title, wildcard='', save=False, multiple=False):
-    """
-    Show a file dialog and return selected path(s)
-    """
-    if type not in self.dialog_dirs.keys() or not self.dialog_dirs[type]:
-      self.dialog_dirs[type] = self.dialog_dirs['last']
-
-    style = 0
-    if save:
-      style |= wx.FD_SAVE
-    else:
-      style |= wx.FD_OPEN
-    if multiple:
-      style |= wx.FD_MULTIPLE
-
-    dlg = wx.FileDialog(self.view, title,
-        self.dialog_dirs[type],
-        wildcard=wildcard,
-        style=style)
-
-    ret = dlg.ShowModal()
-
-    paths = []
-    if ret == wx.ID_OK:
-      directory = dlg.GetDirectory()
-      self.dialog_dirs[type] = self.dialog_dirs['last'] = directory
-      filenames = dlg.GetFilenames()
-
-      paths = [os.path.join(directory, f) for f in filenames]
-
-    dlg.Destroy()
-
-    if not paths:
-      return None
-
-    if multiple:
-      return paths
-    else:
-      return paths[0]
 
   def OnClearExposures(self, evt):
     self.view.panel.exposure_list.ClearExposures()

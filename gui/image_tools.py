@@ -6,9 +6,13 @@ class Tool(object):
     self.parent.AddTool(self)
 
     self.active = False
+    self.visible = True
 
   def SetActive(self, active):
     self.active = active
+
+  def SetVisible(self, visible):
+    self.visible = visible
 
   def OnLeftDown(self, evt):
     pass

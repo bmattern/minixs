@@ -68,8 +68,9 @@ class ImageView(wx.Panel):
     if self.bitmap:
       dc.DrawBitmap(self.bitmap, 0, 0)
 
-    for t in self.tools:
-      t.OnPaint(evt)
+    for tool in self.tools:
+      if tool.visible:
+        tool.OnPaint(evt)
 
   def AddTool(self, tool):
     self.tools.append(tool)

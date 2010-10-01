@@ -191,6 +191,14 @@ class RangeTool(Tool):
 
     self.parent.Refresh()
 
+  def OnRightUp(self, evt):
+    if self.action & self.ACTION_PROPOSED:
+      self.rects.remove(self.active_rect)
+      self.active_rect = None
+      self.action = self.ACTION_NONE
+      # XXX self.PostEventXtalsChanged()
+      self.parent.Refresh()
+
   def OnMotion(self, evt):
     x, y = evt.GetPosition()
 

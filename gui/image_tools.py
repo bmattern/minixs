@@ -68,7 +68,7 @@ class RangeTool(Tool):
     self.multiple = False
     self.direction = self.VERTICAL | self.HORIZONTAL
 
-    self.action = ACTION_NONE
+    self.action = self.ACTION_NONE
 
     self.brush = wx.Brush(wx.Colour(127,127,127,50))
     self.pen = wx.Pen('#ffff22', 1, wx.DOT_DASH)
@@ -102,14 +102,14 @@ class RangeTool(Tool):
           action = self.ACTION_MOVE
 
       # only perform actions commensurate with direction
-      mask = ACTION_NONE
+      mask = self.ACTION_MOVE
       if self.direction & self.VERTICAL:
         mask |= self.ACTION_RESIZE_T
         mask |= self.ACTION_RESIZE_B
       if self.direction & self.HORIZONTAL:
         mask |= self.ACTION_RESIZE_L
         mask |= self.ACTION_RESIZE_R
-      action &= ~mask
+      action &= mask
 
       if action != self.ACTION_NONE:
         return (rect, action)
@@ -139,52 +139,130 @@ class RangeTool(Tool):
     x, y = evt.GetPosition()
     w, h = self.parent.GetSize()
 
-    if self.direction & self.VERTICAL:
-      y1 = y2 = y
+    if self.action & self.ACTION_PROPOSED:
+      self.action &= ~self.ACTION_PROPOSED
+      self.action_start = (x,y)
     else:
-      y1 = 0
-      y2 = h
-    if self.direction & self.HORIZONTAL:
-      x1 = x2 = x
-    else:
-      x1 = 0
-      x2 = w
+      if self.direction & self.VERTICAL:
+        y1 = y
+        y2 = y + 1
+      else:
+        y1 = 0
+        y2 = h
+      if self.direction & self.HORIZONTAL:
+        x1 = x
+        x2 = x + 1
+      else:
+        x1 = 0
+        x2 = w
 
-    r = [[x1, y1], [x2, y2]]
-    if self.multiple:
-      self.rects.append(r)
-    else:
-      self.rects = [r]
+      rect = [[x1,y1],[x+1,y+1]]
+      if self.multiple:
+        self.rects.append(rect)
+      else:
+        self.rects = [rect]
 
-    self.active_rect = r
+      self.active_rect = rect
+      self.action = self.ACTION_RESIZE_BR
+
     self.parent.Refresh()
 
   def OnLeftUp(self, evt):
+    x,y = evt.GetPosition()
     (x1,y1), (x2,y2) = self.active_rect
 
-    # normalize rect coords so x1<x2 and y1<y2
-    if x2 < x1:
-      self.active_rect[0][0], self.active_rect[1][0] = x2, x1
-    if y2 < y1:
-      self.active_rect[0][1], self.active_rect[1][1] = y2, y1
+    if self.action & self.ACTION_RESIZE:
+      # normalize rect coords so x1<x2 and y1<y2
+      if x2 < x1:
+        self.active_rect[0][0], self.active_rect[1][0] = x2, x1
+      if y2 < y1:
+        self.active_rect[0][1], self.active_rect[1][1] = y2, y1
 
-    # don't keep rects with vanishing size
-    if abs(x2 - x1) < 2 or abs(y2 - y1) < 2:
-      self.rects.remove(self.active_rect)
-      self.Refresh()
+      # don't keep rects with vanishing size
+      if abs(x2 - x1) < 2 or abs(y2 - y1) < 2:
+        self.rects.remove(self.active_rect)
+        self.parent.Refresh()
 
-    self.active_rect = None
+    rect, action = self.DetermineAction(x, y)
+    if action != self.ACTION_NONE:
+      action |= self.ACTION_PROPOSED
+    self.active_rect = rect
+    self.action = action 
+
     self.parent.Refresh()
 
   def OnMotion(self, evt):
-    if self.active_rect is not None:
-      x, y = evt.GetPosition()
+    x, y = evt.GetPosition()
 
-      if self.direction & self.HORIZONTAL:
+    w, h = self.parent.GetSize()
+
+    # not currently performing an action
+    if self.action == self.ACTION_NONE or self.action & self.ACTION_PROPOSED:
+      rect, action = self.DetermineAction(x,y)
+
+      needs_refresh = False
+      if self.action & ~self.ACTION_PROPOSED != action or rect != self.active_rect:
+        needs_refresh = True
+
+      if rect:
+        self.action = action | self.ACTION_PROPOSED
+        self.active_rect = rect
+      else:
+        self.action = self.ACTION_NONE
+        self.active_rect = None
+
+      # XXX self.PostEventActionChanged(in_window=True)
+      if needs_refresh:
+        self.parent.Refresh()
+
+    elif self.action & self.ACTION_RESIZE:
+      # clamp mouse to within panel
+      if x < 0: x = 0
+      if x > w: x = w
+      if y < 0: y = 0
+      if y > h: y = h
+
+      if self.action & self.ACTION_RESIZE_L:
+        self.active_rect[0][0] = x
+      elif self.action & self.ACTION_RESIZE_R:
         self.active_rect[1][0] = x
-      if self.direction & self.VERTICAL:
+      if self.action & self.ACTION_RESIZE_T:
+        self.active_rect[0][1] = y
+      elif self.action & self.ACTION_RESIZE_B:
         self.active_rect[1][1] = y
 
+      # XXX self.PostEventXtalsChanged()
+      self.parent.Refresh()
+
+    elif self.action & self.ACTION_MOVE:
+      (x1, y1), (x2, y2) = self.active_rect
+      xs,ys = self.action_start
+      dx, dy = x - xs, y - ys
+
+      if dx < -x1: dx = -x1
+      if dy < -y1: dy = -y1
+      if dx > w-x2: dx = w-x2
+      if dy > h-y2: dy = h-y2
+
+      self.active_rect[0][0] += dx
+      self.active_rect[0][1] += dy
+      self.active_rect[1][0] += dx
+      self.active_rect[1][1] += dy
+      self.action_start = (x,y)
+
+      # XXX self.PostEventXtalsChanged()
+      self.parent.Refresh()
+
+  def OnEnterWindow(self, evt):
+    pass
+
+  def OnLeaveWindow(self, evt):
+    if self.action & self.ACTION_PROPOSED or self.action == self.ACTION_NONE:
+      self.action = self.ACTION_NONE
+      self.active_rect = None
+
+      # XXX self.PostEventActionChanged(in_window=False)
+      # XXX self.PostEventCoords(-1,-1)
       self.parent.Refresh()
 
   def OnPaint(self, evt):

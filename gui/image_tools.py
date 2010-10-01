@@ -170,7 +170,7 @@ class RangeTool(Tool):
 
     # don't keep rects with vanishing size
     if abs(x2 - x1) < 2 or abs(y2 - y1) < 2:
-      self.rects.remove(self.active_xtal)
+      self.rects.remove(self.active_rect)
       self.Refresh()
 
     self.active_rect = None

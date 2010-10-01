@@ -40,6 +40,9 @@ class Tool(object):
 
 
 class RangeTool(Tool):
+  """
+  A tool to allow selecting one or more ranges in one or more directions
+  """
   VERTICAL = 1
   HORIZONTAL = 2
 
@@ -60,6 +63,9 @@ class RangeTool(Tool):
                   ACTION_RESIZE_T | ACTION_RESIZE_B
 
   def __init__(self, *args, **kwargs):
+    """
+    Initialize tool
+    """
     Tool.__init__(self, *args, **kwargs)
 
     self.rects = []
@@ -75,6 +81,22 @@ class RangeTool(Tool):
     self.active_pen = wx.Pen('#33dd33', 1, wx.DOT_DASH)
 
   def DetermineAction(self, x, y):
+    """
+    Determine action to perform based on the provided location
+
+    Parameters
+    ----------
+      x: x coordinate
+      y: y coordinate
+
+    Returns
+    -------
+      (rect, action)
+
+      rect: the rectangle to act on
+      action: the action to perform (a bitmask of self.ACTION_*)
+    """
+
     off = 4
     action = self.ACTION_NONE
     active_rect = None
@@ -136,6 +158,9 @@ class RangeTool(Tool):
       self.direction &= ~direction
 
   def OnLeftDown(self, evt):
+    """
+    Handle left mouse down
+    """
     x, y = evt.GetPosition()
     w, h = self.parent.GetSize()
 
@@ -172,6 +197,9 @@ class RangeTool(Tool):
     self.parent.Refresh()
 
   def OnLeftUp(self, evt):
+    """
+    Handle left mouse up
+    """
     x,y = evt.GetPosition()
     (x1,y1), (x2,y2) = self.active_rect
 
@@ -196,6 +224,9 @@ class RangeTool(Tool):
     self.parent.Refresh()
 
   def OnRightUp(self, evt):
+    """
+    Handle right mouse up
+    """
     if self.action & self.ACTION_PROPOSED:
       self.rects.remove(self.active_rect)
       self.active_rect = None
@@ -204,6 +235,9 @@ class RangeTool(Tool):
       self.parent.Refresh()
 
   def OnMotion(self, evt):
+    """
+    Handle mouse motion
+    """
     x, y = evt.GetPosition()
 
     w, h = self.parent.GetSize()
@@ -268,9 +302,15 @@ class RangeTool(Tool):
       self.parent.Refresh()
 
   def OnEnterWindow(self, evt):
+    """
+    Handle entering window
+    """
     pass
 
   def OnLeaveWindow(self, evt):
+    """
+    Handle leaving window
+    """
     if self.action & self.ACTION_PROPOSED or self.action == self.ACTION_NONE:
       self.action = self.ACTION_NONE
       self.active_rect = None
@@ -280,6 +320,9 @@ class RangeTool(Tool):
       self.parent.Refresh()
 
   def OnPaint(self, evt):
+    """
+    Draw tool
+    """
     dc = wx.PaintDC(self.parent)
     gcdc = wx.GCDC(dc)
 

@@ -13,6 +13,9 @@ def get_filter_by_name(name):
 
 class Filter(object):
   name = ""
+  def __init__(self):
+    self.enabled = True
+
   def filter(pixels, energy):
     pass
 
@@ -21,7 +24,6 @@ class Filter(object):
 
   def get_str(self, val):
     return None
-
 
 class DummyFilter(Filter):
   pass
@@ -187,3 +189,4 @@ class Exposure:
   def filter_bad_pixels(self, bad_pixels):
     for x,y in bad_pixels:
       self.pixels[y,x] = 0
+

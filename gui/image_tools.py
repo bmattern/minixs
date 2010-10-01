@@ -367,9 +367,9 @@ class RangeTool(Tool):
 
       (x1,y1),(x2,y2) = r 
       gcdc.DrawRectangle(x1,y1,x2-x1,y2-y1)
-      dc.DrawRectangle(x1,y1,x2-x1,y2-y1)
+      dc.DrawRectangle(x1,y1,x2-x1+1,y2-y1+1)
 
-      if self.active_rect and self.action & self.ACTION_RESIZE:
+      if self.active_rect and self.action & self.ACTION_RESIZE and self.action & self.ACTION_PROPOSED:
 
         dc.SetPen(self.action_pen)
         (x1,y1),(x2,y2) = self.active_rect
@@ -377,11 +377,11 @@ class RangeTool(Tool):
         if self.action & self.ACTION_RESIZE_L:
           dc.DrawLine(x1,y1,x1,y2)
         if self.action & self.ACTION_RESIZE_R:
-          dc.DrawLine(x2-1,y1,x2-1,y2)
+          dc.DrawLine(x2,y1,x2,y2)
         if self.action & self.ACTION_RESIZE_T:
           dc.DrawLine(x1,y1,x2,y1)
         if self.action & self.ACTION_RESIZE_B:
-          dc.DrawLine(x1,y2-1,x2,y2-1)
+          dc.DrawLine(x1,y2,x2,y2)
 
 
 class Crosshair(Tool):

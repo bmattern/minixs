@@ -13,11 +13,17 @@ from calibrator_const import *
 from wildcards        import *
 
 class CalibratorController(object):
+  """
+  The beast that controls the calibrator gui
+  """
   UPDATE_FILTERS = 1
   UPDATE_EXPOSURES = 2
   UPDATE_SELECTED_EXPOSURE = 4
 
   def __init__(self, view, model):
+    """
+    Initialize
+    """
     self.view = view
     self.model = model
 
@@ -59,6 +65,9 @@ class CalibratorController(object):
     self.BindCallbacks()
 
   def BindCallbacks(self):
+    """
+    Connect up event handlers
+    """
     callbacks = [
         (wx.EVT_CLOSE, [ (ID_MAIN_FRAME, self.OnClose) ]),
         (wx.EVT_MENU, [
@@ -112,6 +121,9 @@ class CalibratorController(object):
       self.view.Bind(wx.EVT_CHECKBOX, self.OnFilterCheck, id=id)
 
   def model_to_view(self):
+    """
+    Update view to match model
+    """
     self.view.panel.dataset_name.SetValue(self.model.dataset_name)
 
     self.view.panel.filter_panel.dispersive_direction.SetSelection(self.model.dispersive_direction)
@@ -144,6 +156,9 @@ class CalibratorController(object):
     self.range_tool.rects = self.model.xtals
 
   def view_to_model(self):
+    """
+    Update model to match view
+    """
     self.model.dataset_name = self.view.panel.dataset_name.GetValue()
     self.model.dispersive_direction = self.view.panel.filter_panel.dispersive_direction.GetSelection()
 
@@ -169,6 +184,9 @@ class CalibratorController(object):
     self.model.xtals = self.range_tool.rects
 
   def OnOpen(self, evt):
+    """
+    File > Open handler
+    """
     filename = self.FileDialog(
         'open',
         'Select a calibration file to open',
@@ -185,6 +203,9 @@ class CalibratorController(object):
       self.Changed(False)
 
   def OnSave(self, evt):
+    """
+    File > Save handler
+    """
     header_only = False
     if self.calibration_valid == False:
       errdlg = wx.MessageDialog(self.view, "Warning: You have changed parameters since last calibrating. Saving now will only save the parameters, and not the matrix itself.", "Error", wx.OK | wx.CANCEL | wx.ICON_WARNING)
@@ -207,6 +228,9 @@ class CalibratorController(object):
       self.model.save(filename, header_only=header_only)
 
   def OnImportXtals(self, evt):
+    """
+    File > Import Crystals handler
+    """
     filename = self.FileDialog(
         'xtals',
         'Select file to import crystals from',
@@ -244,6 +268,9 @@ class CalibratorController(object):
     self.Changed()
 
   def OnExportXtals(self, evt):
+    """
+    File > Export Crystals handler
+    """
     filename = self.FileDialog(
         'xtals',
         'Select file to export crystals to',
@@ -268,6 +295,12 @@ class CalibratorController(object):
         f.write("%d\t%d\t%d\t%d\n" % (x1,y1,x2,y2))
 
   def OnClose(self, evt):
+    """
+    Window close handler
+
+    Checks if model has changed since last save and notifies user
+    if it has.
+    """
     if not evt.CanVeto():
       self.view.Destroy()
       return True
@@ -285,12 +318,21 @@ class CalibratorController(object):
     self.view.Destroy()
 
   def OnExit(self, evt):
+    """
+    File > Exit handler
+    """
     self.view.Close()
 
   def OnAbout(self, evt):
+    """
+    Help > About handler
+    """
     wx.AboutBox(self.about_info)
 
   def OnDatasetName(self, evt):
+    """
+    Dataset name changed
+    """
     self.model.dataset_name = evt.GetString()
     self.Changed()
 

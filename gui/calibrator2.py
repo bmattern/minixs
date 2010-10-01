@@ -8,6 +8,9 @@ import util
 from frame import MenuFrame
 from matplotlib import cm, colors
 
+from image_view import ImageView, EVT_COORDS
+from image_tools import RangeTool, Crosshair, EVT_RANGE_CHANGED, EVT_RANGE_ACTION_CHANGED
+
 HPAD = 10
 VPAD = 5
 
@@ -33,10 +36,6 @@ ID_EXPORT_XTALS     = wx.NewId()
 
 ID_LOAD_SCAN        = wx.NewId()
 
-EventActionChanged, EVT_ACTION_CHANGED = wx.lib.newevent.NewCommandEvent()
-EventXtalsChanged, EVT_XTALS_CHANGED = wx.lib.newevent.NewCommandEvent()
-EventCoords, EVT_COORDS = wx.lib.newevent.NewCommandEvent()
-
 WILDCARD_CALIB = "Calibration Files (*.calib)|*.calib|Data Files (*.dat)|*.dat|Text Files (*.txt)|*.txt|All Files|*"
 WILDCARD_EXPOSURE = "TIF Files (*.tif)|*.tif|All Files|*"
 WILDCARD_XTAL = "Crystal Files (*.xtal)|*.xtal|Calibration Files (*.calib)|*.calib|Text Files (*.txt)|*.txt|All Files|*"
@@ -50,256 +49,6 @@ STATUS_MESSAGE = 1
 class CalibratorModel(mxinfo.CalibrationInfo):
   def __init__(self):
     mxinfo.CalibrationInfo.__init__(self)
-
-ACTION_RESIZE = 1
-
-ACTION_NONE = 0
-ACTION_RESIZE_L = 0x01
-ACTION_RESIZE_R = 0x02
-ACTION_RESIZE_T = 0x04
-ACTION_RESIZE_B = 0x08
-ACTION_MOVE     = 0x10
-ACTION_PROPOSED = 0x100
-
-ACTION_RESIZE_TL = ACTION_RESIZE_T | ACTION_RESIZE_L
-ACTION_RESIZE_TR = ACTION_RESIZE_T | ACTION_RESIZE_R
-ACTION_RESIZE_BL = ACTION_RESIZE_B | ACTION_RESIZE_L
-ACTION_RESIZE_BR = ACTION_RESIZE_B | ACTION_RESIZE_R
-
-ACTION_RESIZE = ACTION_RESIZE_L | ACTION_RESIZE_R | \
-                ACTION_RESIZE_T | ACTION_RESIZE_B
-
-class ImagePanel(wx.Panel):
-  def __init__(self, *args, **kwargs):
-    wx.Panel.__init__(self, *args, **kwargs)
-    self.bitmap = None
-    self.xtals = []
-
-    self.SetEvtHandlerEnabled(True)
-
-    self.bad_pixels = []
-
-    self.Bind(wx.EVT_PAINT, self.OnPaint)
-    self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
-    self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
-    self.Bind(wx.EVT_RIGHT_UP, self.OnRightUp)
-    self.Bind(wx.EVT_MOTION, self.OnMotion)
-    self.Bind(wx.EVT_ENTER_WINDOW, self.OnEnterWindow)
-    self.Bind(wx.EVT_LEAVE_WINDOW, self.OnLeaveWindow)
-
-    self.action = ACTION_NONE
-    self.active_xtal = None
-
-    self.show_xtals = True
-
-    self.xtal_brush = wx.Brush('#aa0000', wx.TRANSPARENT)
-    self.xtal_pen = wx.Pen('#ffff22', 1, wx.DOT_DASH)
-    self.active_xtal_pen = wx.Pen('#33dd33', 1, wx.DOT_DASH)
-    self.action_pen = wx.Pen('#22ffff', 1, wx.SOLID)
-
-  def set_pixels(self, pixels, colormap=cm.Greys_r):
-    if pixels is None:
-      self.bitmap = None
-    else:
-      h,w = pixels.shape[0:2]
-      p = colormap(pixels, bytes=True)[:,:,0:3]
-      self.bitmap = wx.BitmapFromBuffer(w, h, p.tostring())
-    self.Refresh()
-
-  def get_xtal_action(self, x, y):
-      off = 4
-      resize_dir = 0
-      action = ACTION_NONE
-      active_xtal = None
-
-      for xtal in self.xtals[::-1]:
-        (x1,y1),(x2,y2) = xtal
-
-        if y1 - off < y < y2 + off:
-          if abs(x1 - x) < off:
-            action |= ACTION_RESIZE_L
-            active_xtal = xtal
-          elif abs(x2 - x) < off:
-            action |= ACTION_RESIZE_R
-        if x1 - off < x < x2 + off:
-          if abs(y1 - y) < off:
-            action |= ACTION_RESIZE_T
-          elif abs(y2 - y) < off:
-            action |= ACTION_RESIZE_B
-
-        if action == ACTION_NONE:
-          if x1 < x < x2 and y1 < y < y2:
-            action = ACTION_MOVE
-
-        if action != ACTION_NONE:
-          return (xtal, action)
-
-      return (None, ACTION_NONE)
-
-  def ShowXtals(self, show):
-    self.show_xtals = show
-    self.Refresh()
-
-  def PostEventXtalsChanged(self):
-    evt = EventXtalsChanged(ID_IMAGE_PANEL, xtals=self.xtals)
-    wx.PostEvent(self, evt)
-
-  def PostEventActionChanged(self, in_window):
-    evt = EventActionChanged(ID_IMAGE_PANEL, action=self.action, xtal=self.active_xtal, in_window=in_window)
-    wx.PostEvent(self, evt)
-
-  def PostEventCoords(self, x, y):
-    evt = EventCoords(ID_IMAGE_PANEL, x=x, y=y)
-    wx.PostEvent(self, evt)
-
-  def OnLeftDown(self, evt):
-    if not self.show_xtals: return
-
-    x,y = evt.GetPosition()
-
-    if self.action & ACTION_PROPOSED:
-      self.action &= ~ACTION_PROPOSED
-      self.action_start = (x,y)
-    else:
-      xtal = [[x,y],[x+1,y+1]]
-      self.xtals.append(xtal)
-      self.active_xtal = xtal
-      self.action = ACTION_RESIZE_BR
-
-  def OnLeftUp(self, evt):
-    if not self.show_xtals: return
-
-    if self.action & ACTION_RESIZE:
-      (x1,y1), (x2,y2) = self.active_xtal
-
-      # normalize rect coords so x1<x2 and y1<y2
-      if x2 < x1:
-        self.active_xtal[0][0], self.active_xtal[1][0] = x2, x1
-      if y2 < y1:
-        self.active_xtal[0][1], self.active_xtal[1][1] = y2, y1
-
-      if abs(x2 - x1) < 2 or abs(y2 - y1) < 2:
-        self.xtals.remove(self.active_xtal)
-        self.Refresh()
-
-    self.active_xtal = None
-    self.action = ACTION_NONE
-
-  def OnRightUp(self, evt):
-    if self.action & ACTION_PROPOSED:
-      self.xtals.remove(self.active_xtal)
-      self.active_xtal = None
-      self.action = ACTION_NONE
-      self.PostEventXtalsChanged()
-      self.Refresh()
-
-  def OnMotion(self, evt):
-    if not self.show_xtals or self.bitmap is None: return
-    x,y = evt.GetPosition()
-
-    self.PostEventCoords(x,y)
-
-    w,h = self.GetSize()
-
-    # not currently performing an action
-    if self.action == ACTION_NONE or self.action & ACTION_PROPOSED:
-      xtal, action = self.get_xtal_action(x,y)
-
-      needs_refresh = False
-      if self.action & ~ACTION_PROPOSED != action or xtal != self.active_xtal:
-        needs_refresh = True
-
-      if xtal:
-        self.action = action | ACTION_PROPOSED
-        self.active_xtal = xtal
-      else:
-        self.action = ACTION_NONE
-        self.active_xtal = None
-
-      self.PostEventActionChanged(in_window=True)
-      if needs_refresh:
-        self.Refresh()
-
-    elif self.action & ACTION_RESIZE:
-      # clamp mouse to within panel
-      if x < 0: x = 0
-      if x > w: x = w
-      if y < 0: y = 0
-      if y > h: y = h
-
-      if self.action & ACTION_RESIZE_L:
-        self.active_xtal[0][0] = x
-      elif self.action & ACTION_RESIZE_R:
-        self.active_xtal[1][0] = x
-      if self.action & ACTION_RESIZE_T:
-        self.active_xtal[0][1] = y
-      elif self.action & ACTION_RESIZE_B:
-        self.active_xtal[1][1] = y
-
-      self.PostEventXtalsChanged()
-      self.Refresh()
-
-    elif self.action & ACTION_MOVE:
-      (x1, y1), (x2, y2) = self.active_xtal
-      xs,ys = self.action_start
-      dx, dy = x - xs, y - ys
-
-      if dx < -x1: dx = -x1
-      if dy < -y1: dy = -y1
-      if dx > w-x2: dx = w-x2
-      if dy > h-y2: dy = h-y2
-
-      self.active_xtal[0][0] += dx
-      self.active_xtal[0][1] += dy
-      self.active_xtal[1][0] += dx
-      self.active_xtal[1][1] += dy
-      self.action_start = (x,y)
-
-      self.PostEventXtalsChanged()
-      self.Refresh()
-
-  def OnEnterWindow(self, evt):
-    pass
-
-  def OnLeaveWindow(self, evt):
-    if self.action & ACTION_PROPOSED or self.action == ACTION_NONE:
-      self.action = ACTION_NONE
-      self.active_xtal = None
-
-      self.PostEventActionChanged(in_window=False)
-      self.PostEventCoords(-1,-1)
-      self.Refresh()
-
-  def OnPaint(self, evt):
-    dc = wx.PaintDC(self)
-    if self.bitmap:
-      dc.DrawBitmap(self.bitmap, 0, 0)
-
-      if not self.show_xtals: return
-
-      dc.SetBrush(self.xtal_brush)
-      for xtal in self.xtals:
-        if xtal == self.active_xtal:
-          dc.SetPen(self.active_xtal_pen)
-        else:
-          dc.SetPen(self.xtal_pen)
-        (x1,y1), (x2,y2) = xtal
-        dc.DrawRectangle(x1,y1,x2-x1,y2-y1)
-
-      if self.active_xtal and self.action & ACTION_RESIZE:
-
-        dc.SetPen(self.action_pen)
-        (x1,y1),(x2,y2) = self.active_xtal
-
-        if self.action & ACTION_RESIZE_L:
-          dc.DrawLine(x1,y1,x1,y2)
-        if self.action & ACTION_RESIZE_R:
-          dc.DrawLine(x2-1,y1,x2-1,y2)
-        if self.action & ACTION_RESIZE_T:
-          dc.DrawLine(x1,y1,x2,y1)
-        if self.action & ACTION_RESIZE_B:
-          dc.DrawLine(x1,y2-1,x2,y2-1)
-
 
 class LoadEnergiesPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
@@ -472,9 +221,9 @@ class ExposurePanel(wx.Panel):
     vbox.Add(label, 0, wx.EXPAND | wx.BOTTOM, VPAD)
     self.label = label
 
-    panel = ImagePanel(self, ID_IMAGE_PANEL, size=(487,195))
+    panel = ImageView(self, ID_IMAGE_PANEL, size=(487,195))
     vbox.Add(panel, 0, wx.EXPAND | wx.BOTTOM, VPAD)
-    self.image_panel = panel
+    self.image_view = panel
 
     slider = wx.Slider(self, ID_EXPOSURE_SLIDER, 0,0,1)
     slider.Enable(False)
@@ -484,7 +233,7 @@ class ExposurePanel(wx.Panel):
     self.SetSizerAndFit(vbox)
 
   def SetPixels(self, pixels, colormap=cm.Greys_r):
-    self.image_panel.set_pixels(pixels, colormap)
+    self.image_view.SetPixels(pixels, colormap)
 
 import wx.lib.mixins.listctrl as listmix
 class ExposureList(wx.ListCtrl,
@@ -730,6 +479,15 @@ class CalibratorController(object):
 
     self.raw_pixels = None
 
+    self.crosshair = Crosshair(self.view.panel.exposure_panel.image_view)
+    self.crosshair.SetActive(True)
+    self.crosshair.ToggleDirection(Crosshair.HORIZONTAL | Crosshair.VERTICAL, True)
+
+    self.range_tool = RangeTool(self.view.panel.exposure_panel.image_view)
+    self.range_tool.ToggleDirection(RangeTool.HORIZONTAL | RangeTool.VERTICAL, True)
+    self.range_tool.SetActive(True)
+    self.range_tool.SetMultiple(True)
+
     self.CalibrationValid(False)
 
     self.dialog_dirs = {
@@ -785,8 +543,8 @@ class CalibratorController(object):
           (ID_FILTER_EMISSION, self.OnFilterEmissionChoice),
           (ID_DISPERSIVE_DIR, self.OnDispersiveDir),
           ]),
-        (EVT_ACTION_CHANGED, [ (ID_IMAGE_PANEL, self.OnImageAction), ]),
-        (EVT_XTALS_CHANGED, [ (ID_IMAGE_PANEL, self.OnImageXtals), ]),
+        (EVT_RANGE_ACTION_CHANGED, [ (ID_IMAGE_PANEL, self.OnImageAction), ]),
+        (EVT_RANGE_CHANGED, [ (ID_IMAGE_PANEL, self.OnImageXtals), ]),
         (EVT_COORDS, [ (ID_IMAGE_PANEL, self.OnImageCoords), ]),
         ]
 
@@ -828,7 +586,7 @@ class CalibratorController(object):
     self.view.panel.filter_panel.set_filters(filters)
 
     # set xtals
-    self.view.panel.exposure_panel.image_panel.xtals = self.model.xtals
+    self.range_tool.rects = self.model.xtals
 
   def view_to_model(self):
     self.model.dataset_name = self.view.panel.dataset_name.GetValue()
@@ -853,7 +611,7 @@ class CalibratorController(object):
         ))
 
     # get xtals
-    self.model.xtals = self.view.panel.exposure_panel.image_panel.xtals
+    self.model.xtals = self.range_tool.rects
 
   def OnOpen(self, evt):
     filename = self.FileDialog(
@@ -925,8 +683,8 @@ class CalibratorController(object):
       errdlg.ShowModal()
       errdlg.Destroy()
 
-    self.view.panel.exposure_panel.image_panel.xtals = self.model.xtals
-    self.view.panel.exposure_panel.image_panel.Refresh()
+    self.range_tool.rects = self.model.xtals
+    self.view.panel.exposure_panel.image_view.Refresh()
     self.CalibrationValid(False)
     self.Changed()
 
@@ -1035,16 +793,15 @@ class CalibratorController(object):
     action = evt.action
 
     status = ""
-    #coords = self.view.panel.exposure_panel.image_panel.GetCoords()
-    if evt.xtal is None:
+    if evt.range is None:
       if evt.in_window:
         status = "L: Click and drag to define crystal boundary"
       else:
         status == ""
-    elif action & ACTION_PROPOSED:
-      if action & ACTION_MOVE:
+    elif action & RangeTool.ACTION_PROPOSED:
+      if action & RangeTool.ACTION_MOVE:
         status = "L: Move crystal  R: Delete crystal"
-      elif action & ACTION_RESIZE:
+      elif action & RangeTool.ACTION_RESIZE:
         status = "L: Resize crystal  R: Delete crystal"
 
     self.view.SetStatusText(status, STATUS_MESSAGE)
@@ -1054,16 +811,19 @@ class CalibratorController(object):
     self.Changed()
 
   def OnImageCoords(self, evt):
-    if evt.x == -1 and evt.y == -1:
+    x, y = evt.x, evt.y
+    if x == None and y == None:
       coords = ''
     else:
       coords = "%3d,%3d" % (evt.x, evt.y)
       if self.raw_pixels is not None:
-        z = self.raw_pixels[evt.y,evt.x]
-        if z == int(z):
-          coords += " -> %d" % z
-        else:
-          coords += " -> %.2f" % z
+        h, w = self.raw_pixels.shape
+        if x >= 0 and x < w and y >= 0 and y < h:
+          z = self.raw_pixels[evt.y,evt.x]
+          if z == int(z):
+            coords += " -> %d" % z
+          else:
+            coords += " -> %.2f" % z
 
     self.view.SetStatusText(coords, STATUS_COORDS)
     pass
@@ -1161,7 +921,9 @@ class CalibratorController(object):
         self.view.panel.exposure_panel.slider.Enable(True)
 
   def OnShowXtals(self, evt):
-    self.view.panel.exposure_panel.image_panel.ShowXtals(evt.Checked())
+    show = evt.Checked()
+    self.range_tool.SetVisible(show)
+    self.range_tool.SetActive(show)
 
   def OnCalibrate(self, evt):
     self.view_to_model()

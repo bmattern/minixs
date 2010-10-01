@@ -16,7 +16,11 @@ class Tool(object):
     self.active = active
 
   def SetVisible(self, visible):
+    if visible == self.visible:
+      return
+
     self.visible = visible
+    self.parent.Refresh()
 
   def OnLeftDown(self, evt):
     pass
@@ -83,6 +87,7 @@ class RangeTool(Tool):
     self.brush = wx.Brush(wx.Colour(127,127,127,50))
     self.pen = wx.Pen('#ffff22', 1, wx.DOT_DASH)
     self.active_pen = wx.Pen('#33dd33', 1, wx.DOT_DASH)
+    self.action_pen = wx.Pen('#22ffff', 2, wx.SOLID)
 
   def PostEventRangeChanged(self):
     """
@@ -361,8 +366,23 @@ class RangeTool(Tool):
         dc.SetPen(self.pen)
 
       (x1,y1),(x2,y2) = r 
-      dc.DrawRectangle(x1,y1,x2-x1,y2-y1)
       gcdc.DrawRectangle(x1,y1,x2-x1,y2-y1)
+      dc.DrawRectangle(x1,y1,x2-x1,y2-y1)
+
+      if self.active_rect and self.action & self.ACTION_RESIZE:
+
+        dc.SetPen(self.action_pen)
+        (x1,y1),(x2,y2) = self.active_rect
+
+        if self.action & self.ACTION_RESIZE_L:
+          dc.DrawLine(x1,y1,x1,y2)
+        if self.action & self.ACTION_RESIZE_R:
+          dc.DrawLine(x2-1,y1,x2-1,y2)
+        if self.action & self.ACTION_RESIZE_T:
+          dc.DrawLine(x1,y1,x2,y1)
+        if self.action & self.ACTION_RESIZE_B:
+          dc.DrawLine(x1,y2-1,x2,y2-1)
+
 
 class Crosshair(Tool):
   VERTICAL = 1

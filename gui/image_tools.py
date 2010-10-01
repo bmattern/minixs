@@ -158,6 +158,9 @@ class RangeTool(Tool):
 
     return (None, self.ACTION_NONE)
 
+  def SetMultiple(self, multiple):
+    self.multiple = multiple
+
   def ToogleDirection(self, direction, on=None):
     """
     Toggle range direction

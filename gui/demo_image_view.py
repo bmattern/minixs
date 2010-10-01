@@ -4,10 +4,10 @@ from image_tools import RangeTool, Crosshair, EVT_RANGE_CHANGED, EVT_RANGE_ACTIO
 
 if __name__ == "__main__":
 
-  ID_HLINE = wx.NewId()
-  ID_VLINE = wx.NewId()
+  ID_HRANGE = wx.NewId()
+  ID_VRANGE = wx.NewId()
   ID_BLINE = wx.NewId()
-  ID_BOX  = wx.NewId()
+  ID_MULTIPLE  = wx.NewId()
 
   class DemoFrame(wx.Frame):
     def __init__(self, *args, **kwargs):
@@ -33,15 +33,16 @@ if __name__ == "__main__":
 
       self.box_tool = RangeTool(im)
       self.box_tool.direction = 0
+      self.box_tool.active = True
       self.crosshair = Crosshair(im)
 
-      c = wx.CheckBox(self, ID_HLINE, 'Horizontal')
+      c = wx.CheckBox(self, ID_HRANGE, 'Horizontal Range')
       vbox.Add(c, 0, wx.EXPAND | wx.BOTTOM, 5)
 
-      c = wx.CheckBox(self, ID_VLINE, 'Vertical')
+      c = wx.CheckBox(self, ID_VRANGE, 'Vertical Range')
       vbox.Add(c, 0, wx.EXPAND | wx.BOTTOM, 5)
 
-      c = wx.CheckBox(self, ID_BOX, 'Box')
+      c = wx.CheckBox(self, ID_MULTIPLE, 'Multiple')
       vbox.Add(c, 0, wx.EXPAND)
 
       self.Bind(EVT_RANGE_ACTION_CHANGED, self.OnRangeActionChanged)
@@ -60,18 +61,18 @@ if __name__ == "__main__":
       id = evt.GetId()
       checked = evt.IsChecked()
 
-      if id == ID_VLINE:
-        self.crosshair.SetActive(dir != 0)
-        self.crosshair.ToogleDirection(Crosshair.VERTICAL, checked)
-        self.box_tool.ToogleDirection(RangeTool.HORIZONTAL, checked)
-
-      elif id == ID_HLINE:
+      if id == ID_VRANGE:
         self.crosshair.SetActive(dir != 0)
         self.crosshair.ToogleDirection(Crosshair.HORIZONTAL, checked)
         self.box_tool.ToogleDirection(RangeTool.VERTICAL, checked)
 
-      elif id == ID_BOX:
-        self.box_tool.SetActive(checked)
+      elif id == ID_HRANGE:
+        self.crosshair.SetActive(dir != 0)
+        self.crosshair.ToogleDirection(Crosshair.VERTICAL, checked)
+        self.box_tool.ToogleDirection(RangeTool.HORIZONTAL, checked)
+
+      elif id == ID_MULTIPLE:
+        self.box_tool.SetMultiple(checked)
 
   a = wx.App()
   f = DemoFrame(None)

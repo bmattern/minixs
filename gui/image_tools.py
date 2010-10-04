@@ -89,6 +89,15 @@ class RangeTool(Tool):
     self.active_pen = wx.Pen('#33dd33', 1, wx.DOT_DASH)
     self.action_pen = wx.Pen('#22ffff', 2, wx.SOLID)
 
+    self.range_changed = False
+    self.post_range_change_immediate = False
+
+  def RangeChanged(self):
+    if self.post_range_change_immediate:
+      self.PostEventRangeChanged()
+    else:
+      self.range_changed = True
+
   def PostEventRangeChanged(self):
     """
     Send event indicating that selected range has changed
@@ -254,6 +263,10 @@ class RangeTool(Tool):
     self.active_rect = rect
     self.action = action 
 
+    if self.range_changed:
+      self.PostEventRangeChanged()
+      self.range_changed = False
+
     self.parent.Refresh()
 
   def OnRightUp(self, evt):
@@ -311,7 +324,7 @@ class RangeTool(Tool):
       elif self.action & self.ACTION_RESIZE_B:
         self.active_rect[1][1] = y
 
-      self.PostEventRangeChanged()
+      self.RangeChanged()
       self.parent.Refresh()
 
     elif self.action & self.ACTION_MOVE:
@@ -332,7 +345,7 @@ class RangeTool(Tool):
         self.active_rect[1][1] += dy
       self.action_start = (x,y)
 
-      self.PostEventRangeChanged()
+      self.RangeChanged()
       self.parent.Refresh()
 
   def OnEnterWindow(self, evt):

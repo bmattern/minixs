@@ -167,6 +167,10 @@ class RangeTool(Tool):
   def SetMultiple(self, multiple):
     self.multiple = multiple
 
+  def SetDirection(self, direction):
+    self.direction = direction
+    self.parent.Refresh()
+
   def ToggleDirection(self, direction, on=None):
     """
     Toggle range direction
@@ -391,7 +395,7 @@ class Crosshair(Tool):
   def __init__(self, *args, **kwargs):
     Tool.__init__(self, *args, **kwargs)
 
-    self.direction = 0
+    self.direction = self.VERTICAL | self.HORIZONTAL
     self.pos = None
 
     self.pen = wx.Pen('#222222', 1, wx.SOLID)

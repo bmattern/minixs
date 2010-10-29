@@ -176,10 +176,12 @@ class CalibratorController(object):
     for i, (enabled, val) in enumerate(filters):
       if enabled:
         self.model.filters.append( (FILTER_NAMES[i], val) )
-    self.model.filters.append((
-        'Filter Emission',
-        self.view.panel.filter_panel.filter_emission_choice.GetSelection()
-        ))
+
+    if self.view.panel.filter_panel.filter_emission_check.GetValue():
+      self.model.filters.append((
+          'Filter Emission',
+          self.view.panel.filter_panel.filter_emission_choice.GetSelection()
+          ))
 
     # get xtals
     self.model.xtals = self.range_tool.rects
@@ -231,6 +233,7 @@ class CalibratorController(object):
     if filename:
       self.view_to_model()
       self.model.save(filename, header_only=header_only)
+      self.Changed(False)
 
   def OnImportXtals(self, evt):
     """

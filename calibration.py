@@ -121,19 +121,25 @@ class Calibrator:
     right.
     """
 
+    # create empty calibration matrix
     self.calib = zeros(self.images[0].pixels.shape)
 
+    # build array of all peak locations for all elastic energies
     points = vstack([
       self.find_maxima(im.pixels,energy)
       for im,energy in izip(self.images, self.energies)
       ])
 
+    # empty lists used to store linear and rms residues for each xtal
     lin_res = []
     rms_res = []
 
+    # run through each xtal region and fit a smooth function
     for xtal in xtals:
+      # boundary coordinates
       (x1,y1),(x2,y2) = xtal
 
+      # extract points inside this xtal region
       index = where(logical_and(
           logical_and(
             points[:,0] >= x1,
@@ -145,27 +151,35 @@ class Calibrator:
           ))
       x,y,z = points[index].T
 
+      # if we have no points in this region, we can't fit anything
+      # XXX this should pass the warning up to higher level code instead
+      #     of printing it out to stdout
       if len(x) == 0:
         print "Warning: No points in xtal ", xtal
         continue
 
       # fit to quadratic
       #A = vstack([x**2, y**2, x*y, x, y, ones(x.shape)]).T
+
+      # fit to 2d quartic using linear least squares
+      # XXX really this should use an ellipsoid
       A = vstack([x**3,y**3,x**2*y,x*y**2,x**2, y**2, x*y, x, y, ones(x.shape)]).T
       fit, r = linalg.lstsq(A,z)[0:2]
-      
-      rms_res.append(sqrt(r / len(z))[0])
 
+      # append residues for this xtal to end of lists
+      rms_res.append(sqrt(r / len(z))[0])
       lin_res.append( sum(z - dot(A, fit)) / len(z) )
 
-      # fill in pixels with fit values
+      # evaluate fit at center of each pixel
       xx, yy = meshgrid(arange(x1,x2), arange(y1,y2))
       xx = ravel(xx)
       yy = ravel(yy)
       zz = dot(vstack([xx**3,yy**3,xx**2*yy,xx*yy**2,xx**2,yy**2,xx*yy,xx,yy,ones(xx.shape)]).T,fit).T
 
+      # fill the calibration matrix with values from fit
       self.calib[yy,xx] = zz
 
+    # return list of points used for fit and residues for diagnostics
     return points, lin_res, rms_res
       
   def kill_regions(self, regions):

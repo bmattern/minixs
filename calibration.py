@@ -4,6 +4,66 @@ from itertools import izip
 from exposure import Exposure
 from constants import *
 
+
+def find_maxima(pixels, direction, window_size = 3):
+  """
+  Find locations of local maxima of `pixels` array in `direction`.
+
+  The location is calculated as the first moment in a window of half width
+  `window_size` centered at a local maximum.
+
+  Parameters
+  ----------
+  p : pixel array from an elastic exposure
+  direction: minixs.DIRECTION_* indicating dispersive direction
+  window_size : size in pixels around max for windowed average
+
+  Returns
+  -------
+  xy : array of x, y and energy coordinates
+  """
+
+  # convert direction to axis (XXX make this a function call somewhere)
+  rolldir = direction % 2
+
+  # shorten expressions below by aliasing pixels array
+  p = pixels
+
+  # build mask of local maxima locations
+  local_max = logical_and(p >= roll(p,-1,rolldir), p > roll(p, 1, rolldir))
+
+  # perform windowed averaging to find average col value in local peak
+  colMoment = zeros(p.shape)
+  norm = zeros(p.shape)
+
+  # build vector of indices along column (row) 
+  cols = arange(0,p.shape[rolldir])
+  if direction == VERTICAL:
+    cols.shape = (len(cols),1)
+
+  # find first moments about local maxima
+  for i in range(-window_size,window_size+1):
+    colMoment += local_max * roll(cols * p, i, rolldir)
+    norm += local_max * roll(p, i, rolldir)
+
+  # calculate average
+  windowedAvg = colMoment / norm
+  windowedAvg[isnan(windowedAvg)] = 0
+
+  # we only want the locations of actual maxima
+  index = where(windowedAvg > 0)
+ 
+  # pull out the pixel locations of the peak centers
+  if direction == VERTICAL:
+    y = windowedAvg[index]
+    x = index[1]
+  else:
+    x = windowedAvg[index]
+    y = index[0]
+
+  # return N x 2 array of peak locations
+  return vstack([x,y]).T
+
 class Calibrator:
   """Calibrates camera display using elastic scan images"""
 
@@ -43,38 +103,10 @@ class Calibrator:
     xyz : array of x, y and energy coordinates
     """
 
-    rolldir = self.direction % 2
+    xy = find_maxima(p, self.direction, window_size)
+    z = inc_energy * ones((len(xy), 1))
 
-    local_max = logical_and(p >= roll(p,-1,rolldir), p > roll(p, 1, rolldir))
-
-    # perform windowed averaging to find average col value in local peak
-    colMoment = zeros(p.shape)
-    norm = zeros(p.shape)
-
-    cols = arange(0,p.shape[rolldir])
-    if self.direction == VERTICAL:
-      cols.shape = (len(cols),1)
-
-    for i in range(-window_size,window_size+1):
-      colMoment += local_max * roll(cols * p, i, rolldir)
-      norm += local_max * roll(p, i, rolldir)
-
-    windowedAvg = colMoment / norm
-    windowedAvg[isnan(windowedAvg)] = 0
-
-    index = where(windowedAvg > 0)
-
-    if self.direction == VERTICAL:
-      y = windowedAvg[index]
-      x = index[1]
-    else:
-      x = windowedAvg[index]
-      y = index[0]
-
-    z = inc_energy * ones(x.shape)
-
-    ret = vstack([x,y,z]).T
-    return ret
+    return hstack([xy,z])
 
   def calibrate(self, xtals):
     """Fits a 2d cubic function to each crystal

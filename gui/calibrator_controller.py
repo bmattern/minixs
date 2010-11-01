@@ -1,5 +1,6 @@
 import minixs      as mx
 import minixs.info as mxinfo
+from minixs.calibrate2 import calibrate
 from   minixs.filter import get_filter_by_name
 import numpy       as np
 import os, sys
@@ -379,12 +380,14 @@ class CalibratorController(object):
         wildcard=WILDCARD_EXPOSURE,
         multiple=True
         )
+
+    if filenames is None:
+      return
+
     for f in filenames:
       self.view.exposure_list.AppendExposure(f)
-
-    if filenames:
-      self.UpdateView(self.UPDATE_EXPOSURES)
-      self.CalibrationValid(False)
+    self.UpdateView(self.UPDATE_EXPOSURES)
+    self.CalibrationValid(False)
 
   def OnAppendRow(self, evt):
     self.view.exposure_list.AppendRow()
@@ -493,14 +496,9 @@ class CalibratorController(object):
 
     self.view.SetStatusText("Calibrating... Please Wait...", STATUS_MESSAGE)
 
-    c = mx.Calibrator(self.model.energies, self.model.exposure_files, self.model.dispersive_direction)
+    points, rms_res, lin_res = calibrate(self.model)
 
-    for energy, exposure in zip(c.energies, c.images):
-      self.ApplyFilters(energy, exposure)
-
-    c.calibrate(self.model.xtals)
-    self.model.calibration_matrix = c.calib
-
+    print rms_res, lin_res
     #XXX check that calib seems reasonable (monotonic, etc)
     # also, report residues from fit
     self.CalibrationValid(True)

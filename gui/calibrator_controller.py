@@ -12,6 +12,7 @@ from image_tools      import RangeTool, Crosshair, EVT_RANGE_CHANGED, EVT_RANGE_
 from filter_view      import EVT_FILTER_CHANGED, filter_ids
 from matplotlib       import cm, colors
 
+from calibrator_view  import LoadEnergiesDialog
 from calibrator_const import *
 from wildcards        import *
 

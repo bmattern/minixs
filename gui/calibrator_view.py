@@ -7,6 +7,7 @@ from matplotlib import cm
 
 from minixs import DIRECTION_NAMES
 
+import util
 import minixs.filter as filter
 import filter_view
 

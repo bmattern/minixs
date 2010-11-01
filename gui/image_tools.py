@@ -299,7 +299,7 @@ class RangeTool(Tool):
       if rect:
         action |= self.ACTION_PROPOSED
 
-      if action != self.action or rect != self.active_rect:
+      if action != self.action or rect != self.active_rect or rect is None:
         self.action = action
         self.active_rect = rect
 

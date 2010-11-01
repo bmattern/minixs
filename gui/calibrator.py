@@ -5,6 +5,9 @@ from calibrator_controller import CalibratorController
 from calibrator_view import CalibratorView
 from calibrator_const import *
 
+import minixs.filter as filter
+import filter_view
+
 class CalibratorModel(mxinfo.CalibrationInfo):
   def __init__(self):
     mxinfo.CalibrationInfo.__init__(self)
@@ -20,5 +23,12 @@ class CalibratorApp(wx.App):
     view.Show()
 
 if __name__ == "__main__":
+
+  # register filters
+  for f in filter.REGISTRY:
+    print "Register %s with %s" % (f, f.view_name)
+    view_class = getattr(filter_view, f.view_name)
+    filter_view.register(f, view_class)
+
   app = CalibratorApp()
   app.MainLoop()

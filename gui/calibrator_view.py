@@ -7,6 +7,9 @@ from matplotlib import cm
 
 from minixs import DIRECTION_NAMES
 
+import minixs.filter as filter
+import filter_view
+
 HPAD = 10
 VPAD = 5
 
@@ -87,36 +90,36 @@ class LoadEnergiesDialog(wx.Dialog):
 
 
 class FilterPanel(wx.Panel):
-  filter_defaults = [
-      (0, True),       # min vis
-      (1000, False),   # max vis
-      (5, True),       # low cut
-      (10000, False),  # high cut
-      (2, True)        # neighbors
-      ]
+
   def __init__(self, *args, **kwargs):
     wx.Panel.__init__(self, *args, **kwargs)
 
 
-    grid = wx.FlexGridSizer(NUM_FILTERS, 2, HPAD, VPAD)
-    self.checks = []
-    self.spins = []
+    grid = wx.FlexGridSizer(len(filter_view.REGISTRY), 2, HPAD, VPAD)
+    self.checks = {}
+    self.views = {}
 
-    for i, name in enumerate(FILTER_NAMES):
-      val, enabled = self.filter_defaults[i]
-      id = FILTER_IDS[i]
-      check = wx.CheckBox(self, id, name)
-      check.SetValue(enabled)
-      spin = wx.SpinCtrl(self, id, '', max=100000)
-      spin.SetValue(val)
-      spin.Enable(enabled)
+    for fltr, view_class, id in filter_view.REGISTRY:
+      check = wx.CheckBox(self, id, fltr.name)
+
+      view = view_class(self, id, filter=fltr)
+      if fltr.name in FILTER_DEFAULTS.keys():
+        val, enabled = FILTER_DEFAULTS[fltr.name]
+
+        check.SetValue(enabled)
+        view.Enable(enabled)
+        view.SetValue(val)
+      else:
+        check.SetValue(False)
+        view.Enable(False)
 
       grid.Add(check)
-      grid.Add(spin)
+      grid.Add(view)
 
-      self.checks.append(check)
-      self.spins.append(spin)
+      self.checks[id] = check
+      self.views[id] = view
 
+    """
     check = wx.CheckBox(self, ID_FILTER_EMISSION, 'Filter Emission')
     choice = wx.Choice(self, ID_FILTER_EMISSION, choices=FILTER_EMISSION_TYPE_NAMES)
     choice.Enable(False)
@@ -124,6 +127,7 @@ class FilterPanel(wx.Panel):
     grid.Add(choice)
     self.filter_emission_check = check
     self.filter_emission_choice = choice
+    """
 
     label = wx.StaticText(self, wx.ID_ANY, 'Dispersive Dir.')
     choice = wx.Choice(self, ID_DISPERSIVE_DIR, choices=DIRECTION_NAMES)
@@ -134,20 +138,37 @@ class FilterPanel(wx.Panel):
     self.SetSizerAndFit(grid)
 
   def set_filter_value(self, filter_type, value):
-    self.spins[filter_type].SetValue(int(value))
+    self.views[filter_type].SetValue(int(value))
 
   def set_filter_enabled(self, filter_type, enabled):
     self.checks[filter_type].SetValue(enabled)
-    self.spins[filter_type].Enable(enabled)
+    self.views[filter_type].Enable(enabled)
 
   def set_filters(self, filters):
-    for i, (enabled, val) in enumerate(filters):
-      self.checks[i].SetValue(enabled)
-      self.spins[i].Enable(enabled)
-      self.spins[i].SetValue(val)
+    fmap = {}
+    for f in filters:
+      fmap[f.__class__] = f
+
+    for ftype, view_class, id in filter_view.REGISTRY:
+      if ftype in fmap:
+        enabled = True
+        val = fmap[ftype].get_val()
+      else:
+        enabled = False
+        val = FILTER_DEFAULTS[ftype.name][1]
+
+      self.checks[id].SetValue(enabled)
+      self.views[id].Enable(enabled)
+      self.views[id].SetValue(val)
 
   def get_filters(self):
-    return [ (self.checks[i].GetValue(), self.spins[i].GetValue()) for i in range(NUM_FILTERS) ]
+    return [ 
+        (
+          self.views[i].filter.name,
+          self.checks[i].GetValue(),
+          self.views[i].GetValue()
+        ) for i in filter_view.filter_ids()
+      ]
 
 class ExposurePanel(wx.Panel):
   def __init__(self, *args, **kwargs):

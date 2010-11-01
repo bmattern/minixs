@@ -1,5 +1,6 @@
 import minixs      as mx
 import minixs.info as mxinfo
+from   minixs.filter import get_filter_by_name
 import numpy       as np
 import os, sys
 import util
@@ -8,6 +9,7 @@ import wx
 from file_dialog      import FileDialog
 from image_view       import EVT_COORDS
 from image_tools      import RangeTool, Crosshair, EVT_RANGE_CHANGED, EVT_RANGE_ACTION_CHANGED
+from filter_view      import EVT_FILTER_CHANGED, filter_ids
 from matplotlib       import cm, colors
 
 from calibrator_const import *
@@ -98,14 +100,12 @@ class CalibratorController(object):
           (ID_EXPOSURE_SLIDER, self.OnExposureSlider),
           ]),
         (wx.EVT_CHECKBOX, [
-          (ID_FILTER_EMISSION, self.OnFilterEmissionCheck),
           (ID_SHOW_XTALS, self.OnShowXtals),
           ]),
         (wx.EVT_RADIOBOX, [
           (ID_VIEW_TYPE, self.OnViewType),
           ]),
         (wx.EVT_CHOICE, [
-          (ID_FILTER_EMISSION, self.OnFilterEmissionChoice),
           (ID_DISPERSIVE_DIR, self.OnDispersiveDir),
           ]),
         (EVT_RANGE_ACTION_CHANGED, [ (ID_IMAGE_PANEL, self.OnImageAction), ]),
@@ -117,8 +117,8 @@ class CalibratorController(object):
       for id, callback in bindings:
         self.view.Bind(event, callback, id=id)
 
-    for id in FILTER_IDS:
-      self.view.Bind(wx.EVT_SPINCTRL, self.OnFilterSpin, id=id)
+    for id in filter_ids():
+      self.view.Bind(EVT_FILTER_CHANGED, self.OnFilterChange, id=id)
       self.view.Bind(wx.EVT_CHECKBOX, self.OnFilterCheck, id=id)
 
   def model_to_view(self):
@@ -138,20 +138,7 @@ class CalibratorController(object):
       self.view.exposure_list.AppendEnergy(e)
 
     # set filters
-    filters = [(False, val) for enabled,val in self.view.panel.filter_panel.filter_defaults]
-
-    self.view.panel.filter_panel.filter_emission_check.SetValue(False)
-    self.view.panel.filter_panel.filter_emission_choice.Enable(False)
-    for name, val in self.model.filters:
-      if name == 'Filter Emission':
-        self.view.panel.filter_panel.filter_emission_check.SetValue(True)
-        self.view.panel.filter_panel.filter_emission_choice.Enable()
-        self.view.panel.filter_panel.filter_emission_choice.SetSelection(val)
-      else:
-        i = FILTER_NAMES.index(name)
-        filters[i] = (True, val)
-
-    self.view.panel.filter_panel.set_filters(filters)
+    self.view.panel.filter_panel.set_filters(self.model.filters)
 
     # set xtals
     self.range_tool.rects = self.model.xtals
@@ -173,15 +160,11 @@ class CalibratorController(object):
     # get filters
     self.model.filters = []
     filters = self.view.get_filters()
-    for i, (enabled, val) in enumerate(filters):
+    for (name, enabled, val) in filters:
       if enabled:
-        self.model.filters.append( (FILTER_NAMES[i], val) )
-
-    if self.view.panel.filter_panel.filter_emission_check.GetValue():
-      self.model.filters.append((
-          'Filter Emission',
-          self.view.panel.filter_panel.filter_emission_choice.GetSelection()
-          ))
+        fltr = get_filter_by_name(name)()
+        fltr.set_val(val)
+        self.model.filters.append( fltr )
 
     # get xtals
     self.model.xtals = self.range_tool.rects
@@ -460,25 +443,13 @@ class CalibratorController(object):
     self.CalibrationValid(False)
     self.Changed()
 
-  def OnFilterSpin(self, evt):
+  def OnFilterChange(self, evt):
     self.UpdateView(self.UPDATE_FILTERS)
     self.CalibrationValid(False)
     self.Changed()
 
   def OnFilterCheck(self, evt):
-    i = FILTER_IDS.index(evt.Id)
-    self.view.panel.filter_panel.set_filter_enabled(i, evt.Checked())
-    self.UpdateView(self.UPDATE_FILTERS)
-    self.CalibrationValid(False)
-    self.Changed()
-
-  def OnFilterEmissionCheck(self, evt):
-    self.view.panel.filter_panel.filter_emission_choice.Enable(evt.Checked())
-    self.UpdateView(self.UPDATE_FILTERS)
-    self.CalibrationValid(False)
-    self.Changed()
-
-  def OnFilterEmissionChoice(self, evt):
+    self.view.panel.filter_panel.set_filter_enabled(evt.Id, evt.Checked())
     self.UpdateView(self.UPDATE_FILTERS)
     self.CalibrationValid(False)
     self.Changed()
@@ -609,37 +580,23 @@ class CalibratorController(object):
   def ApplyFilters(self, energy, exposure):
     min_vis = None
     max_vis = None
-    low_cutoff = None
-    high_cutoff = None
-    neighbors = None
 
-    filter_emission = self.view.panel.filter_panel.filter_emission_check.GetValue()
+    # apply each filter to exposure
+    filters = self.view.get_filters()
+    for (name, enabled, val) in filters:
+      if enabled:
+        #XXX these should be instantiated once and updated when view changes
+        fltr = get_filter_by_name(name)()
+        fltr.set_val(val)
+        fltr.filter(exposure.pixels, energy)
 
-    if filter_emission:
-      emission_type = self.view.panel.filter_panel.filter_emission_choice.GetSelection()
-      self.FilterEmission(energy, exposure, emission_type)
+      # these two are handled specially
+      if fltr.name == 'Min Visible':
+        min_vis = fltr.get_val()
+      elif fltr.name == 'Max Visible':
+        max_vis = fltr.get_val()
 
-    self.filters = self.view.get_filters()
-
-    for i, (enabled, val) in enumerate(self.filters):
-      if not enabled:
-        continue
-
-      if i == FILTER_MIN:
-        min_vis = val
-      elif i == FILTER_MAX:
-        max_vis = val
-      elif i == FILTER_LOW:
-        low_cutoff = val
-      elif i == FILTER_HIGH:
-        high_cutoff = val
-      elif i == FILTER_NBOR:
-        neighbors = val
-
-    exposure.filter_low_high(low_cutoff, high_cutoff)
-    if neighbors:
-      exposure.filter_neighbors(neighbors)
-
+    # normalize pixels values
     p = exposure.pixels
     if min_vis is None: min_vis = p.min()
     if max_vis is None: max_vis = p.max()

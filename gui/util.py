@@ -4,6 +4,7 @@ def read_scan_column_names(scanfile):
 
     for line in f:
       if line[0] != "#":
+        # get number of columns in first data line
         num = len(line.split())
 
         if last is None:
@@ -15,6 +16,7 @@ def read_scan_column_names(scanfile):
           cols = last.split()
 
           # if whitespace separated headers aren't correct, try fixed width
+          # XXX this should be done better by actually detecting a PNC file
           if len(cols) != num:
             w = 21
             cols = [ last[w*i:w*(i+1)].strip() for i in range(0,len(last)/20) ]

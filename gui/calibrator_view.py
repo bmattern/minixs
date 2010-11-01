@@ -208,7 +208,6 @@ class ExposureList(wx.ListCtrl,
     self.InsertColumn(0, 'Incident Energy', width=200)
     self.InsertColumn(1, 'Exposure File', width=200)
 
-    self.num_rows = 0
     self.num_energies = 0
     self.num_exposures = 0
 
@@ -250,8 +249,9 @@ class ExposureList(wx.ListCtrl,
 
   def AppendRow(self):
     """Add empty row to end of listctrl"""
-    self.InsertStringItem(self.num_rows, '')
-    self.num_rows += 1
+    count = self.GetItemCount()
+    self.InsertStringItem(count, '')
+    self.EnsureVisible(count)
 
   def DeleteRow(self, index=None):
     if index is None and self.GetItemCount() == 1:

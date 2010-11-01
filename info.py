@@ -1,6 +1,7 @@
 import minixs as mx
 import numpy as np
 from itertools import izip
+from filter import get_filter_by_name
 
 FILE_UNKNOWN     = -1
 FILE_CALIBRATION = 0
@@ -66,7 +67,7 @@ class CalibrationInfo:
 
       f.write("# Filters:\n")
       for fltr in self.filters:
-        f.write('#   %s: %d\n' % fltr)
+        f.write('#   %s: %s\n' % (fltr.name, fltr.get_str()))
       f.write("#\n")
 
       f.write("# Xtal Boundaries:\n")
@@ -119,8 +120,9 @@ class CalibrationInfo:
             else:
               name,val = line[2:].split(':')
               name = name.strip()
-              val = int(val.strip())
-              self.filters.append((name,val))
+              fltr = get_filter_by_name(name)()
+              fltr.set_str(val.strip())
+              self.filters.append(fltr)
 
           elif in_xtals:
             if line[2:].strip() == '':

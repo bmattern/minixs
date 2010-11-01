@@ -26,7 +26,6 @@ if __name__ == "__main__":
 
   # register filters
   for f in filter.REGISTRY:
-    print "Register %s with %s" % (f, f.view_name)
     view_class = getattr(filter_view, f.view_name)
     filter_view.register(f, view_class)
 

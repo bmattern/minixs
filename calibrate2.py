@@ -68,10 +68,10 @@ def find_maxima(pixels, direction, energy, window_size = 3):
   return np.vstack([x,y,z]).T
 
 FIT_QUADRATIC = 1
-FIT_QUARTIC   = 2
+FIT_CUBIC   = 2
 FIT_ELLIPSOID = 3
 
-def fit_xtal(xtal, points, dest, fit_type = FIT_QUARTIC):
+def fit_xtal(xtal, points, dest, fit_type = FIT_CUBIC):
   # boundary coordinates
   (x1,y1),(x2,y2) = xtal
 
@@ -114,7 +114,7 @@ def fit_xtal(xtal, points, dest, fit_type = FIT_QUARTIC):
            fit
          ).T
 
-  elif fit_type == FIT_QUARTIC:
+  elif fit_type == FIT_CUBIC:
     # fit to quartic:
     #   Ax^3 + By^3 + Cx^2y + Dxy^2 + Ex^2 + Fy^2 + Gxy + Hx + Iy + J = z
     A = np.vstack([x**3,y**3,x**2*y,x*y**2,x**2, y**2, x*y, x, y, np.ones(x.shape)]).T
@@ -171,7 +171,7 @@ def fit_xtal(xtal, points, dest, fit_type = FIT_QUARTIC):
 
   return lin_res, rms_res
 
-def calibrate(info, fit_type=FIT_QUADRATIC):
+def calibrate(info, fit_type=FIT_CUBIC):
   # load exposure files
   exposures = [Exposure(f) for f in info.exposure_files]
 

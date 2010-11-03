@@ -240,15 +240,27 @@ def calibrate(filtered_exposures, energies, regions, dispersive_direction, fit_t
 
   Parameters
   ----------
-    calib: a filled in Calibration object
+    filtered_exposures: list of loaded and cleaned up Exposure objects
+    energies: list of energies corresponding to exposures 
+    regions: list of regions containing individual spectra
+    dispersive_direction: direction of increasing energy on camera (minixs.const.{DOWN,UP,LEFT,RIGHT})
+
+  Optional Parameters
+  -------------------
     fit_type: type of fit (see fit_region() for more)
+    return_diagnostics: whether to return extra information (residues and points used for fit)
 
   Returns
   -------
-    (points, rms_res, lin_res)
-    points: extracted maxima used for fit
-    rms_res: avg root mean square residue of fit
+    calibration_matrix, [lin_res, rms_res, points]
+
+    calibration_matrix: matrix of energies assigned to each pixel
+
     lin_res: average linear deviation of fit
+    rms_res: avg root mean square residue of fit
+    points: extracted maxima used for fit
+
+    The last 3 of these are only returned if `return_diagnostics` is True.
   """
   # locate maxima
   points = find_combined_maxima(filtered_exposures, energies, dispersive_direction)
@@ -267,7 +279,7 @@ def calibrate(filtered_exposures, energies, regions, dispersive_direction, fit_t
   if return_diagnostics:
     return (calibration_matrix, (lin_res, rms_res, points))
   else:
-    calibration_matrix
+    return calibration_matrix
 
 class Calibration:
   """
@@ -440,4 +452,5 @@ class Calibration:
                                                      fit_type,
                                                      return_diagnostics=True)
 
+    # store diagnostic info
     self.lin_res, self.rms_res, self.fit_points = diagnostics

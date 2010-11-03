@@ -99,6 +99,11 @@ def fit_region(region, points, dest, fit_type = FIT_CUBIC):
 
   This is intended to be called for several different non-overlapping values of
   `region` with the same list of `points` and `dest`.
+
+  Fit Types
+  ---------
+    FIT_QUADRATIC: z = Ax^2 + By^2 + Cxy + Dx + Ey + F
+    FIT_CUBIC: z = Ax^3 + By^3 + Cx^2y + Dxy^2 + Ex^2 + Fy^2 + Gxy + Hx + Iy + J
   """
 
   # boundary coordinates
@@ -120,7 +125,7 @@ def fit_region(region, points, dest, fit_type = FIT_CUBIC):
   # XXX this should pass the warning up to higher level code instead
   #     of printing it out to stdout
   if len(x) == 0:
-    print "Warning: No points in xtal ", region
+    print "Warning: No points in region: ", region
     return
 
   # build points to evaluate fit at
@@ -144,7 +149,7 @@ def fit_region(region, points, dest, fit_type = FIT_CUBIC):
          ).T
 
   elif fit_type == FIT_CUBIC:
-    # fit to quartic:
+    # fit to cubic:
     #   Ax^3 + By^3 + Cx^2y + Dxy^2 + Ex^2 + Fy^2 + Gxy + Hx + Iy + J = z
     A = np.vstack([x**3,y**3,x**2*y,x*y**2,x**2, y**2, x*y, x, y, np.ones(x.shape)]).T
     fit, r = np.linalg.lstsq(A,z)[0:2]

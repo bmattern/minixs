@@ -184,7 +184,13 @@ class CalibratorController(object):
         )
 
     if (filename):
-      self.model.load(filename)
+      success = self.model.load(filename)
+      if not success:
+        errmsg = "Warning: some errors were encountered while loading the calibration file:\n\n  %s" % '\n  '.join(self.model.load_errors)
+        errdlg = wx.MessageDialog(self.view,  errmsg, "Error", wx.OK | wx.ICON_WARNING)
+        errdlg.ShowModal()
+        errdlg.Destroy()
+
       self.model_to_view()
       self.UpdateView(self.UPDATE_EXPOSURES | self.UPDATE_FILTERS)
       if self.show_calibration_matrix:

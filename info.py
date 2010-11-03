@@ -49,6 +49,8 @@ class CalibrationInfo:
 
     self.filename = None
 
+    self.load_errors = []
+
   def save(self, filename=None, header_only=False):
     if filename is None:
       filename = self.filename
@@ -84,6 +86,23 @@ class CalibrationInfo:
         np.savetxt(f, self.calibration_matrix, fmt='%.3f')
 
   def load(self, filename=None, header_only=False):
+    """
+    Load calibration information from saved file
+
+    Parameters
+    ----------
+      filename: name of file to load
+      header_only: whether to load only the header or full data
+
+    Returns
+    -------
+      True if load was successful
+      False if load encountered an error
+
+      Error messages are stored as strings in the list `CalibrationInfo.load_errors`.
+    """
+    self.load_errors = []
+
     if filename is None:
       filename = self.filename
     else:
@@ -120,9 +139,13 @@ class CalibrationInfo:
             else:
               name,val = line[2:].split(':')
               name = name.strip()
-              fltr = get_filter_by_name(name)()
-              fltr.set_str(val.strip())
-              self.filters.append(fltr)
+              fltr = get_filter_by_name(name)
+              if fltr == None:
+                self.load_errors.append("Unknown Filter: '%s' (Ignoring)" % name)
+              else:
+                fltr = fltr()
+                fltr.set_str(val.strip())
+                self.filters.append(fltr)
 
           elif in_xtals:
             if line[2:].strip() == '':
@@ -137,6 +160,8 @@ class CalibrationInfo:
             dirname = line[24:].strip()
             if dirname in mx.DIRECTION_NAMES:
               self.dispersive_direction = mx.DIRECTION_NAMES.index(dirname)
+            else:
+              self.load_errors.append("Unknown Dispersive Direction: '%s' (Using default)." % dirname)
           elif line[2:25] == 'Energies and Exposures:':
             self.energies = []
             self.exposure_files = []
@@ -160,6 +185,8 @@ class CalibrationInfo:
 
         pos = f.tell()
         line = f.readline()
+
+    return self.load_errors == []
 
 class XESInfo:
   def __init__(self):

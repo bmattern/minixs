@@ -1,4 +1,4 @@
-import minixs.info as mxinfo
+from minixs.calibrate import Calibration
 import wx
 
 from calibrator_controller import CalibratorController
@@ -8,9 +8,9 @@ from calibrator_const import *
 import minixs.filter as filter
 import filter_view
 
-class CalibratorModel(mxinfo.CalibrationInfo):
+class CalibratorModel(Calibration):
   def __init__(self):
-    mxinfo.CalibrationInfo.__init__(self)
+    Calibration.__init__(self)
 
 class CalibratorApp(wx.App):
   def __init__(self, *args, **kwargs):

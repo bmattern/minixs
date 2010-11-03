@@ -1,6 +1,6 @@
 import minixs      as mx
 import minixs.info as mxinfo
-from minixs.calibrate import calibrate
+from minixs.calibrate import calibrate, Calibration
 from   minixs.filter import get_filter_by_name
 import numpy       as np
 import os, sys
@@ -254,7 +254,7 @@ class CalibratorController(object):
         self.model.xtals = xtals
 
     elif t == mxinfo.FILE_CALIBRATION:
-      ci = mxinfo.CalibrationInfo()
+      ci = mxinfo.Calibration()
       ci.load(filename, header_only=True)
       self.model.xtals = ci.xtals
 

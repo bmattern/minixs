@@ -5,6 +5,8 @@ import minixs.info as mxinfo
 import wx
 import wxmpl
 
+from minixs.calibrate import Calibration
+
 from wildcards import *
 
 HPAD = 10
@@ -163,7 +165,7 @@ class ProcessorPanel(wx.Panel):
 
 class ProcessorModel(object):
   def __init__(self):
-    self.calibration = mxinfo.CalibrationInfo()
+    self.calibration = Calibration()
     self.xes = mxinfo.XESInfo()
 
   def load(self, filename):
@@ -174,7 +176,7 @@ class ProcessorModel(object):
     self.load_calibration(xes.calibration_file)
 
   def load_calibration(self, calibration_file):
-    calibration = mxinfo.CalibrationInfo()
+    calibration = Calibration()
     if calibration_file:
       calibration.load(calibration_file)
     self.calibration = calibration

@@ -1,6 +1,10 @@
-from info import CalibrationInfo
+"""
+Calibration functions
+"""
+
 from exposure import Exposure
 from itertools import izip
+from filter import get_filter_by_name
 from constants import *
 
 import numpy as np
@@ -230,13 +234,13 @@ def fit_region(region, points, dest, fit_type = FIT_CUBIC):
 
   return lin_res, rms_res
 
-def calibrate(info, fit_type=FIT_CUBIC):
+def calibrate(calib, fit_type=FIT_CUBIC):
   """
-  Build calibration matrix from CalibrationInfo
+  Build calibration matrix from parameters in Calibration object
 
   Parameters
   ----------
-    info: a filled in CalibrationInfo object
+    calib: a filled in Calibration object
     fit_type: type of fit (see fit_region() for more)
 
   Returns
@@ -247,29 +251,183 @@ def calibrate(info, fit_type=FIT_CUBIC):
     lin_res: average linear deviation of fit
   """
   # load exposure files
-  exposures = [Exposure(f) for f in info.exposure_files]
+  exposures = [Exposure(f) for f in calib.exposure_files]
   
   # apply filters
-  for exposure, energy in izip(exposures, info.energies):
-    for f in info.filters:
+  for exposure, energy in izip(exposures, calib.energies):
+    for f in calib.filters:
       f.filter(exposure.pixels, energy)
 
   # locate maxima
-  points = find_combined_maxima(exposures, info.energies, info.dispersive_direction)
+  points = find_combined_maxima(exposures, calib.energies, calib.dispersive_direction)
 
   # create empty calibration matrix
-  calib = np.zeros(exposures[0].pixels.shape)
+  calib.calibration_matrix = np.zeros(exposures[0].pixels.shape)
 
   # fit smooth shape for each crystal, storing fit residues
   lin_res = []
   rms_res = []
-  for xtal in info.xtals:
-    lr, rr = fit_region(xtal, points, calib, fit_type)
+  for xtal in calib.xtals:
+    lr, rr = fit_region(xtal, points, calib.calibration_matrix, fit_type)
     lin_res.append(lr)
     rms_res.append(rr)
 
-  # update info object with new calibration matrix 
-  info.calibration_matrix = calib
-
   # return list of points used for fit and residues for diagnostics
   return points, lin_res, rms_res
+
+class Calibration:
+  """
+  A calibration matrix and all corresponding information
+  """
+
+  def __init__(self):
+    self.dataset_name = ""
+    self.dispersive_direction = DOWN
+    self.energies = []
+    self.exposure_files = []
+    self.filters = []
+    self.xtals = []
+    self.calibration_matrix = np.array([])
+
+    self.filename = None
+
+    self.load_errors = []
+
+  def save(self, filename=None, header_only=False):
+    if filename is None:
+      filename = self.filename
+    else:
+      self.filename = filename
+
+    with open(filename, 'w') as f:
+      f.write("# minIXS calibration matrix\n#\n")
+      f.write("# Dataset: %s\n" % self.dataset_name)
+      f.write("# Dispersive Direction: %s\n" % DIRECTION_NAMES[self.dispersive_direction])
+      f.write("#\n")
+      f.write("# Energies and Exposures:\n")
+      for en, ex in izip(self.energies, self.exposure_files):
+        f.write("#   %5.2f %s\n" % (en,ex))
+      f.write("#\n")
+
+      f.write("# Filters:\n")
+      for fltr in self.filters:
+        f.write('#   %s: %s\n' % (fltr.name, fltr.get_str()))
+      f.write("#\n")
+
+      f.write("# Xtal Boundaries:\n")
+      for (x1,y1), (x2,y2) in self.xtals:
+        f.write("#   %3d %3d %3d %3d\n" % (x1,y1,x2,y2))
+      f.write("#\n")
+
+      if (not header_only and
+          self.calibration_matrix is not None and
+          len(self.calibration_matrix) > 0 and 
+          len(self.calibration_matrix.shape) == 2):
+        f.write("# %d x %d matrix follows\n" % self.calibration_matrix.shape)
+
+        np.savetxt(f, self.calibration_matrix, fmt='%.3f')
+
+  def load(self, filename=None, header_only=False):
+    """
+    Load calibration information from saved file
+
+    Parameters
+    ----------
+      filename: name of file to load
+      header_only: whether to load only the header or full data
+
+    Returns
+    -------
+      True if load was successful
+      False if load encountered an error
+
+      Error messages are stored as strings in the list `Calibration.load_errors`.
+    """
+    self.load_errors = []
+
+    if filename is None:
+      filename = self.filename
+    else:
+      self.filename = filename
+
+    with open(filename, 'r') as f:
+      pos = f.tell()
+      line = f.readline()
+
+      if line.strip() != '# minIXS calibration matrix':
+        raise InvalidFileError()
+
+      in_exposures = False
+      in_filters = False
+      in_xtals = False
+
+      while line:
+        if line[0] == "#":
+
+          if in_exposures:
+            if line[2:].strip() == '':
+              in_exposures = False
+            else:
+              energy, ef = line[2:].split()
+              energy = float(energy.strip())
+              ef = ef.strip()
+
+              self.energies.append(energy)
+              self.exposure_files.append(ef)
+
+          elif in_filters:
+            if line[2:].strip() == '':
+              in_filters = False
+            else:
+              name,val = line[2:].split(':')
+              name = name.strip()
+              fltr = get_filter_by_name(name)
+              if fltr == None:
+                self.load_errors.append("Unknown Filter: '%s' (Ignoring)" % name)
+              else:
+                fltr.set_str(val.strip())
+                self.filters.append(fltr)
+
+          elif in_xtals:
+            if line[2:].strip() == '':
+              in_xtals = False
+            else:
+              x1,y1,x2,y2 = [int(s.strip()) for s in line[2:].split()]
+              self.xtals.append([[x1,y1],[x2,y2]])
+
+          elif line[2:10] == 'Dataset:':
+            self.dataset_name = line[11:].strip()
+          elif line[2:23] == 'Dispersive Direction:':
+            dirname = line[24:].strip()
+            if dirname in DIRECTION_NAMES:
+              self.dispersive_direction = DIRECTION_NAMES.index(dirname)
+            else:
+              self.load_errors.append("Unknown Dispersive Direction: '%s' (Using default)." % dirname)
+          elif line[2:25] == 'Energies and Exposures:':
+            self.energies = []
+            self.exposure_files = []
+            in_exposures = True
+          elif line[2:10] == 'Filters:':
+            self.filters = []
+            in_filters = True
+          elif line[2:18] == 'Xtal Boundaries:':
+            self.xtals = []
+            in_xtals = True
+          else:
+            pass
+        elif header_only:
+          break
+        else:
+          f.seek(pos)
+          self.calibration_matrix = np.loadtxt(f)
+          if len(self.calibration_matrix.shape) == 1:
+            self.calibration_matrix.shape = (1,self.spectrum.shape[0])
+          break
+
+        pos = f.tell()
+        line = f.readline()
+
+    return len(self.load_errors) == 0
+
+  def calibrate(self, fit_type=FIT_CUBIC):
+    calibrate(self, fit_type)

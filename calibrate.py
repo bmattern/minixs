@@ -6,7 +6,7 @@ from constants import *
 import numpy as np
 
 
-def find_maxima(pixels, direction, energy, window_size = 3):
+def find_maxima(pixels, direction, window_size = 3):
   """
   Find locations of local maxima of `pixels` array in `direction`.
 
@@ -15,7 +15,7 @@ def find_maxima(pixels, direction, energy, window_size = 3):
 
   Parameters
   ----------
-  p : pixel array from an elastic exposure
+  pixels : pixel array from an elastic exposure
   direction: minixs.DIRECTION_* indicating dispersive direction
   window_size : size in pixels around max for windowed average
 
@@ -62,10 +62,35 @@ def find_maxima(pixels, direction, energy, window_size = 3):
     x = windowedAvg[index]
     y = index[0]
 
-  z = energy * np.ones(x.shape)
-
   # return N x 2 array of peak locations
-  return np.vstack([x,y,z]).T
+  return np.vstack([x,y]).T
+
+
+def find_combined_maxima(exposures, energies, direction):
+  """
+  Build array of all maxima locations and energies in a list of exposures
+
+  Parameters
+  ----------
+    exposures: a list of Exposure objects
+    energies:  a list of corresponding energies (must be same length as `exposures`)
+    direction: the dispersive direction
+
+  Returns
+  -------
+    Nx3 array with columns giving x,y,energy for each maximum
+  """
+  points = []
+
+  for exposure, energy in izip(exposures, energies):
+    # extract locations of peaks
+    xy = find_maxima(exposure.pixels, direction)
+    z = energy * np.ones((len(xy), 1))
+    xyz = np.hstack([xy,z])
+    points.append(xyz)
+
+  return np.vstack(points)
+
 
 FIT_QUADRATIC = 1
 FIT_CUBIC   = 2
@@ -206,34 +231,45 @@ def fit_region(region, points, dest, fit_type = FIT_CUBIC):
   return lin_res, rms_res
 
 def calibrate(info, fit_type=FIT_CUBIC):
+  """
+  Build calibration matrix from CalibrationInfo
+
+  Parameters
+  ----------
+    info: a filled in CalibrationInfo object
+    fit_type: type of fit (see fit_region() for more)
+
+  Returns
+  -------
+    (points, rms_res, lin_res)
+    points: extracted maxima used for fit
+    rms_res: avg root mean square residue of fit
+    lin_res: average linear deviation of fit
+  """
   # load exposure files
   exposures = [Exposure(f) for f in info.exposure_files]
-
-  points = []
-  lin_res = []
-  rms_res = []
-
+  
+  # apply filters
   for exposure, energy in izip(exposures, info.energies):
-    # apply filters
     for f in info.filters:
       f.filter(exposure.pixels, energy)
 
-    # extract locations of peaks
-    points.append(find_maxima(exposure.pixels,
-                              info.dispersive_direction,
-                              energy))
-
-  points = np.vstack(points)
+  # locate maxima
+  points = find_combined_maxima(exposures, info.energies, info.dispersive_direction)
 
   # create empty calibration matrix
   calib = np.zeros(exposures[0].pixels.shape)
 
-  # fit smooth shape for each crystal and fill in calib with fit
+  # fit smooth shape for each crystal, storing fit residues
+  lin_res = []
+  rms_res = []
   for xtal in info.xtals:
     lr, rr = fit_region(xtal, points, calib, fit_type)
     lin_res.append(lr)
     rms_res.append(rr)
 
+  # update info object with new calibration matrix 
   info.calibration_matrix = calib
+
   # return list of points used for fit and residues for diagnostics
   return points, lin_res, rms_res

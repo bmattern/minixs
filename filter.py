@@ -173,6 +173,44 @@ class EmissionFilter(ChoiceFilter):
 # Filter Registry #
 #                 #
 ###################
+
+REGISTRY = []
+FILTER_MAP = {}
+
+
+def get_filter_by_name(name):
+  """
+  Lookup filter by name
+
+  Parameters
+  ----------
+    name: the name of the filter
+
+  Returns
+  -------
+    an instantiated filter object of the given type or None if name is unknown
+  """
+
+  global FILTER_MAP
+  fltr = FILTER_MAP.get(name, None)
+  if fltr is None:
+    return None
+  else:
+    return fltr()
+
+def register(f):
+  """
+  Register a filter
+
+  Parameters
+  ----------
+    f: a class derived from Filter
+  """
+  FILTER_MAP[f.name] = f
+  REGISTRY.append(f)
+  
+
+# register standard filters
 FILTERS = [
   MinFilter,
   MaxFilter,
@@ -182,19 +220,5 @@ FILTERS = [
   #BadPixelFilter,
   EmissionFilter
   ]
-
-REGISTRY = []
-FILTER_MAP = {}
-
 for f in FILTERS:
-  FILTER_MAP[f.name] = f
-  REGISTRY.append(f)
-
-def get_filter_by_name(name):
-  global FILTER_MAP
-  return FILTER_MAP.get(name, None)
-
-def register(f):
-  FILTER_MAP[f.name] = f
-  REGISTRY.append(f)
-  
+  register(f)

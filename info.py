@@ -143,7 +143,6 @@ class CalibrationInfo:
               if fltr == None:
                 self.load_errors.append("Unknown Filter: '%s' (Ignoring)" % name)
               else:
-                fltr = fltr()
                 fltr.set_str(val.strip())
                 self.filters.append(fltr)
 
@@ -175,18 +174,18 @@ class CalibrationInfo:
           else:
             pass
         elif header_only:
-          return
+          break
         else:
           f.seek(pos)
           self.calibration_matrix = np.loadtxt(f)
           if len(self.calibration_matrix.shape) == 1:
             self.calibration_matrix.shape = (1,self.spectrum.shape[0])
-          return
+          break
 
         pos = f.tell()
         line = f.readline()
 
-    return self.load_errors == []
+    return len(self.load_errors) == 0
 
 class XESInfo:
   def __init__(self):

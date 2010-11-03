@@ -164,7 +164,7 @@ class CalibratorController(object):
     filters = self.view.get_filters()
     for (name, enabled, val) in filters:
       if enabled:
-        fltr = get_filter_by_name(name)()
+        fltr = get_filter_by_name(name)
         fltr.set_val(val)
         self.model.filters.append( fltr )
 
@@ -591,7 +591,7 @@ class CalibratorController(object):
     for (name, enabled, val) in filters:
       if enabled:
         #XXX these should be instantiated once and updated when view changes
-        fltr = get_filter_by_name(name)()
+        fltr = get_filter_by_name(name)
         fltr.set_val(val)
         fltr.filter(exposure.pixels, energy)
 

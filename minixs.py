@@ -5,7 +5,6 @@ import sys, os
 import time
 
 from scanfile import ScanFile
-from calibration import Calibrator
 from exposure import Exposure
 from misc import *
 

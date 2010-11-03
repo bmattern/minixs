@@ -1,6 +1,6 @@
 import minixs      as mx
 import minixs.info as mxinfo
-from minixs.calibrate2 import calibrate
+from minixs.calibrate import calibrate
 from   minixs.filter import get_filter_by_name
 import numpy       as np
 import os, sys

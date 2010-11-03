@@ -71,9 +71,38 @@ FIT_QUADRATIC = 1
 FIT_CUBIC   = 2
 FIT_ELLIPSOID = 3
 
-def fit_xtal(xtal, points, dest, fit_type = FIT_CUBIC):
+def fit_region(region, points, dest, fit_type = FIT_CUBIC):
+  """
+  Fit a smooth function to points that lie in region bounded by `region`
+
+  Parameters
+  ----------
+    region - a rectangle defining the boundary of region to fit: [(x1,y1), (x2,y2)]
+    points - an N x 3 array of data points
+    dest - an array to store fit data in
+    fit_type - type of fit to perform, ether FIT_QUADRATIC or FIT_CUBIC
+
+  Returns
+  -------
+    Nothing
+
+  The points array should contain three columns giving respectively x,y and z
+  values of data points.  The x and y values should be between 0 and the width
+  and height of `dest` respectively. They are in units of pixels, but may be
+  real valued.  The z values can take any values.
+
+  The entries in `points` with x,y coordinates falling within the bounds
+  specified by `region` are fit to the model specified by `fit_type` using linear
+  least squares. This model is then evaluated at all integral values of x and y
+  in this range, with the result being stored in the corresponding location of
+  `dest`.
+
+  This is intended to be called for several different non-overlapping values of
+  `region` with the same list of `points` and `dest`.
+  """
+
   # boundary coordinates
-  (x1,y1),(x2,y2) = xtal
+  (x1,y1),(x2,y2) = region
 
   # extract points inside this xtal region
   index = np.where(np.logical_and(
@@ -91,7 +120,7 @@ def fit_xtal(xtal, points, dest, fit_type = FIT_CUBIC):
   # XXX this should pass the warning up to higher level code instead
   #     of printing it out to stdout
   if len(x) == 0:
-    print "Warning: No points in xtal ", xtal
+    print "Warning: No points in xtal ", region
     return
 
   # build points to evaluate fit at
@@ -196,7 +225,7 @@ def calibrate(info, fit_type=FIT_CUBIC):
 
   # fit smooth shape for each crystal and fill in calib with fit
   for xtal in info.xtals:
-    lr, rr = fit_xtal(xtal, points, calib, fit_type)
+    lr, rr = fit_region(xtal, points, calib, fit_type)
     lin_res.append(lr)
     rms_res.append(rr)
 

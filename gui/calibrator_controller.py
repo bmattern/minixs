@@ -1,6 +1,6 @@
 import minixs      as mx
 import minixs.info as mxinfo
-from minixs.calibrate import calibrate, Calibration
+from minixs.calibrate import Calibration
 from   minixs.filter import get_filter_by_name
 import numpy       as np
 import os, sys
@@ -502,9 +502,9 @@ class CalibratorController(object):
 
     self.view.SetStatusText("Calibrating... Please Wait...", STATUS_MESSAGE)
 
-    points, rms_res, lin_res = calibrate(self.model)
+    self.model.calibrate()
+    print self.model.rms_res, self.model.lin_res
 
-    print rms_res, lin_res
     #XXX check that calib seems reasonable (monotonic, etc)
     # also, report residues from fit
     self.CalibrationValid(True)

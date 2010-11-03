@@ -234,7 +234,7 @@ def fit_region(region, points, dest, fit_type = FIT_CUBIC):
 
   return lin_res, rms_res
 
-def calibrate(calib, fit_type=FIT_CUBIC):
+def calibrate(filtered_exposures, energies, regions, dispersive_direction, fit_type=FIT_CUBIC, return_diagnostics=False):
   """
   Build calibration matrix from parameters in Calibration object
 
@@ -250,30 +250,24 @@ def calibrate(calib, fit_type=FIT_CUBIC):
     rms_res: avg root mean square residue of fit
     lin_res: average linear deviation of fit
   """
-  # load exposure files
-  exposures = [Exposure(f) for f in calib.exposure_files]
-  
-  # apply filters
-  for exposure, energy in izip(exposures, calib.energies):
-    for f in calib.filters:
-      f.filter(exposure.pixels, energy)
-
   # locate maxima
-  points = find_combined_maxima(exposures, calib.energies, calib.dispersive_direction)
+  points = find_combined_maxima(filtered_exposures, energies, dispersive_direction)
 
   # create empty calibration matrix
-  calib.calibration_matrix = np.zeros(exposures[0].pixels.shape)
+  calibration_matrix = np.zeros(filtered_exposures[0].pixels.shape)
 
   # fit smooth shape for each crystal, storing fit residues
   lin_res = []
   rms_res = []
-  for xtal in calib.xtals:
-    lr, rr = fit_region(xtal, points, calib.calibration_matrix, fit_type)
+  for region in regions:
+    lr, rr = fit_region(region, points, calibration_matrix, fit_type)
     lin_res.append(lr)
     rms_res.append(rr)
 
-  # return list of points used for fit and residues for diagnostics
-  return points, lin_res, rms_res
+  if return_diagnostics:
+    return (calibration_matrix, (lin_res, rms_res, points))
+  else:
+    calibration_matrix
 
 class Calibration:
   """
@@ -430,4 +424,20 @@ class Calibration:
     return len(self.load_errors) == 0
 
   def calibrate(self, fit_type=FIT_CUBIC):
-    calibrate(self, fit_type)
+    # load exposure files
+    exposures = [Exposure(f) for f in self.exposure_files]
+    
+    # apply filters
+    for exposure, energy in izip(exposures, self.energies):
+      for f in self.filters:
+        f.filter(exposure.pixels, energy)
+
+    # calibrate
+    self.calibration_matrix, diagnostics = calibrate(exposures,
+                                                     self.energies,
+                                                     self.xtals,
+                                                     self.dispersive_direction,
+                                                     fit_type,
+                                                     return_diagnostics=True)
+
+    self.lin_res, self.rms_res, self.fit_points = diagnostics

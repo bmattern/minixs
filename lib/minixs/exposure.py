@@ -35,7 +35,12 @@ class Exposure:
       info = []
     return info
 
+  def apply_filters(self, energy, filters):
+    for f in filters:
+      f.filter(self.pixels, energy)
+  
   def filter_low_high(self, low, high):
+    # DEPRECATED
     if low == None: low = self.pixels.min()
     if high == None: high = self.pixels.max()
 
@@ -43,6 +48,7 @@ class Exposure:
     self.pixels *= mask
 
   def filter_neighbors(self, cutoff):
+    # DEPRECATED
     from itertools import product
     nbors = (-1,0,1)
     mask = sum([
@@ -53,6 +59,8 @@ class Exposure:
     self.pixels *= mask
 
   def filter_bad_pixels(self, bad_pixels):
+    # DEPRECATED
     for x,y in bad_pixels:
       self.pixels[y,x] = 0
+
 

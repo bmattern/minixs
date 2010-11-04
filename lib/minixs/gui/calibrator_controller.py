@@ -1,21 +1,25 @@
-import minixs      as mx
-import minixs.info as mxinfo
-from minixs.calibrate import Calibration
-from   minixs.filter import get_filter_by_name
-import numpy       as np
+import minixs           as mx
+import minixs.filetype  as filetype
+from   minixs.calibrate import Calibration
+from   minixs.exposure  import Exposure
+from   minixs.filter    import get_filter_by_name
+from   minixs.misc      import read_scan_info
+
+import numpy            as np
 import os, sys
 import util
 import wx
 
-from file_dialog      import FileDialog
-from image_view       import EVT_COORDS
-from image_tools      import RangeTool, Crosshair, EVT_RANGE_CHANGED, EVT_RANGE_ACTION_CHANGED
-from filter_view      import EVT_FILTER_CHANGED, filter_ids
-from matplotlib       import cm, colors
+from file_dialog        import FileDialog
+from image_view         import EVT_COORDS
+from image_tools        import RangeTool, Crosshair, \
+                               EVT_RANGE_CHANGED, EVT_RANGE_ACTION_CHANGED
+from filter_view        import EVT_FILTER_CHANGED, filter_ids
+from matplotlib         import cm, colors
 
-from calibrator_view  import LoadEnergiesDialog
-from calibrator_const import *
-from wildcards        import *
+from calibrator_view    import LoadEnergiesDialog
+from calibrator_const   import *
+from wildcards          import *
 
 class CalibratorController(object):
   """
@@ -241,9 +245,9 @@ class CalibratorController(object):
     if not filename:
       return
 
-    t = mxinfo.determine_filetype(filename)
+    t = filetype.determine_filetype(filename)
 
-    if t == mxinfo.FILE_XTALS:
+    if t == filetype.FILE_XTALS:
       with open(filename) as f:
         xtals = []
         for line in f:
@@ -253,8 +257,8 @@ class CalibratorController(object):
           xtals.append([[x1,y1],[x2,y2]])
         self.model.xtals = xtals
 
-    elif t == mxinfo.FILE_CALIBRATION:
-      ci = mxinfo.Calibration()
+    elif t == filetype.FILE_CALIBRATION:
+      ci = Calibration()
       ci.load(filename, header_only=True)
       self.model.xtals = ci.xtals
 
@@ -347,7 +351,7 @@ class CalibratorController(object):
 
     if ret == wx.ID_OK:
       filename, column = dlg.get_info()
-      energies = mx.read_scan_info(filename, [column])[0]
+      energies = mx.misc.read_scan_info(filename, [column])[0]
 
       for e in energies:
         self.view.exposure_list.AppendEnergy(e)
@@ -670,7 +674,7 @@ class CalibratorController(object):
         filename = self.exposures[i]
         energy = self.energies[i]
 
-        e = mx.Exposure(filename)
+        e = mx.exposure.Exposure(filename)
         self.raw_pixels = e.pixels.copy()
         p = self.ApplyFilters(energy, e)
         self.view.exposure_panel.SetPixels(p)

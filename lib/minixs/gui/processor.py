@@ -1,7 +1,6 @@
 import os, sys
 import minixs as mx
 import numpy as np
-import minixs.info as mxinfo
 from minixs.emission import EmissionSpectrum
 import wx
 import wxmpl

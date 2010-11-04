@@ -3,7 +3,7 @@ import minixs.filetype  as filetype
 from   minixs.calibrate import Calibration
 from   minixs.exposure  import Exposure
 from   minixs.filter    import get_filter_by_name
-from   minixs.misc      import read_scan_info
+from   minixs.misc      import read_scan_info, find_xtal_boundaries
 
 import numpy            as np
 import os, sys
@@ -16,6 +16,7 @@ from image_tools        import RangeTool, Crosshair, \
                                EVT_RANGE_CHANGED, EVT_RANGE_ACTION_CHANGED
 from filter_view        import EVT_FILTER_CHANGED, filter_ids
 from matplotlib         import cm, colors
+from itertools          import izip
 
 from calibrator_view    import LoadEnergiesDialog
 from calibrator_const   import *
@@ -98,6 +99,7 @@ class CalibratorController(object):
           (ID_CLEAR_ENERGIES, self.OnClearEnergies),
           (ID_CLEAR_EXPOSURES, self.OnClearExposures),
           (ID_CALIBRATE, self.OnCalibrate),
+          (ID_FIND_XTALS, self.OnFindXtals),
           ]),
         (wx.EVT_LIST_END_LABEL_EDIT, [
           (ID_EXPOSURE_LIST, self.OnListEndLabelEdit),
@@ -505,6 +507,29 @@ class CalibratorController(object):
     show = evt.Checked()
     self.range_tool.SetVisible(show)
     self.range_tool.SetActive(show)
+
+  def OnFindXtals(self,evt):
+    self.view_to_model()
+    
+    self.view.SetStatusText("Finding Boundaries... Please Wait...", STATUS_MESSAGE)
+
+    exposures = [Exposure(f) for f in self.model.exposure_files]
+    for exposure, energy in izip(exposures, self.model.energies):
+      exposure.apply_filters(energy, self.model.filters)
+
+    xtals = find_xtal_boundaries(exposures)
+
+    if xtals is None:
+      message = 'Unable to determine boundaries. It may help to increase the low cutoff value.'
+      errdlg = wx.MessageDialog(self.view, message, "Error", wx.OK | wx.ICON_ERROR)
+      errdlg.ShowModal()
+      errdlg.Destroy()
+    else:
+      self.model.xtals = xtals
+      self.range_tool.rects = self.model.xtals
+      self.view.image_view.Refresh()
+
+    self.view.SetStatusText("", STATUS_MESSAGE)
 
   def OnCalibrate(self, evt):
     self.view_to_model()

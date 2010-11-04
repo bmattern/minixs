@@ -310,6 +310,9 @@ class ToolsPanel(wx.Panel):
     vbox.Add(radio, 0, wx.EXPAND | wx.BOTTOM, VPAD)
     self.view_type = radio
 
+    button = wx.Button(self, ID_FIND_XTALS, 'Find Crystal Bounds')
+    vbox.Add(button)
+
     check = wx.CheckBox(self, ID_SHOW_XTALS, 'Show Crystals')
     check.SetValue(True)
     vbox.Add(check)

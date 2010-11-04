@@ -19,6 +19,7 @@ ID_IMAGE_PANEL      = wx.NewId()
 
 ID_VIEW_TYPE        = wx.NewId()
 ID_SHOW_XTALS       = wx.NewId()
+ID_FIND_XTALS       = wx.NewId()
 
 ID_IMPORT_XTALS     = wx.NewId()
 ID_EXPORT_XTALS     = wx.NewId()

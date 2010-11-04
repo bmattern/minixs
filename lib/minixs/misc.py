@@ -160,10 +160,10 @@ def _find_boundaries(p, axis):
   """
   Helper function for find_xtal_boundaries
   """
-  flat = p.sum(axis)
+  flat = p.sum(1-axis)
 
   # find boundaries
-  mask = 1 * (flat > p.shape[axis])
+  mask = 1 * (flat > p.shape[1-axis])
   diffs = np.diff(mask)
   b1 = list(np.where(diffs==1)[0])
   b2 = list(np.where(diffs==-1)[0])
@@ -187,8 +187,8 @@ def find_xtal_boundaries(filtered_exposures):
   for e in filtered_exposures[1:]:
     np.add(p,e.pixels,p)
 
-  x1s,x2s = _find_boundaries(p, 0)
-  y1s,y2s = _find_boundaries(p, 1)
+  x1s,x2s = _find_boundaries(p, 1)
+  y1s,y2s = _find_boundaries(p, 0)
 
   if len(x1s) != len(x2s) or len(y1s) != len(y2s):
     return None

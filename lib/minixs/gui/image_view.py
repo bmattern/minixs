@@ -71,8 +71,6 @@ class ImageView(wx.Panel):
     if not self.bitmap:
       return
 
-return # Not yet fully implemented, so disable for now:w
-
     for tool in self.tools:
       if tool.active:
         tool.OnLeftUp(evt)
@@ -126,7 +124,7 @@ return # Not yet fully implemented, so disable for now:w
         tool.OnPaint(evt)
 
   def OnMouseWheel(self, evt):
-    return # Not yet fully implemented, so disable for now:w
+    return # Not yet fully implemented, so disable for now
 
     if not self.bitmap:
       return

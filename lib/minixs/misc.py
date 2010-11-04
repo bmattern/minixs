@@ -181,7 +181,17 @@ def _find_boundaries(p, axis):
 
   return b1,b2
 
-def find_xtal_boundaries(filtered_exposures):
+def find_xtal_boundaries(filtered_exposures, shrink=1):
+  """
+  From a full set of filtered calibration exposures, determine crystal boundaries
+
+  Parameters
+  ----------
+    filtered_exposures: a list of Exposures
+    shrink: the number of pixels to shrink determined boundary (default 1)
+
+  The `shrink` parameter can be used to avoid edge effects or slight aparallelism.
+  """
   # combine exposures into one
   p = filtered_exposures[0].pixels.copy()
   for e in filtered_exposures[1:]:
@@ -196,7 +206,7 @@ def find_xtal_boundaries(filtered_exposures):
   xtals = []
   for x1,x2 in izip(x1s, x2s):
     for y1,y2 in izip(y1s, y2s):
-      xtals.append([[x1,y1],[x2,y2]])
+      xtals.append([[x1+shrink,y1+shrink],[x2-shrink,y2-shrink]])
 
   return xtals
 

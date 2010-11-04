@@ -144,7 +144,7 @@ class ImageView(wx.Panel):
         tool.OnPaint(evt)
 
   def OnMouseWheel(self, evt):
-    #return # Not yet fully implemented, so disable for now
+    return # Not yet fully implemented, so disable for now
 
     if not self.bitmap:
       return

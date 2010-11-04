@@ -2,6 +2,7 @@ import os, sys
 import minixs as mx
 import numpy as np
 import minixs.info as mxinfo
+from minixs.emission import EmissionSpectrum
 import wx
 import wxmpl
 
@@ -166,10 +167,10 @@ class ProcessorPanel(wx.Panel):
 class ProcessorModel(object):
   def __init__(self):
     self.calibration = Calibration()
-    self.xes = mxinfo.XESInfo()
+    self.xes = EmissionSpectrum() 
 
   def load(self, filename):
-    xes = mxinfo.XESInfo()
+    xes = EmissionSpectrum() 
     xes.load(filename)
     self.xes = xes
 
@@ -318,7 +319,7 @@ class ProcessorController(object):
 
   def model_to_view(self):
     self.view.panel.dataset_entry.SetValue(self.model.xes.dataset_name)
-    self.view.panel.energy_entry.SetValue("%.2f" % self.model.xes.energy)
+    self.view.panel.energy_entry.SetValue("%.2f" % self.model.xes.incident_energy)
     self.view.panel.norm_entry.SetValue("%.2f" % self.model.xes.I0)
     self.view.panel.calibration_file_entry.SetValue(self.model.xes.calibration_file)
     self.view.panel.exposure_listbox.Clear()
@@ -329,7 +330,7 @@ class ProcessorController(object):
   def view_to_model(self):
     self.model.xes.dataset = self.view.panel.dataset_entry.GetValue()
     self.model.xes.calibration_file = self.view.panel.calibration_file_entry.GetValue()
-    self.model.xes.energy = float(self.view.panel.energy_entry.GetValue())
+    self.model.xes.incident_energy = float(self.view.panel.energy_entry.GetValue())
     self.model.xes.I0 = float(self.view.panel.norm_entry.GetValue())
     self.model.xes.exposure_files = self.view.panel.exposure_listbox.GetItems()
 

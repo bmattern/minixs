@@ -335,24 +335,7 @@ class ProcessorController(object):
     self.model.xes.exposure_files = self.view.panel.exposure_listbox.GetItems()
 
   def process_spectrum(self):
-
-    exposure = mx.Exposure()
-    exposure.load_multi(self.model.xes.exposure_files)
-
-    energies = np.arange(
-        np.min(self.model.calibration.calibration_matrix),
-        np.max(self.model.calibration.calibration_matrix) + .25,
-        .25)
-
-    self.model.xes.spectrum = mx.emission_spectrum2(
-        self.model.calibration.calibration_matrix,
-        exposure,
-        energies,
-        self.model.xes.I0,
-        self.model.calibration.dispersive_direction,
-        self.model.calibration.xtals
-        )
-
+    self.model.xes.process()
 
 if __name__ == "__main__":
   app = ProcessorApp()

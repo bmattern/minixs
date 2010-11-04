@@ -174,8 +174,11 @@ class CalibratorController(object):
         fltr.set_val(val)
         self.model.filters.append( fltr )
 
-    # get xtals (and convert to int
-    self.model.xtals = [[[int(x1),int(y1)],[int(x2),int(y2)]] for (x1,y1),(x2,y2) in self.range_tool.rects]
+    # get xtals (and convert to int)
+    self.model.xtals = [
+        [[int(round(x1)),int(round(y1))],[int(round(x2)),int(round(y2))]]
+        for (x1,y1),(x2,y2) in self.range_tool.rects
+        ]
 
   def OnOpen(self, evt):
     """

@@ -531,6 +531,8 @@ class CalibratorController(object):
       self.model.xtals = xtals
       self.range_tool.rects = self.model.xtals
       self.view.image_view.Refresh()
+      self.Changed()
+      self.CalibrationValid(False)
 
     self.view.SetStatusText("", STATUS_MESSAGE)
 

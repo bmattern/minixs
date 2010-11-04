@@ -1,40 +1,4 @@
-import minixs as mx
 import numpy as np
-from itertools import izip
-from filter import get_filter_by_name
-
-FILE_UNKNOWN     = -1
-FILE_CALIBRATION = 0
-FILE_XTALS       = 1
-FILE_XES         = 2
-FILE_RIXS        = 3
-
-FILE_TYPES = [
-    'calibration matrix',
-    'crystal boundaries',
-    'XES spectrum',
-    'RIXS spectrum'
-    ]
-
-def determine_filetype(path):
-  with open(path) as f:
-    line = f.readline()
-    if line[0] != "#":
-      return FILE_UNKNOWN
-
-    s = line[2:]
-
-    if not s.startswith('minIXS'):
-      return 0
-
-    t = s[7:].strip()
-    if t in FILE_TYPES:
-      return FILE_TYPES.index(t)
-
-    return FILE_UNKNOWN
-
-class InvalidFileError(Exception):
-  pass
 
 class RIXSInfo:
   def __init__(self):
@@ -119,9 +83,4 @@ class RIXSInfo:
 
         pos = f.tell()
         line = f.readline()
-
-class DataSet:
-  def __init__(self):
-    self.name = ""
-    self.description = ""
 

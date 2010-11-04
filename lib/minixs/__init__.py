@@ -2,7 +2,6 @@ import calibrate, \
        emission, \
        exposure, \
        filter, \
-       info, \
        misc, \
        rixs, \
        scanfile
@@ -14,7 +13,6 @@ __all__ = [
   'emission',
   'exposure',
   'filter',
-  'info',
   'misc',
   'rixs',
   'scanfile',

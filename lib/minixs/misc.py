@@ -54,7 +54,6 @@ def determine_dispersive_direction(e1, e2, threshold=.75, sep=20):
 
   return -1
 
-
 def build_rixs(spectra, energies):
   total_length = np.sum([len(s) for s in spectra])
   full_spectrum = np.zeros((total_length, 6))
@@ -156,4 +155,48 @@ def plot_spectrum(s, **kwargs):
     errorbar(s[:,0], s[:,1]/n, s[:,2]/n, **kwargs)
   else:
     plot(s[:,0], s[:,1]/n, **kwargs)
-    
+
+def _find_boundaries(p, axis):
+  """
+  Helper function for find_xtal_boundaries
+  """
+  flat = p.sum(axis)
+
+  # find boundaries
+  mask = 1 * (flat > p.shape[axis])
+  diffs = np.diff(mask)
+  b1 = list(np.where(diffs==1)[0])
+  b2 = list(np.where(diffs==-1)[0])
+
+  # if nothing was found, xtals cover entire face
+  if len(b1) == 0:
+    b1 = [0]
+  if len(b2) == 0:
+    b2 = [p.shape[axis]]
+  
+  if b1[0] > b2[0]:
+    b1.insert(0,0)
+  if b2[-1] < b1[-1]:
+    b2.append(p.shape[axis])
+
+  return b1,b2
+
+def find_xtal_boundaries(filtered_exposures):
+  # combine exposures into one
+  p = filtered_exposures[0].pixels.copy()
+  for e in filtered_exposures[1:]:
+    np.add(p,e.pixels,p)
+
+  x1s,x2s = _find_boundaries(p, 0)
+  y1s,y2s = _find_boundaries(p, 1)
+
+  if len(x1s) != len(x2s) or len(y1s) != len(y2s):
+    return None
+
+  xtals = []
+  for x1,x2 in izip(x1s, x2s):
+    for y1,y2 in izip(y1s, y2s):
+      xtals.append([[x1,y1],[x2,y2]])
+
+  return xtals
+

@@ -27,7 +27,7 @@ class ImageView(wx.Panel):
 
   def GetBitmapSize(self):
     if self.bitmap:
-      return self.bitmap.GetSize()
+      return self.raw_image.GetSize()
     else:
       return (0,0)
 
@@ -47,20 +47,33 @@ class ImageView(wx.Panel):
     if not force and zoom == self.zoom:
       return
 
+    if zoom > 0:
+      w = self.raw_image.Width * zoom
+      h = self.raw_image.Height * zoom
+    elif zoom < 0:
+      w = -self.raw_image.Width / zoom
+      h = -self.raw_image.Height / zoom
+    else:
+      raise ValueError("Zoom level cannot be 0.")
+
     self.zoom = zoom
 
-    w = self.raw_image.Width * self.zoom
-    h = self.raw_image.Height * self.zoom
     scaled = self.raw_image.Scale(w, h)
 
     self.bitmap = wx.BitmapFromImage(scaled)
     self.Refresh()
 
   def CoordBitmapToScreen(self,x,y):
-    return (x*self.zoom, y*self.zoom)
+    if self.zoom > 0:
+      return (x*self.zoom, y*self.zoom)
+    else:
+      return (-x/float(self.zoom), -y/float(self.zoom))
 
   def CoordScreenToBitmap(self,sx,sy):
-    return (sx/float(self.zoom), sy/float(self.zoom))
+    if self.zoom > 0:
+      return (sx/float(self.zoom), sy/float(self.zoom))
+    else:
+      return (-sx*self.zoom, -sy*self.zoom)
 
   def PostEventCoords(self, x, y):
     evt = EventCoords(self.Id, x=x, y=y)
@@ -137,22 +150,22 @@ class ImageView(wx.Panel):
       return
 
     rot = evt.GetWheelRotation()
-    print rot
+
     zoom = self.zoom
     if rot > 0:
       zoom += 1
+      if zoom == -1:
+        zoom = 1
+
     elif rot < 0:
       zoom -= 1
-
-    if zoom < 1:
-      zoom = 1
-
-    print zoom
+      if zoom == 0:
+        zoom = -2
 
     self.SetZoom(zoom)
 
     # pan so that pixel under mouse stays under mouse
-    x,y = evt.GetPosition()
+    #x,y = evt.GetPosition()
 
 
 

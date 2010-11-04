@@ -288,9 +288,7 @@ class RangeTool(Tool):
     Handle mouse motion
     """
     x, y = evt.GetPosition()
-    print x,y,
     x, y = self.parent.CoordScreenToBitmap(x,y)
-    print " -> ", x, y
 
     w, h = self.parent.GetBitmapSize()
 

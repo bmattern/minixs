@@ -383,6 +383,11 @@ class RangeTool(Tool):
         dc.SetPen(self.pen)
 
       (x1,y1),(x2,y2) = r 
+
+      # transform coords
+      x1,y1 = self.parent.CoordBitmapToScreen(x1,y1)
+      x2,y2 = self.parent.CoordBitmapToScreen(x2,y2)
+
       gcdc.DrawRectangle(x1,y1,x2-x1,y2-y1)
       dc.DrawRectangle(x1,y1,x2-x1+1,y2-y1+1)
 

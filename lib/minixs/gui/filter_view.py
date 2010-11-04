@@ -51,6 +51,32 @@ class IntFilterView(FilterView):
   def OnSpinBox(self, evt):
     self.post_event_filter_changed()
 
+class StringFilterView(FilterView):
+  def __init__(self, *args, **kwargs):
+    FilterView.__init__(self, *args, **kwargs)
+
+    id = args[1]
+    text = wx.TextCtrl(self, id, '', style=wx.TE_PROCESS_ENTER)
+    self.ctrl = text
+    self.lastval = ''
+
+    self.ctrl.Bind(wx.EVT_TEXT_ENTER, self.OnTextBox, id=id)
+    self.ctrl.Bind(wx.EVT_KILL_FOCUS, self.OnTextBox, id=id)
+
+  def SetValue(self, val):
+    self.ctrl.SetValue(val)
+
+  def GetValue(self):
+    return self.ctrl.GetValue()
+
+  def OnTextBox(self, evt):
+    newval = self.ctrl.GetValue()
+    if self.lastval == newval:
+      return
+
+    self.lastval = newval 
+    self.post_event_filter_changed()
+
 class ChoiceFilterView(FilterView):
   def __init__(self, *args, **kwargs):
     FilterView.__init__(self, *args, **kwargs)
@@ -59,7 +85,7 @@ class ChoiceFilterView(FilterView):
     choice = wx.Choice(self, id, choices=self.filter.CHOICES)
     self.ctrl = choice 
 
-    self.ctrl.Bind(wx.EVT_CHOICE, self.on_choice, id=id)
+    self.ctrl.Bind(wx.EVT_CHOICE, self.OnChoice, id=id)
 
   def SetValue(self, val):
     self.ctrl.SetSelection(int(val))
@@ -67,7 +93,7 @@ class ChoiceFilterView(FilterView):
   def GetValue(self):
     return self.ctrl.GetSelection()
 
-  def on_choice(self):
+  def OnChoice(self, evt):
     self.post_event_filter_changed()
 
 REGISTRY = []

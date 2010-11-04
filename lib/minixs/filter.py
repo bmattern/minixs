@@ -62,6 +62,15 @@ class FloatFilter(Filter):
   def get_str(self):
     return "%.2f" % self.val
 
+class StringFilter(Filter):
+  view_name = "StringFilterView"
+
+  def set_str(self, valstr):
+    self.val = valstr
+
+  def get_str(self):
+    return self.val
+
 class ChoiceFilter(Filter):
   view_name = "ChoiceFilterView"
 

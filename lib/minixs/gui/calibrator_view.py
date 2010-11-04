@@ -111,6 +111,9 @@ class FilterPanel(wx.Panel):
         view.Enable(enabled)
         view.SetValue(val)
       else:
+        if hasattr(fltr, 'default_val'):
+          view.SetValue(fltr.default_val) 
+
         check.SetValue(False)
         view.Enable(False)
 
@@ -156,11 +159,16 @@ class FilterPanel(wx.Panel):
         val = fmap[ftype].get_val()
       else:
         enabled = False
-        val = FILTER_DEFAULTS[ftype.name][1]
+        val = None
+        if ftype.name in FILTER_DEFAULTS:
+          val = FILTER_DEFAULTS[ftype.name][1]
+        elif hasattr(ftype, 'default_val'):
+          val = ftype.default_val
 
       self.checks[id].SetValue(enabled)
       self.views[id].Enable(enabled)
-      self.views[id].SetValue(val)
+      if val is not None:
+        self.views[id].SetValue(val)
 
   def get_filters(self):
     return [ 

@@ -14,7 +14,7 @@ FILE_TYPES = [
 def determine_filetype(path):
   with open(path) as f:
     line = f.readline()
-    if line[0] != "#":
+    if len(line) == 0 or line[0] != "#":
       return FILE_UNKNOWN
 
     s = line[2:]

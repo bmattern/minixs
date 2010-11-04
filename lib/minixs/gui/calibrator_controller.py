@@ -245,25 +245,40 @@ class CalibratorController(object):
     if not filename:
       return
 
+    error = None
+
     t = filetype.determine_filetype(filename)
 
-    if t == filetype.FILE_XTALS:
-      with open(filename) as f:
-        xtals = []
-        for line in f:
-          if line[0] == "#": 
-            continue
-          x1,y1,x2,y2 = [int(s.strip()) for s in line.split()]
-          xtals.append([[x1,y1],[x2,y2]])
-        self.model.xtals = xtals
-
-    elif t == filetype.FILE_CALIBRATION:
+    if t == filetype.FILE_CALIBRATION:
       ci = Calibration()
       ci.load(filename, header_only=True)
       self.model.xtals = ci.xtals
 
+    elif t == filetype.FILE_XTALS or t == filetype.FILE_UNKNOWN:
+      data = None
+      try:
+        data = np.loadtxt(filename)
+        self.model.xtals = [ [[x1,y1],[x2,y2]] for x1,y1,x2,y2 in data ]
+      except ValueError:
+        if data is not None:
+          if len(data.shape) == 1:
+            num = data.shape[0]
+          else:
+            num = data.shape[1]
+
+          if num != 4:
+            error = "Crystal file must contain 4 columns."
+          else:
+            error = "Invalid file."
+        else:
+          error = "Invalid file."
     else:
-      errdlg = wx.MessageDialog(self.view, "Unknown Filetype", "Error", wx.OK | wx.ICON_ERROR)
+      error = "Invalid filetype."
+
+    if error:
+      print error
+      errmsg = "Unable to load crystal boundaries:\n\n%s" % error
+      errdlg = wx.MessageDialog(self.view, errmsg, "Error", wx.OK | wx.ICON_ERROR)
       errdlg.ShowModal()
       errdlg.Destroy()
 

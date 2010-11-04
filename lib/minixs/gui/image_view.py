@@ -25,6 +25,12 @@ class ImageView(wx.Panel):
 
     self.zoom = 1
 
+  def GetBitmapSize(self):
+    if self.bitmap:
+      return self.bitmap.GetSize()
+    else:
+      return (0,0)
+
   def SetPixels(self, pixels, colormap):
     if pixels is None:
       self.raw_image = None
@@ -37,6 +43,7 @@ class ImageView(wx.Panel):
       self.SetZoom(self.zoom, force=True)
 
   def SetZoom(self, zoom, force=False):
+    # XXX use timer to prevent slow down when zooming quickly through several levels
     if not force and zoom == self.zoom:
       return
 
@@ -53,7 +60,7 @@ class ImageView(wx.Panel):
     return (x*self.zoom, y*self.zoom)
 
   def CoordScreenToBitmap(self,sx,sy):
-    return (sx/float(self.zoom), y/float(self.zoom))
+    return (sx/float(self.zoom), sy/float(self.zoom))
 
   def PostEventCoords(self, x, y):
     evt = EventCoords(self.Id, x=x, y=y)
@@ -124,7 +131,7 @@ class ImageView(wx.Panel):
         tool.OnPaint(evt)
 
   def OnMouseWheel(self, evt):
-    return # Not yet fully implemented, so disable for now
+    #return # Not yet fully implemented, so disable for now
 
     if not self.bitmap:
       return

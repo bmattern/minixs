@@ -204,7 +204,9 @@ class RangeTool(Tool):
     Handle left mouse down
     """
     x, y = evt.GetPosition()
-    w, h = self.parent.GetSize()
+    x, y = self.parent.CoordScreenToBitmap(x,y)
+
+    w, h = self.parent.GetBitmapSize()
 
     if self.action & self.ACTION_PROPOSED:
       self.action &= ~self.ACTION_PROPOSED
@@ -243,6 +245,7 @@ class RangeTool(Tool):
     Handle left mouse up
     """
     x,y = evt.GetPosition()
+    x,y = self.parent.CoordScreenToBitmap(x,y)
     (x1,y1), (x2,y2) = self.active_rect
 
     if self.action & self.ACTION_RESIZE:
@@ -285,8 +288,11 @@ class RangeTool(Tool):
     Handle mouse motion
     """
     x, y = evt.GetPosition()
+    print x,y,
+    x, y = self.parent.CoordScreenToBitmap(x,y)
+    print " -> ", x, y
 
-    w, h = self.parent.GetSize()
+    w, h = self.parent.GetBitmapSize()
 
     # not currently performing an action
     if self.action == self.ACTION_NONE or self.action & self.ACTION_PROPOSED:
@@ -395,6 +401,8 @@ class RangeTool(Tool):
 
         dc.SetPen(self.action_pen)
         (x1,y1),(x2,y2) = self.active_rect
+        x1,y1 = self.parent.CoordBitmapToScreen(x1,y1)
+        x2,y2 = self.parent.CoordBitmapToScreen(x2,y2)
 
         if self.action & self.ACTION_RESIZE_L:
           dc.DrawLine(x1,y1,x1,y2)

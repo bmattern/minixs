@@ -514,6 +514,9 @@ class CalibratorController(object):
   def OnFindXtals(self,evt):
     self.view_to_model()
     
+    if not self.model.exposure_files:
+      return
+
     self.view.SetStatusText("Finding Boundaries... Please Wait...", STATUS_MESSAGE)
 
     exposures = [Exposure(f) for f in self.model.exposure_files]

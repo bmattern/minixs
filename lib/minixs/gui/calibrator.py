@@ -22,12 +22,12 @@ class CalibratorApp(wx.App):
 
     view.Show()
 
-if __name__ == "__main__":
-
+def main():
   # register filters
   for f in filter.REGISTRY:
     view_class = getattr(filter_view, f.view_name)
     filter_view.register(f, view_class)
 
+  # run app
   app = CalibratorApp()
   app.MainLoop()

@@ -6,8 +6,7 @@ incident_energy = 7615.01 # in eV
 I0 = 1 # this is used for normalization (I = counts / pixel / I0)
 exposures = [ 'calib_00010.tif' ] # this can be multiple exposures taken at the same incident beam energy
 
-xes_file = 'example.xes'
-
+xes_file = 'example.xes' # file to save spectrum to
 
 if __name__ == "__main__":
   from minixs.emission  import EmissionSpectrum
@@ -21,8 +20,6 @@ if __name__ == "__main__":
   # process
   print "Processing..."
   xes.process()
-
-  print xes.spectrum.shape
 
   print "Finished\n"
 

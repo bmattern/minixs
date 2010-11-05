@@ -19,7 +19,6 @@ filters = [
     ]
 
 # Boundaries of regions containing individual spectra
-# In miniXS these each correspond to reflections from individual crystals
 xtal_boundaries = [
     #(x1, y1, x2, y2),
     (17, 7, 119, 190),

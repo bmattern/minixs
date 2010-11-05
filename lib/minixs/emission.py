@@ -8,6 +8,7 @@ from calibrate import Calibration
 from exposure import Exposure
 from misc import read_scan_info, gen_file_list
 from constants import *
+from filter import  get_filter_by_name
 
 from itertools import izip
 
@@ -197,11 +198,14 @@ class EmissionSpectrum:
     self.incident_energy = 0
     self.I0 = 1
     self.exposure_files = []
+    self.filters = []
 
     spectrum = np.array([]).reshape(0,5)
     self.set_spectrum(spectrum)
 
     self.filename = None
+
+    self.load_errors = []
 
   def set_incident_energy(self, incident_energy):
     self.incident_energy = incident_energy
@@ -233,6 +237,12 @@ class EmissionSpectrum:
       f.write("# Calibration File: %s\n" % self.calibration_file)
       f.write("# Incident Energy: %.2f\n" % self.incident_energy)
       f.write("# I0: %.2f\n" % self.I0)
+      if self.filters:
+        f.write("# Filters:\n")
+        for fltr in self.filters:
+          f.write('#   %s: %s\n' % (fltr.name, fltr.get_str()))
+        f.write("#\n")
+
       f.write("# Exposures:\n")
       for ef in self.exposure_files:
         f.write("#   %s\n" % ef)
@@ -257,6 +267,7 @@ class EmissionSpectrum:
       line = f.readline()
 
       in_exposures = False
+      in_filters = False
 
       while line:
         if line[0] == "#":
@@ -267,6 +278,19 @@ class EmissionSpectrum:
             else:
               in_exposures = False
 
+          elif in_filters:
+            if line[2:].strip() == '':
+              in_filters = False
+            else:
+              name,val = line[2:].split(':')
+              name = name.strip()
+              fltr = get_filter_by_name(name)
+              if fltr == None:
+                self.load_errors.append("Unknown Filter: '%s' (Ignoring)" % name)
+              else:
+                fltr.set_str(val.strip())
+                self.filters.append(fltr)
+
           elif line[2:10] == 'Dataset:':
             self.dataset_name = line[11:].strip()
           elif line[2:19] == 'Calibration File:':
@@ -275,13 +299,16 @@ class EmissionSpectrum:
             self.incident_energy = float(line[19:].strip())
           elif line[2:5] == 'I0:':
             self.I0 = float(line[6:].strip())
+          elif line[2:10] == 'Filters:':
+            self.filters = []
+            in_filters = True
           elif line[2:12] == 'Exposures:':
             self.exposure_files = []
             in_exposures = True
           else:
             pass
         elif header_only:
-          return
+          break
         else:
           f.seek(pos)
           spectrum = np.loadtxt(f)
@@ -293,6 +320,8 @@ class EmissionSpectrum:
         pos = f.tell()
         line = f.readline()
 
+    return len(self.load_errors) == 0
+
   def process(self, emission_energies=None):
     calibration = Calibration()
     calibration.load(self.calibration_file)
@@ -300,16 +329,16 @@ class EmissionSpectrum:
     exposure = Exposure()
     exposure.load_multi(self.exposure_files)
 
-    exposure.pixels[np.where(exposure.pixels == exposure.pixels.max())] = 0
-    print exposure.pixels.max()
+    for f in self.filters:
+      f.filter(exposure.pixels, self.incident_energy)
 
+    # generate emission energies from range of calibration matrix
     if emission_energies is None:
       Emin = calibration.calibration_matrix[np.where(calibration.calibration_matrix > 0)].min()
       Emax = calibration.calibration_matrix.max()
 
       emission_energies = np.arange(Emin,Emax,.1)
 
-    print emission_energies
     spectrum = process_spectrum(calibration.calibration_matrix,
                                 exposure,
                                 emission_energies,

@@ -16,7 +16,6 @@ class Filter(object):
   Filters take an array of pixels and process them in some fashion
   """
   name = ""
-  view_name = "UnimplementedView"
   default_val = None
   default_enabled = False
 
@@ -161,11 +160,10 @@ class NeighborFilter(IntFilter):
       ], 0) >= self.val 
     pixels *= mask
 
-"""
 class BadPixelFilter(Filter):
   name = "Bad Pixels"
 
-  default_val = []
+  default_val = (0,[])
   default_enabled = False
 
   MODE_ZERO_OUT = 0
@@ -173,7 +171,7 @@ class BadPixelFilter(Filter):
   MODE_INTERP_V = 2
 
   @classmethod
-  def str_to_val(valstr):
+  def str_to_val(cls, valstr):
     tmp = valstr.split('|')
     if len(tmp) == 2:
       mode = tmp[0]
@@ -184,20 +182,20 @@ class BadPixelFilter(Filter):
       raise Exception("Invalid filter value: %s" % valstr)
 
   @classmethod
-  def val_to_str(val):
+  def val_to_str(cls, val):
     mode, points = val
     points = ';'.join(['%d,%d' % p for p in points])
     return '%d|%s' % (mode, points)
 
   def filter(self, pixels, energy):
-    for x,y in self.bad_pixels:
-      if self.mode == MODE_ZERO_OUT:
+    mode, bad_pixels = self.val
+    for x,y in bad_pixels:
+      if mode == self.MODE_ZERO_OUT:
         pixels[y,x] = 0
-      elif self.mode == MODE_INTERP_H:
+      elif mode == self.MODE_INTERP_H:
         pixels[y,x] = (pixels[y,x-1] + pixels[y,x+1])/2.
-      elif self.mode == MODE_INTERP_V:
+      elif mode == self.MODE_INTERP_V:
         pixels[y,x] = (pixels[y-1,x] + pixels[y+1,x])/2.
-"""
 
 class EmissionFilter(ChoiceFilter):
   name = "Emission Filter"
@@ -268,7 +266,7 @@ FILTERS = [
   LowFilter,
   HighFilter,
   NeighborFilter,
-  #BadPixelFilter,
+  BadPixelFilter,
   EmissionFilter
   ]
 for f in FILTERS:

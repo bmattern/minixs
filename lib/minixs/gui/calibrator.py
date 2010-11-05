@@ -63,8 +63,9 @@ def main():
   # register built in filters
   # XXX these should be split out into a system filter directory...
   for f in filter.REGISTRY:
-    view_class = getattr(filter_view, f.view_name)
-    filter_view.register(f, view_class)
+    if hasattr(f, 'view_name'):
+      view_class = getattr(filter_view, f.view_name)
+      filter_view.register(f, view_class)
 
   # set up application
   app = CalibratorApp()

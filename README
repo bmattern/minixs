@@ -1,7 +1,7 @@
-minIXS Calibration
+miniXS Calibration
 ------------------
 
-In order to calibrate the minIXS spectrometer, an energy value needs to be assigned to each pixel of the Pilatus camera. To do this, several exposures should be taken with the incident beam set to various energies within the range of the spectrometer. The elastically scattered beam will then show up on the camera as a thin arc for each crystal. From the respective energies of these arcs, we can fit a smooth function to assign energy values to all pixels on the camera face.
+In order to calibrate the miniXS spectrometer, an energy value needs to be assigned to each pixel of the Pilatus camera. To do this, several exposures should be taken with the incident beam set to various energies within the range of the spectrometer. The elastically scattered beam will then show up on the camera as a thin arc for each crystal. From the respective energies of these arcs, we can fit a smooth function to assign energy values to all pixels on the camera face.
 
 Ideally, the calibration data should be taken by setting up a 1-d scan that triggers the Pilatus. Lets assume we have a scan file named "calibration.0001" with 15 energy points evenly spaced over the range of the spectrometer. The corresponding are saved in files calibration_00001.tif through calibration_00015.tif.
 

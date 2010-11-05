@@ -17,17 +17,21 @@ class Filter(object):
   """
   name = ""
   view_name = "UnimplementedView"
+  default_val = None
+  default_enabled = False
+
   def __init__(self):
     self.enabled = True
+    self.val = self.default_val
 
   def filter(self, pixels, energy):
     raise ValueError("Unimplemented Filter: %s" % self.name)
 
   def set_str(self, valstr):
-    return None
+    self.val = self.str_to_val(valstr)
 
   def get_str(self):
-    return None
+    return self.val_to_str(self.val)
 
   def set_val(self, val):
     self.val = val
@@ -35,56 +39,68 @@ class Filter(object):
   def get_val(self):
     return self.val
 
+  @classmethod
+  def str_to_val(cls,valstr):
+    return None
+
+  @classmethod
+  def val_to_str(cls,val):
+    return str(val)
+
 class IntFilter(Filter):
   view_name = "IntFilterView"
 
-  def set_str(self, valstr):
-    if valstr == "None":
-      self.val = None
+  @classmethod
+  def str_to_val(cls,valstr):
+    if valstr == '':
+      return 0
     else:
-      self.val = int(valstr)
-
-  def get_str(self):
-    if self.val is None:
-      return "None"
-    else:
-      return str(self.val)
+      return int(valstr)
 
 class FloatFilter(Filter):
   view_name = "FloatFilterView"
 
-  def set_str(self, valstr):
-    if self.val is None:
-      return "None"
-    else:
-      self.val = float(valstr)
+  @classmethod
+  def val_to_str(cls,val):
+    return "%.2f" % val
 
-  def get_str(self):
-    return "%.2f" % self.val
+  @classmethod
+  def str_to_val(cls,valstr):
+    if valstr == '':
+      return 0
+    else:
+      return float(valstr)
 
 class StringFilter(Filter):
   view_name = "StringFilterView"
 
-  def set_str(self, valstr):
-    self.val = valstr
-
-  def get_str(self):
-    return self.val
+  @classmethod
+  def val_to_str(cls,val):
+    return val
 
 class ChoiceFilter(Filter):
   view_name = "ChoiceFilterView"
+  default_value = 0
 
   CHOICES = [
       ]
 
-  def set_str(self, valstr):
-    try:
-      self.val = self.CHOICES.index(valstr)
-    except ValueError:
-      raise ValueError("Unknown %s Type: %s" % (self.name, valstr))
+  @classmethod
+  def val_to_str(cls,val):
+    if val == -1:
+      return ''
 
-  def get_str(self):
-    return self.CHOICES[self.val]
+    try:
+      return cls.CHOICES[val]
+    except IndexError:
+      return ''
+
+  @classmethod
+  def str_to_val(cls,valstr):
+    if valstr == '':
+      return -1
+
+    return cls.CHOICES.index(valstr)
 
 ##################
 #                #
@@ -95,6 +111,8 @@ class ChoiceFilter(Filter):
 class MinFilter(IntFilter):
   name = "Min Visible"
   view_name = "IntFilterView"
+  default_val = 0
+  default_enabled = True
 
   def filter(self, pixels, energy):
     pass
@@ -102,12 +120,17 @@ class MinFilter(IntFilter):
 class MaxFilter(IntFilter):
   name = "Max Visible"
   view_name = "IntFilterView"
+  default_val = 1000
+  default_enabled = False
 
   def filter(self, pixels, energy):
     pass
 
 class LowFilter(IntFilter):
   name = "Low Cutoff"
+  default_val = 5
+  default_enabled = True
+
   def filter(self, pixels, energy):
     if self.val is None:
       return
@@ -115,6 +138,9 @@ class LowFilter(IntFilter):
 
 class HighFilter(IntFilter):
   name = "High Cutoff"
+  default_val = 1000
+  default_enabled = False
+
   def filter(self, pixels, energy):
     if self.val is None:
       return
@@ -122,6 +148,9 @@ class HighFilter(IntFilter):
 
 class NeighborFilter(IntFilter):
   name = "Neighbors"
+  default_val = 2
+  default_enabled = True
+
   def filter(self, pixels, energy):
     from itertools import product
     nbors = (-1,0,1)
@@ -132,25 +161,33 @@ class NeighborFilter(IntFilter):
       ], 0) >= self.val 
     pixels *= mask
 
+"""
 class BadPixelFilter(Filter):
   name = "Bad Pixels"
+
+  default_val = []
+  default_enabled = False
 
   MODE_ZERO_OUT = 0
   MODE_INTERP_H = 1
   MODE_INTERP_V = 2
 
-  def set_str(self, valstr):
+  @classmethod
+  def str_to_val(valstr):
     tmp = valstr.split('|')
     if len(tmp) == 2:
-      self.mode = tmp[0]
+      mode = tmp[0]
       pts = tmp[1].split(';')
-      self.bad_pixels = [[c.strip() for c in pt.split(',')] for pt in pts]
+      bad_pixels = [[c.strip() for c in pt.split(',')] for pt in pts]
+      return (mode, bad_pixels)
     else:
       raise Exception("Invalid filter value: %s" % valstr)
 
-  def get_str(self):
-    pts = ';'.join(['%d,%d' % p for p in self.points])
-    return '%d|%s' % (self.mode, pts)
+  @classmethod
+  def val_to_str(val):
+    mode, points = val
+    points = ';'.join(['%d,%d' % p for p in points])
+    return '%d|%s' % (mode, points)
 
   def filter(self, pixels, energy):
     for x,y in self.bad_pixels:
@@ -160,6 +197,7 @@ class BadPixelFilter(Filter):
         pixels[y,x] = (pixels[y,x-1] + pixels[y,x+1])/2.
       elif self.mode == MODE_INTERP_V:
         pixels[y,x] = (pixels[y-1,x] + pixels[y+1,x])/2.
+"""
 
 class EmissionFilter(ChoiceFilter):
   name = "Emission Filter"
@@ -168,6 +206,10 @@ class EmissionFilter(ChoiceFilter):
   CHOICES = [
       "Fe Kbeta"
       ]
+
+  default_val = TYPE_FE_KBETA
+  default_enabled = False
+
   def filter(self, pixels, energy):
     if self.val == self.TYPE_FE_KBETA:
       if energy >= 7090:

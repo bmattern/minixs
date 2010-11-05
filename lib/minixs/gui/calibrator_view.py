@@ -102,36 +102,22 @@ class FilterPanel(wx.Panel):
 
     for fltr, view_class, id in filter_view.REGISTRY:
       check = wx.CheckBox(self, id, fltr.name)
-
       view = view_class(self, id, filter=fltr)
-      if fltr.name in FILTER_DEFAULTS.keys():
-        val, enabled = FILTER_DEFAULTS[fltr.name]
 
-        check.SetValue(enabled)
-        view.Enable(enabled)
+      enabled, val = self._get_filter_defaults(fltr)
+
+      # set value
+      if val is not None:
         view.SetValue(val)
-      else:
-        if hasattr(fltr, 'default_val'):
-          view.SetValue(fltr.default_val) 
 
-        check.SetValue(False)
-        view.Enable(False)
+      check.SetValue(enabled)
+      view.Enable(enabled)
 
       grid.Add(check)
       grid.Add(view)
 
       self.checks[id] = check
       self.views[id] = view
-
-    """
-    check = wx.CheckBox(self, ID_FILTER_EMISSION, 'Filter Emission')
-    choice = wx.Choice(self, ID_FILTER_EMISSION, choices=FILTER_EMISSION_TYPE_NAMES)
-    choice.Enable(False)
-    grid.Add(check)
-    grid.Add(choice)
-    self.filter_emission_check = check
-    self.filter_emission_choice = choice
-    """
 
     label = wx.StaticText(self, wx.ID_ANY, 'Dispersive Dir.')
     choice = wx.Choice(self, ID_DISPERSIVE_DIR, choices=DIRECTION_NAMES)
@@ -141,6 +127,28 @@ class FilterPanel(wx.Panel):
 
     self.SetSizerAndFit(grid)
 
+  def _get_filter_defaults(self, fltr):
+    conf = wx.Config.Get()
+
+    # get default value
+    valstr = ''
+    if hasattr(fltr, 'default_val'):
+      valstr = fltr.val_to_str(fltr.default_val)
+
+    # allow configuration to override default
+    valstr = conf.Read('calibrator/filters/default_val/%s' % fltr.name, valstr)
+    val = fltr.str_to_val(valstr)
+
+    # get default enabled state
+    enabled = False
+    if hasattr(fltr, 'default_enabled'):
+      enabled = fltr.default_enabled
+
+    # allow config to override
+    enabled = conf.ReadBool('calibrator/filters/default_enabled/%s' % fltr.name, enabled)
+
+    return (enabled, val)
+
   def set_filter_value(self, filter_type, value):
     self.views[filter_type].SetValue(int(value))
 
@@ -149,6 +157,7 @@ class FilterPanel(wx.Panel):
     self.views[filter_type].Enable(enabled)
 
   def set_filters(self, filters):
+
     fmap = {}
     for f in filters:
       fmap[f.__class__] = f
@@ -157,13 +166,9 @@ class FilterPanel(wx.Panel):
       if ftype in fmap:
         enabled = True
         val = fmap[ftype].get_val()
-      else:
+      else: # only enabled filters are included in `filters`, so for all others must be disabled
+        enabled, val = self._get_filter_defaults(ftype)
         enabled = False
-        val = None
-        if ftype.name in FILTER_DEFAULTS:
-          val = FILTER_DEFAULTS[ftype.name][1]
-        elif hasattr(ftype, 'default_val'):
-          val = ftype.default_val
 
       self.checks[id].SetValue(enabled)
       self.views[id].Enable(enabled)

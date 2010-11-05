@@ -342,6 +342,10 @@ class CalibratorController(object):
         evt.Veto()
         return False
 
+    # save out configuration
+    conf = wx.Config.Get()
+    conf.Flush()
+
     self.view.Destroy()
 
   def OnExit(self, evt):
@@ -647,11 +651,11 @@ class CalibratorController(object):
         fltr.set_val(val)
         fltr.filter(exposure.pixels, energy)
 
-      # these two are handled specially
-      if fltr.name == 'Min Visible':
-        min_vis = fltr.get_val()
-      elif fltr.name == 'Max Visible':
-        max_vis = fltr.get_val()
+        # these two are handled specially
+        if fltr.name == 'Min Visible':
+          min_vis = fltr.get_val()
+        elif fltr.name == 'Max Visible':
+          max_vis = fltr.get_val()
 
     # normalize pixels values
     p = exposure.pixels

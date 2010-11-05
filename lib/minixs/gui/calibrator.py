@@ -40,6 +40,7 @@ class CalibratorApp(wx.App):
     # create config object and set as global config obj
     conffile = os.path.join(datadir, 'config')
     conf = wx.FileConfig(localFilename=conffile)
+    conf.SetRecordDefaults(True)
     wx.Config.Set(conf)
 
   def load_filter_plugins(self):

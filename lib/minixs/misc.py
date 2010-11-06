@@ -1,3 +1,7 @@
+"""
+Miscellanous functions
+"""
+
 import numpy as np
 from itertools import izip, product as iproduct
 from scanfile import ScanFile

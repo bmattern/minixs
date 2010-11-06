@@ -1,3 +1,6 @@
+"""
+Miniature X-ray Spectrometer (miniXS) Tools
+"""
 import calibrate, \
        emission, \
        exposure, \

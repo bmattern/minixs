@@ -1,8 +1,13 @@
-import numpy as np
-
 """
 Exposure filters
+
+A set of filters that act on exposure pixel arrays.
+
+See the `Filter` class documentation for details on how to implement new
+filters.
 """
+
+import numpy as np
 
 #########################
 #                       #
@@ -14,6 +19,21 @@ class Filter(object):
   Abstract filter base class
 
   Filters take an array of pixels and process them in some fashion
+
+  To implement a new filter type, create a subclass of Filter.
+
+  Set the name, default_val and default_enabled class variables.
+
+  Implement class methods `str_to_val` and `val_to_str` that convert the
+  filter's parameters between a string representation (to be saved in an
+  output file) and the internal representation (of any type).
+
+  Finally, implement the object method `filter`, which applies this filter to
+  an array of pixels (in place).
+
+  To create a filter that has only one parameter of a basic type, subclass
+  one of IntFilter, FloatFilter, or StringFilter. These already have
+  implementations of `str_to_val` and `val_to_str`.
   """
   name = ""
   default_val = None
@@ -24,29 +44,64 @@ class Filter(object):
     self.val = self.default_val
 
   def filter(self, pixels, energy):
+    """
+    Apply this filter to an array of pixels
+
+    This must be overridden by subclasses.
+
+    Parameters
+    ----------
+      pixels: an array of counts received at each pixel
+      energy: the incident beam energy
+    """
     raise ValueError("Unimplemented Filter: %s" % self.name)
 
   def set_str(self, valstr):
+    """
+    Set filter's value from a string
+    """
     self.val = self.str_to_val(valstr)
 
   def get_str(self):
+    """
+    Get filter's value as a string
+    """
     return self.val_to_str(self.val)
 
   def set_val(self, val):
+    """
+    Set filter's value
+    """
     self.val = val
 
   def get_val(self):
+    """
+    Get filter's value
+    """
     return self.val
 
   @classmethod
   def str_to_val(cls,valstr):
+    """
+    Convert value from string to whichever representation is used internally
+
+    This is used to load a filter from a file
+    """
     return None
 
   @classmethod
   def val_to_str(cls,val):
+    """
+    Convert value from internal representation to string
+
+    This is used to save a filter to a file
+    """
     return str(val)
 
 class IntFilter(Filter):
+  """
+  An abstract class for a filter that takes a single integer parameter
+  """
   view_name = "IntFilterView"
 
   @classmethod
@@ -57,6 +112,9 @@ class IntFilter(Filter):
       return int(valstr)
 
 class FloatFilter(Filter):
+  """
+  An abstract class for a filter that takes a single float parameter
+  """
   view_name = "FloatFilterView"
 
   @classmethod
@@ -71,6 +129,9 @@ class FloatFilter(Filter):
       return float(valstr)
 
 class StringFilter(Filter):
+  """
+  An abstract class for a filter that takes a single string parameter
+  """
   view_name = "StringFilterView"
 
   @classmethod
@@ -78,6 +139,14 @@ class StringFilter(Filter):
     return val
 
 class ChoiceFilter(Filter):
+  """
+  An abstract class for a filter that has a single parameter chosen from a set
+
+  Subclasses should override the `CHOICES` class variable with a list of
+  strings values of possible choices.
+
+  The `val` object variable will be set to the index of the selected choice.
+  """
   view_name = "ChoiceFilterView"
   default_value = 0
 
@@ -108,6 +177,9 @@ class ChoiceFilter(Filter):
 ##################
 
 class MinFilter(IntFilter):
+  """
+  A dummy filter used by the Calibrator GUI to set the lower contrast level to show
+  """
   name = "Min Visible"
   view_name = "IntFilterView"
   default_val = 0
@@ -117,6 +189,9 @@ class MinFilter(IntFilter):
     pass
 
 class MaxFilter(IntFilter):
+  """
+  A dummy filter used by the Calibrator GUI to set the upper contrast level to show
+  """
   name = "Max Visible"
   view_name = "IntFilterView"
   default_val = 1000
@@ -126,6 +201,9 @@ class MaxFilter(IntFilter):
     pass
 
 class LowFilter(IntFilter):
+  """
+  Zero out all pixels below a given threshold
+  """
   name = "Low Cutoff"
   default_val = 5
   default_enabled = True
@@ -136,6 +214,9 @@ class LowFilter(IntFilter):
     pixels[np.where(pixels < self.val)] = 0
 
 class HighFilter(IntFilter):
+  """
+  Zero out all pixels above a given threshold
+  """
   name = "High Cutoff"
   default_val = 1000
   default_enabled = False
@@ -146,6 +227,13 @@ class HighFilter(IntFilter):
     pixels[np.where(pixels > self.val)] = 0
 
 class NeighborFilter(IntFilter):
+  """
+  Zero out all pixels with fewer than the given number of nonzero neighbors
+
+  A neighbor is defined as a pixel whose row and column are within one of the
+  pixel under consideration, not including the pixel itself. Each pixel has 8
+  neighbors.
+  """
   name = "Neighbors"
   default_val = 2
   default_enabled = True
@@ -161,6 +249,17 @@ class NeighborFilter(IntFilter):
     pixels *= mask
 
 class BadPixelFilter(Filter):
+  """
+  Filter out a set of specified pixels
+
+  Each pixel in the provided list is processed in manner which depends on the
+  mode:
+
+    0: Zero out pixels
+    1: Linearly interpolate value from pixels to left and right
+    2: Linearly interpolate value from pixels above and below
+  """
+
   name = "Bad Pixels"
 
   default_val = (0,[])
@@ -198,6 +297,13 @@ class BadPixelFilter(Filter):
         pixels[y,x] = (pixels[y-1,x] + pixels[y+1,x])/2.
 
 class EmissionFilter(ChoiceFilter):
+  """
+  A filter to remove fluorescence from elastic exposures
+
+  This is hard coded to only handle the Fe Kbeta von Hamos
+  spectrometer. At some point, this should be replaced
+  by something more flexible.
+  """
   name = "Emission Filter"
 
   TYPE_FE_KBETA = 0

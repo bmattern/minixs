@@ -1,16 +1,20 @@
-from minixs.misc import gen_file_list
-from minixs.exposure import Exposure
 
-calibration_file = 'example.calib' # file to load calibration from
+calibration_file = 'output/example.calib' # file to load calibration from
 incident_energy = 7615.01 # in eV
 I0 = 1 # this is used for normalization (I = counts / pixel / I0)
-exposures = [ 'calib_00010.tif' ] # this can be multiple exposures taken at the same incident beam energy
+exposures = [ 'data/calib_00010.tif' ] # this can be multiple exposures taken at the same incident beam energy
 
-xes_file = 'example.xes' # file to save spectrum to
+xes_file = 'output/example.xes' # file to save spectrum to
 
 if __name__ == "__main__":
   from minixs.emission  import EmissionSpectrum
+  import os
 
+  # make paths absolute
+  calibration_file = os.path.abspath(calibration_file)
+  exposures = [ os.path.abspath(e) for e in exposures ]
+
+  # fill out emission specgtrum object
   xes = EmissionSpectrum()
   xes.calibration_file = calibration_file
   xes.incident_energy = incident_energy

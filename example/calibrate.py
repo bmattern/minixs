@@ -1,11 +1,12 @@
 from minixs.misc import gen_file_list
 
-calib_filename = 'example.calib' # file to save out to
-scan_file  = 'calib.0001'      # file containing energies
+dataset = "miniXS example data"
+calib_filename = 'output/example.calib' # file to save out to
+scan_file  = 'data/calib.0001'      # file containing energies
 energy_col = 0                   # column containing energies
 
 # list of exposure filenames (example_00001.tif ... example_00018.tif)
-exposures = [ 'calib_%05d.tif' % i for i in range(1,19) ]
+exposures = [ 'data/calib_%05d.tif' % i for i in range(1,19) ]
 
 # Direction in which energy increases.
 # Can be "Up", "Down", "Left" or "Right"
@@ -28,6 +29,7 @@ xtal_boundaries = [
     ] 
 
 if __name__ == "__main__":
+  import os, sys
   from minixs.calibrate import Calibration
   from minixs.misc import read_scan_info
   import minixs.filter as filter
@@ -35,7 +37,8 @@ if __name__ == "__main__":
 
   c = Calibration()
 
-  c.exposure_files = exposures
+  c.dataset = dataset
+  c.exposure_files = [os.path.abspath(e) for e in exposures]
   c.energies = read_scan_info(scan_file, [energy_col])[0]
   c.dispersive_direction = DIRECTION_NAMES.index(dispersive_direction)
 
@@ -53,17 +56,17 @@ if __name__ == "__main__":
   c.xtals = [ ((x1,y1),(x2,y2)) for x1,y1,x2,y2 in xtal_boundaries ]
 
   # calibrate
-  print "Calibrating..."
+  print "Calibrating...",
+  sys.stdout.flush()
   c.calibrate()
-
   print "Finished\n"
 
-  print "Residues\n--------\n"
+  # output residues
+  print "Residues\n--------"
+  print "  Xtal #\tLinear     \tRMS"
   for i in range(len(xtal_boundaries)):
-    print "Xtal #%d" % i
-    print "  Linear: %.3e" % c.lin_res[i]
-    print "  RMS: %.3e" % c.rms_res[i]
-    print "\n"
+    print "% 8d\t%.3e\t%.3e" % (i, c.lin_res[i], c.rms_res[i])
+  print ""
 
   print "Saving as '%s'" % calib_filename
   c.save(calib_filename)

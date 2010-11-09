@@ -1,0 +1,18 @@
+Until I get around to creating a proper installation setup, the code must be manually installed.
+
+The contents contents of the lib directory must be made available to python. To do this, either:
+
+  a) Add the lib/ directory to your PYTHONPATH environment variable.
+
+     $ export PYTHONPATH=$PYTHONPATH:/path/to/lib/
+
+  OR
+
+  b) Copy (or symlink) lib/minixs into a directory that is already in your PYTHONPATH.
+
+Once this has been done, the calibrator gui can be run:
+
+  $ ./bin/calibrator
+
+If desired, this script can be placed in a directory that is in your PATH.
+

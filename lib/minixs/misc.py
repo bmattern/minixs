@@ -214,3 +214,44 @@ def find_xtal_boundaries(filtered_exposures, shrink=1):
 
   return xtals
 
+
+def collection_angle_correction(ci, d, return_theta=False):
+  """
+  Calculate angular spread in dispersive direction (in radians) for each pixel
+
+  This should by used to correct for the fact that different pixels bin different energy widths (or alternatively cover different solid angles).
+
+  This code has not been fully verified, so do not use at this time.
+ 
+  Parameters
+  ----------
+    ci: Calibration object containing calibration matrix and xtals
+    d:  lattice spacing
+    return_theta: if True, return a matrix of angle values for each pixel
+  """
+  cac =  np.zeros(ci.calibration_matrix.shape)
+  if return_theta:
+    fulltheta =  np.zeros(ci.calibration_matrix.shape)
+
+  E0 = np.pi * 1973.26 / d
+
+  for xtal in ci.xtals:
+    (x1,y1),(x2,y2) = xtal
+    E = ci.calibration_matrix[y1:y2,x1:x2]
+
+    dE = (np.roll(E,-1,0) - np.roll(E,1,0)) / 2.
+    # fix up end points by extrapolation
+    dE[0] = 2*dE[1] - dE[2]
+    dE[-1] = 2*dE[-2] - dE[-3]
+
+    theta = np.arccos(E0 / E)
+    dtheta = dE / E / np.tan(theta)
+ 
+    if return_theta:
+      fulltheta[y1:y2, x1:x2] = theta
+    cac[y1:y2, x1:x2] = dtheta
+
+  if return_theta:
+    return fulltheta, cac
+  else:
+    return cac

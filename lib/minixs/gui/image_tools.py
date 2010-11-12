@@ -84,7 +84,7 @@ class RangeTool(Tool):
 
     self.action = self.ACTION_NONE
 
-    self.brush = wx.Brush(wx.Colour(127,127,127,50))
+    self.brush = wx.Brush(wx.Colour(255,255,255,50))
     self.pen = wx.Pen('#ffff22', 1, wx.DOT_DASH)
     self.active_pen = wx.Pen('#33dd33', 1, wx.DOT_DASH)
     self.action_pen = wx.Pen('#22ffff', 2, wx.SOLID)

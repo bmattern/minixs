@@ -222,7 +222,7 @@ class ExposureList(wx.ListCtrl,
   def FindLastEmptyItem(self, column):
     count = self.GetItemCount()
     # find last empty energy
-    i = count
+    i = count - 1
     while i >= 0:
       text = self.GetItem(i,column).GetText()
       if text != '':

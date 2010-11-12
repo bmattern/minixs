@@ -11,6 +11,8 @@ class ImageView(wx.Panel):
     self.SetEvtHandlerEnabled(True)
 
     self.Bind(wx.EVT_PAINT, self.OnPaint)
+    self.Bind(wx.EVT_SIZE, self.OnSize)
+    self.Bind(wx.EVT_ERASE_BACKGROUND, self.OnEraseBG)
     self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
     self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
     self.Bind(wx.EVT_RIGHT_UP, self.OnRightDown)
@@ -135,13 +137,25 @@ class ImageView(wx.Panel):
         tool.OnLeaveWindow(evt)
 
   def OnPaint(self, evt):
-    dc = wx.PaintDC(self)
+    dc = wx.BufferedPaintDC(self)
+    self.Draw(evt, dc)
+
+  def OnSize(self, evt):
+    dc = wx.ClientDC(self)
+    dc = wx.BufferedDC(dc)
+    self.Draw(evt, dc)
+
+  def OnEraseBG(self, evt):
+    pass
+
+  def Draw(self, evt, dc):
+    dc.Clear()
     if self.bitmap:
       dc.DrawBitmap(self.bitmap, 0, 0)
 
     for tool in self.tools:
       if tool.visible:
-        tool.OnPaint(evt)
+        tool.OnPaint(evt, dc)
 
   def OnMouseWheel(self, evt):
     return # Not yet fully implemented, so disable for now

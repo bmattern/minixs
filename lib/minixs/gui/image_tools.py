@@ -43,7 +43,7 @@ class Tool(object):
   def OnLeaveWindow(self, evt):
     pass
 
-  def OnPaint(self, evt):
+  def OnPaint(self, evt, dc):
     pass
 
 
@@ -84,7 +84,7 @@ class RangeTool(Tool):
 
     self.action = self.ACTION_NONE
 
-    self.brush = wx.Brush(wx.Colour(127,127,127,20))
+    self.brush = wx.Brush(wx.Colour(255,255,255,50))
     self.pen = wx.Pen('#ffff22', 1, wx.DOT_DASH)
     self.active_pen = wx.Pen('#33dd33', 1, wx.DOT_DASH)
     self.action_pen = wx.Pen('#22ffff', 2, wx.SOLID)
@@ -369,11 +369,10 @@ class RangeTool(Tool):
       self.PostEventRangeActionChanged(in_window=False)
       self.parent.Refresh()
 
-  def OnPaint(self, evt):
+  def OnPaint(self, evt, dc):
     """
     Draw tool
     """
-    dc = wx.PaintDC(self.parent)
     gcdc = wx.GCDC(dc)
 
     dc.SetBrush(wx.TRANSPARENT_BRUSH)
@@ -458,11 +457,10 @@ class Crosshair(Tool):
     self.pos = None
     self.parent.Refresh()
 
-  def OnPaint(self, evt):
+  def OnPaint(self, evt, dc):
     if self.pos is None:
       return
 
-    dc = wx.PaintDC(self.parent)
     dc.SetLogicalFunction(wx.INVERT)
 
     w, h = self.parent.GetSize()

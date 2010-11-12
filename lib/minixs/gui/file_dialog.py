@@ -28,6 +28,7 @@ def FileDialog(parent, dirlist, type, title, wildcard='', save=False, multiple=F
     directory = dlg.GetDirectory()
     dirlist[type] = dirlist['last'] = directory
     filenames = dlg.GetFilenames()
+    filenames.sort()
 
     paths = [os.path.join(directory, f) for f in filenames]
 

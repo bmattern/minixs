@@ -374,7 +374,7 @@ class Calibration:
             if line[2:].strip() == '':
               in_exposures = False
             else:
-              energy, ef = line[2:].split()
+              energy, ef = line[2:].split(None, 1)
               energy = float(energy.strip())
               ef = ef.strip()
 

@@ -337,20 +337,20 @@ class CalibratorPanel(wx.Panel):
     hbox = wx.BoxSizer(wx.HORIZONTAL)
     label = wx.StaticText(self, wx.ID_ANY, "Dataset Name: ")
     entry = wx.TextCtrl(self, ID_DATASET_NAME)
-    hbox.Add(label, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, HPAD)
-    hbox.Add(entry, 1, 0 )
+    hbox.Add(label, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, HPAD)
+    hbox.Add(entry, 1, wx.RIGHT, HPAD)
     vbox.Add(hbox, 0, wx.EXPAND | wx.BOTTOM, VPAD)
     self.dataset_name = entry
 
 
-    # buttons to control exposure list
+    # exposure list and control buttons
     hbox = wx.BoxSizer(wx.HORIZONTAL)
 
     # exposures list
     listctrl = ExposureList(self, ID_EXPOSURE_LIST,
         style=wx.LC_REPORT|wx.LC_HRULES|wx.LC_VRULES,
         size=(200,200))
-    hbox.Add(listctrl, 1, wx.EXPAND | wx.RIGHT, HPAD)
+    hbox.Add(listctrl, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, HPAD)
     self.exposure_list = listctrl
 
     vbox2= wx.BoxSizer(wx.VERTICAL)
@@ -373,7 +373,7 @@ class CalibratorPanel(wx.Panel):
     button = wx.Button(self, ID_CLEAR_EXPOSURES, "Clear Exposures")
     vbox2.Add(button, 1, wx.EXPAND)
 
-    hbox.Add(vbox2, 0, wx.EXPAND)
+    hbox.Add(vbox2, 0, wx.EXPAND | wx.RIGHT, HPAD)
 
     vbox.Add(hbox, 1, wx.EXPAND | wx.BOTTOM, VPAD)
 
@@ -381,7 +381,7 @@ class CalibratorPanel(wx.Panel):
     hbox = wx.BoxSizer(wx.HORIZONTAL)
 
     panel = FilterPanel(self, wx.ID_ANY)
-    hbox.Add(panel, 0, wx.RIGHT, HPAD)
+    hbox.Add(panel, 0, wx.LEFT | wx.RIGHT, HPAD)
     self.filter_panel = panel
 
     panel = ExposurePanel(self, wx.ID_ANY)
@@ -389,14 +389,14 @@ class CalibratorPanel(wx.Panel):
     self.exposure_panel = panel
 
     panel = ToolsPanel(self, wx.ID_ANY)
-    hbox.Add(panel, 1)
+    hbox.Add(panel, 1, wx.RIGHT, HPAD)
     self.tools_panel = panel
 
     vbox.Add(hbox, 0, wx.EXPAND | wx.BOTTOM, VPAD)
 
     # load calibrate button
     button = wx.Button(self, ID_CALIBRATE, "Calibrate")
-    vbox.Add(button, 0, wx.EXPAND)
+    vbox.Add(button, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, HPAD)
     self.calibrate_button = button
 
     self.SetSizerAndFit(vbox)
@@ -424,7 +424,7 @@ class CalibratorView(MenuFrame):
 
     box = wx.BoxSizer(wx.VERTICAL)
     self.panel = CalibratorPanel(self, wx.ID_ANY)
-    box.Add(self.panel, 1, wx.EXPAND | wx.ALL, VPAD)
+    box.Add(self.panel, 1, wx.EXPAND)
 
     self.SetSizerAndFit(box)
 

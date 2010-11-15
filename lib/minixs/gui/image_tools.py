@@ -478,3 +478,4 @@ class Crosshair(Tool):
       x2 = w
       dc.DrawLine(x1,y1,x2,y2)
 
+    dc.SetLogicalFunction(wx.COPY)

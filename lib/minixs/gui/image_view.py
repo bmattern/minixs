@@ -141,8 +141,7 @@ class ImageView(wx.Panel):
     self.Draw(evt, dc)
 
   def OnSize(self, evt):
-    dc = wx.ClientDC(self)
-    dc = wx.BufferedDC(dc)
+    dc = wx.BufferedPaintDC(self)
     self.Draw(evt, dc)
 
   def OnEraseBG(self, evt):

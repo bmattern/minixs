@@ -273,9 +273,9 @@ class BadPixelFilter(Filter):
   def str_to_val(cls, valstr):
     tmp = valstr.split('|')
     if len(tmp) == 2:
-      mode = tmp[0]
+      mode = int(tmp[0])
       pts = tmp[1].split(';')
-      bad_pixels = [[c.strip() for c in pt.split(',')] for pt in pts]
+      bad_pixels = [[int(c.strip()) for c in pt.split(',')] for pt in pts]
       return (mode, bad_pixels)
     else:
       raise Exception("Invalid filter value: %s" % valstr)
@@ -283,7 +283,7 @@ class BadPixelFilter(Filter):
   @classmethod
   def val_to_str(cls, val):
     mode, points = val
-    points = ';'.join(['%d,%d' % p for p in points])
+    points = ';'.join(['%d,%d' % tuple(p) for p in points])
     return '%d|%s' % (mode, points)
 
   def filter(self, pixels, energy):

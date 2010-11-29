@@ -9,6 +9,13 @@ from constants import *
 
 import numpy as np
 
+def load(filename):
+  """
+  Load a calibration matrix from a file
+  """
+  c = Calibration()
+  c.load(filename)
+  return c
 
 def find_maxima(pixels, direction, window_size = 3):
   """

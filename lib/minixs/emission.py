@@ -12,6 +12,12 @@ from filter import  get_filter_by_name
 
 from itertools import izip
 
+def load(filename):
+  """Load EmissionSpectrum from file"""
+  xes = EmissionSpectrum()
+  xes.load(filename)
+  return xes
+
 def process_spectrum(cal, exposure, energies, I0, direction, xtals):
   """Interpolated emission spectrum
 

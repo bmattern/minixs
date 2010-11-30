@@ -1,12 +1,16 @@
+import minixs as mx
+from emission import process_spectrum
 import numpy as np
+from itertools import izip
 
-class RIXSInfo:
+class RIXS:
   def __init__(self):
     self.dataset_name = ""
     self.calibration_file = ""
     self.energies = []
     self.I0s = []
     self.exposure_files = []
+    self.filters = []
     self.spectrum = np.array([]) 
     self.filename = None
 
@@ -28,7 +32,19 @@ class RIXSInfo:
       f.write("# E_incident   E_emission    Intensity  Uncertainty  Raw_Counts   Num_Pixels\n")
       if len(self.spectrum.shape) == 2 and self.spectrum.shape[1] == 6:
         fmt=('%12.2f', '%12.2f','%.6e','%.6e','% 11d',' % 11d')
-        np.savetxt(f, self.spectrum, fmt=fmt)
+        fmt = ' '.join(fmt)
+        last_energy = None
+        for row in self.spectrum:
+          energy = row[0]
+
+          # place empty line between inc. energies
+          if last_energy is not None and energy != last_energy:
+            f.write("\n")
+          last_energy = energy
+
+          f.write(fmt % tuple(row))
+          f.write("\n")
+
       elif len(self.spectrum) > 0:
         raise Exception("Invalid shape for RIXS spectrum array")
       
@@ -84,3 +100,39 @@ class RIXSInfo:
         pos = f.tell()
         line = f.readline()
 
+  def process(self, emission_energies=None, progress_callback=None):
+    calibration = mx.calibrate.Calibration()
+    calibration.load(self.calibration_file)
+
+    for f in self.filters:
+      f.filter(exposure.pixels, self.incident_energy)
+
+    # generate emission energies from range of calibration matrix
+    if emission_energies is None:
+      Emin = calibration.calibration_matrix[np.where(calibration.calibration_matrix > 0)].min()
+      Emax = calibration.calibration_matrix.max()
+
+      emission_energies = np.arange(Emin,Emax,.1)
+
+    # create rixs array
+    stride = len(emission_energies)
+    spectrum = np.zeros((stride * len(self.energies), 6))
+
+    # process each xes exposure and add to end of rixs array
+    for i, energy in enumerate(self.energies):
+      if progress_callback:
+        progress_callback(i, energy)
+
+      exposure = mx.exposure.Exposure(self.exposure_files[i])
+
+      xes = process_spectrum(calibration.calibration_matrix,
+                             exposure,
+                             emission_energies,
+                             self.I0s[i],
+                             calibration.dispersive_direction,
+                             calibration.xtals)
+
+      spectrum[i*stride:(i+1)*stride,0] = energy
+      spectrum[i*stride:(i+1)*stride,1:] = xes
+
+    self.spectrum = spectrum

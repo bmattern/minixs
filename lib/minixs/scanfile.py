@@ -29,6 +29,10 @@ class ScanFile:
     if not headers_only:
       self.data = np.loadtxt(filename)
 
+      # reshape single column
+      if len(self.data.shape) == 1:
+        self.data.shape = (self.data.shape[0], 1)
+
   def save(self, filename=None, fmt=None):
     if not filename:
       filename = self.filename

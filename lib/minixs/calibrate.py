@@ -3,9 +3,11 @@ Calibration functions
 """
 
 from exposure import Exposure
+from emission import EmissionSpectrum, process_spectrum
 from itertools import izip
 from filter import get_filter_by_name
 from constants import *
+from gauss import gauss_leastsq, gauss_model
 
 import numpy as np
 
@@ -461,3 +463,72 @@ class Calibration:
 
     # store diagnostic info
     self.lin_res, self.rms_res, self.fit_points = diagnostics
+
+  def energy_range(self):
+    """
+    Find min and max energies in calibration matrix
+
+    Returns
+    -------
+      (min_energy, max_energy)
+    """
+    return (self.calibration_matrix[np.where(self.calibration_matrix > 0)].min(), self.calibration_matrix.max())
+
+  def diagnose(self, return_spectra=False):
+    """
+    Process all calibration exposures and fit to gaussians, returning parameters of fit
+
+    Parameters
+    ----------
+    return_spectra: whether to return processed calibration spectra
+
+    Returns
+    -------
+    (diagnostics, [processed_spectra])
+
+    diagnostics: an array with columns (deviation, sigma) with one row for each calibration exposure
+                 deviation is the difference between the mono energy and the peak center (square and avg for RMS)
+                 sigma is the gaussian width as in: exp(-(x-x0)**2/(2*sigma**2))
+
+    if `return_spectra` is True, then a list of XES spectra will be returned (one for each calibration exposure)
+    """
+
+    emin, emax = self.energy_range()
+    emission_energies = np.arange(emin, emax, .2)
+
+    diagnostics = np.zeros((len(self.energies), 4))
+
+    if return_spectra:
+      spectra = []
+
+    for i in range(len(self.energies)):
+      if i % 10 == 0:
+        print i
+      energy = self.energies[i]
+      exposure = Exposure(self.exposure_files[i])
+
+      s = process_spectrum(self.calibration_matrix, exposure, emission_energies, 1, self.dispersive_direction, self.xtals)
+      x = s[:,0]
+      y = s[:,1]
+
+      fit, ier = gauss_leastsq((x,y), (y.max(), energy, 1.0))
+
+      if not (0 < ier < 5):
+        continue
+
+      diagnostics[i,0] = energy
+      diagnostics[i,1:] = fit
+
+      if return_spectra:
+        xes = EmissionSpectrum()
+        xes.incident_energy = energy
+        xes.exposure_files = [exposure.filename]
+        xes.set_spectrum(s)
+        spectra.append(xes)
+
+    diagnostics = diagnostics[np.where(diagnostics[:,0] != 0)]
+
+    if return_spectra:
+      return (diagnostics, spectra)
+    else:
+      return diagnostics

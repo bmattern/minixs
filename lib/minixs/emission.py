@@ -4,7 +4,7 @@ XES Spectrum processing code
 
 import numpy as np
 
-from calibrate import Calibration
+import calibrate
 from exposure import Exposure
 from misc import read_scan_info, gen_file_list
 from constants import *
@@ -329,7 +329,7 @@ class EmissionSpectrum:
     return len(self.load_errors) == 0
 
   def process(self, emission_energies=None):
-    calibration = Calibration()
+    calibration = calibrate.Calibration()
     calibration.load(self.calibration_file)
 
     exposure = Exposure()

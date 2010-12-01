@@ -1,0 +1,115 @@
+#!/usr/bin/env python
+
+#from optparse import OptionParser
+import minixs as mx
+import numpy as np
+import sys, os
+
+usage = "Usage: %s <calibration> --scans <scan files> --exposures <exposure files> --outfile <output filename>" % sys.argv[0]
+
+#energy_column = 8 # for Fe
+energy_column = 0 # for others
+i0_column = 6
+bad_pixels = []
+#bad_pixels = [ (14, 185) ]
+
+def parse_args():
+  # read command line options
+  scans = []
+  exposures = []
+  outputs = []
+  cur = scans
+  calib_file = sys.argv[1]
+  for arg in sys.argv[2:]:
+    if arg == '-s' or arg == '--scans':
+      cur = scans
+    elif arg == '-e' or arg == '--exposures':
+      cur = exposures
+    elif arg == '-o' or arg == '--outfile':
+      cur = outputs
+    else:
+      cur.append(arg)
+
+  if len(outputs) == 0:
+    print "Please specify an output filename."
+    print usage
+    exit
+
+  return calib_file, scans, exposures, outputs[0]
+
+def progress_cb(i, energy):
+  sys.stdout.write(".")
+  sys.stdout.flush()
+
+if __name__ == "__main__":
+  if len(sys.argv) < 4:
+    print usage
+    exit()
+
+  calibration_file, scans, exposures, outfile = parse_args()
+
+  if len(scans) < 1 or len(exposures) < 1:
+    print usage
+    exit()
+
+  # read in scan files
+  energies = None
+  I0s = None
+
+  for scan in scans:
+    e,i = mx.misc.read_scan_info(scan, [energy_column, i0_column])
+
+    if energies is None:
+      energies = e
+    else:
+      print len(energies), len(e)
+      diff = np.max(np.abs(energies - e))
+      if diff > 0.25:
+        print "Energies from scan %s differ from others. Aborting." % scan
+        exit()
+    
+    if I0s is None:
+      I0s = i
+    else:
+      I0s += i
+
+  # ensure that # of exposures is correct for number of entries in scan
+  if len(exposures) % len(energies) is not 0:
+    print "Number of energies does not divide number of exposures. Aborting."
+    exit()
+
+  calib = mx.calibrate.load(calibration_file)
+
+  # setup bad pixel filter if needed
+  filters = []
+  if bad_pixels:
+    fltr = mx.filter.BadPixelFilter()
+    if calib.dispersive_direction in [mx.UP, mx.DOWN]:
+      mode = fltr.MODE_INTERP_V
+    else:
+      mode = fltr.MODE_INTERP_H
+    fltr.set_val((mode, bad_pixels))
+    filters.append(fltr)
+
+  #print energies
+
+  rixs = mx.rixs.RIXS()
+  rixs.exposure_files = [os.path.abspath(f) for f in exposures]
+  rixs.calibration_file = os.path.abspath(calibration_file)
+  rixs.energies = energies
+  rixs.I0s = I0s
+
+  c = calib.calibration_matrix
+  emission_energies = np.arange(c[np.where(c>0)].min(), c.max(), .25)
+
+  sys.stdout.write("Processing")
+  sys.stdout.flush()
+
+  rixs.process(emission_energies, progress_callback=progress_cb)
+  print("")
+
+  print("Saving...")
+  rixs.save(outfile)
+  print("Done")
+
+

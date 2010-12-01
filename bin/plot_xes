@@ -1,0 +1,32 @@
+#!/usr/bin/env python
+
+import minixs as mx
+import matplotlib.pyplot as pt
+import sys
+from optparse import OptionParser
+
+usage = "Usage: %s <.xes file(s)>"
+
+parser = OptionParser()
+parser.add_option("-s", "--scale", dest='scale',
+                  action='store_true', default=False,
+                  help="scale all plots to max")
+parser.add_option("-u", "--unnormalize", dest='unnormalize',
+                  action='store_true', default=False,
+                  help="remove I0 normalization")
+(options, args) = parser.parse_args()
+
+
+
+for f in args:
+  xes = mx.emission.load(f)
+  y = xes.intensity
+
+  if options.unnormalize:
+    y *= xes.I0
+  if options.scale:
+    y /= y.max()
+
+  pt.plot(xes.emission, xes.intensity)
+
+pt.show()

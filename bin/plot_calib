@@ -1,0 +1,16 @@
+#!/usr/bin/env python
+
+import minixs as mx
+import matplotlib.pyplot as pt
+import sys
+
+usage = "Usage: %s <.calib file(s)>"
+
+for f in sys.argv[1:]:
+  pt.figure();
+  cal = mx.calibrate.load(f)
+  vmin,vmax = cal.energy_range()
+  pt.imshow(cal.calibration_matrix, vmin=vmin, vmax=vmax)
+  pt.colorbar()
+
+pt.show()

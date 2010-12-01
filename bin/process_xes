@@ -1,0 +1,98 @@
+#!/usr/bin/env python
+
+#from optparse import OptionParser
+import minixs as mx
+import numpy as np
+import sys, os
+
+usage = "Usage: %s <calibration> --scans <scan files> --exposures <exposure files>" % sys.argv[0]
+
+#energy_column = 8 # for Fe
+energy_column = 0 # for others
+i0_column = 6
+bad_pixels = [ (14, 185) ]
+
+def parse_args():
+  # read command line options
+  scans = []
+  exposures = []
+  cur = scans
+  calib_file = sys.argv[1]
+  for arg in sys.argv[2:]:
+    if arg == '-s' or arg == '--scans':
+      cur = scans
+    elif arg == '-e' or arg == '--exposures':
+      cur = exposures
+    else:
+      cur.append(arg)
+
+  return calib_file, scans, exposures
+
+if __name__ == "__main__":
+  if len(sys.argv) < 4:
+    print usage
+    exit()
+
+  calibration_file, scans, exposures = parse_args()
+
+  if len(scans) < 1 or len(exposures) < 1:
+    print usage
+    exit()
+
+  # read in scan files
+  energies = None
+  I0s = None
+
+  for scan in scans:
+    e,i = mx.misc.read_scan_info(scan, [energy_column, i0_column])
+
+    if energies is None:
+      energies = e
+    else:
+      print len(energies), len(e)
+      diff = np.max(np.abs(energies - e))
+      if diff > 0.25:
+        print "Energies from scan %s differ from others. Aborting." % scan
+        exit()
+    
+    if I0s is None:
+      I0s = i
+    else:
+      I0s += i
+
+  # ensure that # of exposures is correct for number of entries in scan
+  if len(exposures) % len(energies) is not 0:
+    print "Number of energies does not divide number of exposures. Aborting."
+    exit()
+
+  # setup bad pixel filter if needed
+  filters = []
+  if bad_pixels:
+    fltr = mx.filter.BadPixelFilter()
+    calib = mx.calibrate.load(calibration_file)
+    if calib.dispersive_direction in [mx.UP, mx.DOWN]:
+      mode = fltr.MODE_INTERP_V
+    else:
+      mode = fltr.MODE_INTERP_H
+    fltr.set_val((mode, bad_pixels))
+    filters.append(fltr)
+
+  print energies
+
+  # generate xes files
+  for i, energy in enumerate(energies):
+    print "Processing %.2f..." % energy
+    xes = mx.emission.EmissionSpectrum()
+    xes.calibration_file = os.path.abspath(calibration_file)
+    xes.energy = energy
+    xes.exposure_files = [os.path.abspath(f) for f in exposures[i::len(energies)]]
+    xes.I0 = I0s[i]
+    xes.filters = filters
+
+    xes.process()
+
+    filename = '%d.xes' % round(energy)
+    print "Saving '%s'..." % filename
+    xes.save(filename)
+    print "Done"
+

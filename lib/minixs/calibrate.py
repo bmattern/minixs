@@ -464,6 +464,24 @@ class Calibration:
     # store diagnostic info
     self.lin_res, self.rms_res, self.fit_points = diagnostics
 
+  def xtal_mask(self):
+    """
+    Generate a mask of the xtal regions
+
+    Returns
+    -------
+      An binary array of the same shape as the calibration matrix with 0's outside of xtal regions and 1's inside
+    """
+
+    if self.calibration_matrix is None:
+      return None
+
+    mask = np.zeros(self.calibration_matrix.shape, dtype=np.bool)
+    for (x1,y1),(x2,y2) in self.xtals:
+      mask[y1:y2,x1:x2] = 1
+
+    return mask
+
   def energy_range(self):
     """
     Find min and max energies in calibration matrix

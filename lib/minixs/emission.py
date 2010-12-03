@@ -2,6 +2,7 @@
 XES Spectrum processing code
 """
 
+import os
 import numpy as np
 
 import calibrate
@@ -18,7 +19,7 @@ def load(filename):
   xes.load(filename)
   return xes
 
-def process_spectrum(cal, exposure, energies, I0, direction, xtals):
+def process_spectrum(cal, exposure, energies, I0, direction, xtals, solid_angle=None):
   """Interpolated emission spectrum
 
   Parameters
@@ -29,6 +30,9 @@ def process_spectrum(cal, exposure, energies, I0, direction, xtals):
   I0 : intensity normalization value
   direction: dispersive direction (minixs.HORIZONTAL or minixs.VERTICAL)
   xtals: list of crystal rects
+  solid_angle: an array giving the solid angle subtended by each pixel
+
+  If solid_angle is not given, then it is effectively an array of ones
   """
 
   intensity = np.zeros(energies.shape)
@@ -54,15 +58,23 @@ def process_spectrum(cal, exposure, energies, I0, direction, xtals):
       if direction == DOWN:
         dE = cal[y1:y2,i]
         dI = exposure.pixels[y1:y2,i]
+        if solid_angle is not None:
+          dS = solid_angle[y1:y2,i]
       elif direction == UP:
         dE = cal[y2-1:y1-1:-1,i]
         dI = exposure.pixels[y2-1:y1-1:-1,i]
+        if solid_angle is not None:
+          dS = solid_angle[y2-1:y1-1:-1,i]
       elif direction == RIGHT:
         dE = cal[i, x1:x2]
         dI = exposure.pixels[i, x1:x2]
+        if solid_angle is not None:
+          dS = solid_angle[i, x1:x2]
       elif direction == LEFT:
         dE = cal[i, x2-1:x1-1:-1]
         dI = exposure.pixels[i, x2-1:x1-1:-1]
+        if solid_angle is not None:
+          dS = solid_angle[i, x2-1:x1-1:-1]
       else:
         raise Exception("Invalid direction.")
 
@@ -76,9 +88,13 @@ def process_spectrum(cal, exposure, energies, I0, direction, xtals):
       mask *= 0
       mask[np.where(y_i >= 0)] = 1
       intensity += y_i * mask
-      num_pixels += mask
-      #variance += var_i * mask
+      if solid_angle is not None:
+        s_i = np.interp(energies, dE, dS, -1,-1)
+        num_pixels += mask * s_i
+      else:
+        num_pixels += mask
 
+      #variance += var_i * mask
 
   # if num_pixels is 0, then intensity will also be 0, so divide by 1 instead of 0 to avoid NaN
   norm = num_pixels.copy()
@@ -203,6 +219,8 @@ class EmissionSpectrum:
     self.calibration_file = ""
     self.incident_energy = 0
     self.I0 = 1
+    self.solid_angle_map_file = None
+    self.solid_angle_map = None
     self.exposure_files = []
     self.filters = []
 
@@ -243,6 +261,8 @@ class EmissionSpectrum:
       f.write("# Calibration File: %s\n" % self.calibration_file)
       f.write("# Incident Energy: %.2f\n" % self.incident_energy)
       f.write("# I0: %.2f\n" % self.I0)
+      if self.solid_angle_map_file:
+        f.write("# Solid Angle Map: %s\n" % self.solid_angle_map_file)
       if self.filters:
         f.write("# Filters:\n")
         for fltr in self.filters:
@@ -255,11 +275,15 @@ class EmissionSpectrum:
       f.write("#\n")
 
       if not header_only:
-        f.write("# E_emission    Intensity  Uncertainty  Raw_Counts   Num_Pixels\n")
-        if len(self.spectrum.shape) == 2 and self.spectrum.shape[1] == 5:
-          np.savetxt(f, self.spectrum, fmt=('%12.2f','%.6e','%.6e','% 11d',' % 11d'))
-        elif len(self.spectrum) > 0:
+        if len(self.spectrum) > 0 and (len(self.spectrum.shape) != 2 and self.spectrum.shape[1] != 5):
           raise Exception("Invalid shape for spectrum array")
+
+        if self.solid_angle_map is None:
+          f.write("# E_emission    Intensity  Uncertainty  Raw_Counts   Num_Pixels\n")
+          np.savetxt(f, self.spectrum, fmt=('%12.2f','%.6e','%.6e','% 11d',' % 11d'))
+        else:
+          f.write("# E_emission    Intensity  Uncertainty  Raw_Counts   Solid_Angle\n")
+          np.savetxt(f, self.spectrum, fmt=('%12.2f','%.6e','%.6e','% 11d',' %.6e'))
       
 
   def load(self, filename=None, header_only=False):
@@ -305,6 +329,9 @@ class EmissionSpectrum:
             self.incident_energy = float(line[19:].strip())
           elif line[2:5] == 'I0:':
             self.I0 = float(line[6:].strip())
+          elif line[2:18] == 'Solid Angle Map:':
+            map_file = line[19:].strip()
+            self.load_solid_angle_map(map_file)
           elif line[2:10] == 'Filters:':
             self.filters = []
             in_filters = True
@@ -328,6 +355,19 @@ class EmissionSpectrum:
 
     return len(self.load_errors) == 0
 
+  def load_solid_angle_map(self, map_file):
+    try:
+      if os.path.exists(map_file):
+        map = np.loadtxt(map_file)
+      else:
+        path = os.path.join(os.path.dirname(__file__), 'data', map_file)
+        map = np.loadtxt(path)
+    except IOError:
+      raise IOError("Solid Angle Map File not found: '%s'. This must either be a full path, or relative to the minixs data directory." % map_file)
+
+    self.solid_angle_map_file = map_file
+    self.solid_angle_map = map
+
   def process(self, emission_energies=None):
     calibration = calibrate.Calibration()
     calibration.load(self.calibration_file)
@@ -350,6 +390,7 @@ class EmissionSpectrum:
                                 emission_energies,
                                 self.I0,
                                 calibration.dispersive_direction,
-                                calibration.xtals)
+                                calibration.xtals,
+                                self.solid_angle_map)
 
     self.set_spectrum(spectrum) 

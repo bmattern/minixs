@@ -6,15 +6,16 @@ import numpy as np
 import sys, os
 from optparse import OptionParser
 
+usage = "Usage: %prog [options] <calibration_file> <exposure_file(s)>"
+parser = OptionParser(usage=usage)
 
-parser = OptionParser()
-parser.usage = "Usage: %prog --calib <calibration> --exposure <exposure file> --output <output file> [options]"
+# These two are now positional arguments
+#parser.add_option("-c", "--calib", dest='calibration_file',
+#                  help="calibration matrix file (*.calib)")
+#parser.add_option("-x", "--exposure", dest='exposure_file',
+#                  help="exposure file (*.tif)")
 
-parser.add_option("-c", "--calib", dest='calibration_file',
-                  help="calibration matrix file (*.calib)")
-parser.add_option("-x", "--exposure", dest='exposure_file',
-                  help="exposure file (*.tif)")
-parser.add_option("-o", "--output", dest='outfile',
+parser.add_option("-o", "--output", dest='output', default=sys.stdout,
                   help="filename to save output to (*.xes)")
 parser.add_option("-e", "--energy", dest='energy', default=0,
                   help="incident energy")
@@ -22,21 +23,39 @@ parser.add_option("-i", "--i0", dest='i0', default=1,
                   help="incident flux")
 parser.add_option("-d", "--dataset", dest='dataset', default='',
                   help="dataset name")
+parser.add_option("-b", "--badpixels", dest='bad_pixels', default='',
+                  help="list of bad pixels (e.g. 15,30;120;52)")
 
 (options, args) = parser.parse_args()
 
-if not options.calibration_file or not options.exposure_file or not options.outfile:
+if len(args) < 2:
   parser.print_help()
   exit()
 
-# XXX make this configurable from command line (or better, autodetect...)
-bad_pixels = [ (14, 185) ]
+# split up positional args
+calibration_file = args[0]
+exposure_files = args[1:]
+
+bad_pixels = []
+
+# parse bad pixel list
+if options.bad_pixels:
+  bad_pixels = [[int(i) for i in pt.split(',')] for pt in options.bad_pixels.split(';')]
+
+  # check that list is valid
+  invalid = False
+  for bp in bad_pixels:
+    if len(bp) != 2:
+      invalid = True
+  if invalid:
+    sys.stderr.write("Error: Bad Pixel list: '%s' is invalid.\nIt should be a semicolon separated list of points whose x and y coordinates are separated by a comma. E.g. '15,30;120,52'\n" % options.bad_pixels)
+    exit(1)
 
 # setup bad pixel filter if needed
 filters = []
 if bad_pixels:
   fltr = mx.filter.BadPixelFilter()
-  calib = mx.calibrate.load(options.calibration_file)
+  calib = mx.calibrate.load(calibration_file)
   if calib.dispersive_direction in [mx.UP, mx.DOWN]:
     mode = fltr.MODE_INTERP_V
   else:
@@ -44,31 +63,30 @@ if bad_pixels:
   fltr.set_val((mode, bad_pixels))
   filters.append(fltr)
 
-
 # don't overwrite files willy nilly
-if (os.path.exists(options.outfile)):
-  sys.stdout.write("Do you want to overwrite '%s'? (y/n): " % options.outfile)
+if (options.output != sys.stdout and os.path.exists(options.output)):
+  sys.stdout.write("Do you want to overwrite '%s'? (y/n): " % options.output)
   response = sys.stdin.readline().strip().lower()
   if response[0] != 'y':
     exit()
 
-# load calibration
-c = mx.calibrate.load(options.calibration_file)
-#XXX check that c is valid
-
 # generate xes files
-print "Processing..."
+sys.stderr.write("Processing...\n")
 xes = mx.emission.EmissionSpectrum()
 xes.dataset = options.dataset
-xes.calibration_file = os.path.abspath(options.calibration_file)
+xes.calibration_file = os.path.abspath(calibration_file)
 xes.energy = options.energy
-xes.exposure_files = [os.path.abspath(f) for f in [options.exposure_file]]
+xes.exposure_files = [os.path.abspath(f) for f in exposure_files]
 xes.I0 = options.i0
 xes.filters = filters
 
 xes.process()
 
-print "Saving '%s'..." % options.outfile
-xes.save(options.outfile)
-print "Done"
+if options.output == sys.stdout:
+  sys.stderr.write("Saving to stdout\n")
+else:
+  sys.stderr.write("Saving '%s'...\n" % options.output)
+
+xes.save(options.output)
+sys.stderr.write("Done\n")
 

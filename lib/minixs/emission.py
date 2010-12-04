@@ -249,13 +249,20 @@ class EmissionSpectrum:
     self.raw_counts = self.spectrum[:,3]
     self.num_pixels = self.spectrum[:,4]
  
-  def save(self, filename=None, header_only=False):
-    if filename is None:
-      filename = self.filename
-    else:
-      self.filename = filename
+  def save(self, file=None, header_only=False):
+    if file is None:
+      file= self.filename
 
-    with open(filename, 'w') as f:
+    file_opened = False
+
+    if hasattr(file, 'write'):
+      f = file
+    else:
+      f = open(file, 'w')
+      self.filename = file
+      file_opened = True
+
+    try:
       f.write("# minIXS XES Spectrum\n#\n")
       f.write("# Dataset: %s\n" % self.dataset_name)
       f.write("# Calibration File: %s\n" % self.calibration_file)
@@ -284,6 +291,11 @@ class EmissionSpectrum:
         else:
           f.write("# E_emission    Intensity  Uncertainty  Raw_Counts   Solid_Angle\n")
           np.savetxt(f, self.spectrum, fmt=('%12.2f','%.6e','%.6e','% 11d',' %.6e'))
+
+    finally:
+      # close the file if we opened it
+      if file_opened:
+        f.close()
       
 
   def load(self, filename=None, header_only=False):

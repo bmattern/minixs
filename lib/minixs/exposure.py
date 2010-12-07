@@ -97,3 +97,32 @@ class Exposure:
       self.pixels[y,x] = 0
 
 
+  def detect_bad_pixels(self, num_bins=20, bin_sep=3):
+    raise Exception("Not yet implemented")
+    # if we find bins separated from the rest by more than bin_sep zero bins, assume they contain bad pixels
+
+    h = np.histogram(self.pixels.flat, num_bins)
+    counts = h[0]
+    bounds = h[1]
+
+    print counts
+    # start at high count end of histogram.
+    high_start = -1
+    zero_start = -1
+    for i in range(len(counts))[::-1]:
+      if counts[i] == 0 and high_start == -1:
+        high_start = i+1
+      elif counts[i] != 0 and high_start != -1:
+        zero_start = i+1
+        break
+
+    num_zeros = high_start - zero_start
+    print high_start, zero_start, num_zeros
+    if num_zeros > bin_sep:
+      max_good_counts = bounds[high_start]
+      y,x = np.where(self.pixels > max_good_counts)
+      bad_pixels = [(xi,yi) for xi,yi in zip(x,y)]
+    else:
+      bad_pixels = []
+
+    return bad_pixels

@@ -75,7 +75,7 @@ sys.stderr.write("Processing...\n")
 xes = mx.emission.EmissionSpectrum()
 xes.dataset = options.dataset
 xes.calibration_file = os.path.abspath(calibration_file)
-xes.energy = options.energy
+xes.incident_energy = options.energy
 xes.exposure_files = [os.path.abspath(f) for f in exposure_files]
 xes.I0 = options.i0
 xes.filters = filters

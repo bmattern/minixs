@@ -107,7 +107,7 @@ def plot_rixs_contour(rixs, plot_log=False, aspect=1):
   emitE = np.unique(rixs[:,1])
   r2d = rixs2d(rixs)
   if plot_log:
-    r2d = log10(r2d)
+    r2d = np.log10(r2d)
 
   from matplotlib.pyplot import contourf, figure, colorbar
   figure()
@@ -119,7 +119,7 @@ def plot_rixs(rixs, start=0, end=-1, plot_log=False, aspect=1):
   emitE = np.unique(rixs[:,1])
   r2d = rixs2d(rixs)
   if plot_log:
-    r2d = log(r2d)
+    r2d = np.log10(r2d)
 
   from matplotlib.pyplot import imshow, figure
   figure()

@@ -307,8 +307,10 @@ class EmissionFilter(ChoiceFilter):
   name = "Emission Filter"
 
   TYPE_FE_KBETA = 0
+  TYPE_FE_KBETA_TIGHT = 1
   CHOICES = [
-      "Fe Kbeta"
+      "Fe Kbeta",
+      "Fe Kbeta v2"
       ]
 
   default_val = TYPE_FE_KBETA
@@ -319,6 +321,17 @@ class EmissionFilter(ChoiceFilter):
       if energy >= 7090:
         z = 1.3214 * energy - 9235.82 - 12
         pixels[0:z,:] = 0
+    elif self.val == self.TYPE_FE_KBETA_TIGHT:
+      m = [ 1.267343, 1.265995, 1.267343, 1.275763, 1.258217, 1.254672, 1.254672, 1.267664, 1.304953, 1.289443 ]
+      b = [ -8847.35, -8846.56, -8849.35, -8913.20, -8790.86, -8762.06, -8761.06, -8847.43, -9109.12, -9006.66 ]
+      w = pixels.shape[1]
+
+      if energy >= 7090:
+        for i in range(10):
+          x1 = np.floor(w / 10.0 * i)
+          x2 = np.ceil(w / 10.0 * (i+1))
+          z = m[i] * energy + b[i] - 1
+          pixels[0:z,x1:x2] = 0
     else:
       raise ValueError("Unimplemented Emission Filter")
 

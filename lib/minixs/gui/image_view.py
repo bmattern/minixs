@@ -15,8 +15,10 @@ class ImageView(wx.Panel):
     self.Bind(wx.EVT_ERASE_BACKGROUND, self.OnEraseBG)
     self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
     self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
-    self.Bind(wx.EVT_RIGHT_UP, self.OnRightDown)
+    self.Bind(wx.EVT_RIGHT_DOWN, self.OnRightDown)
     self.Bind(wx.EVT_RIGHT_UP, self.OnRightUp)
+    self.Bind(wx.EVT_MIDDLE_DOWN, self.OnMiddleDown)
+    self.Bind(wx.EVT_MIDDLE_UP, self.OnMiddleUp)
     self.Bind(wx.EVT_MOTION, self.OnMotion)
     self.Bind(wx.EVT_ENTER_WINDOW, self.OnEnterWindow)
     self.Bind(wx.EVT_LEAVE_WINDOW, self.OnLeaveWindow)
@@ -112,6 +114,22 @@ class ImageView(wx.Panel):
     for tool in self.tools:
       if tool.active:
         tool.OnRightUp(evt)
+
+  def OnMiddleDown(self, evt):
+    if not self.bitmap:
+      return
+
+    for tool in self.tools:
+      if tool.active:
+        tool.OnMiddleDown(evt)
+
+  def OnMiddleUp(self, evt):
+    if not self.bitmap:
+      return
+
+    for tool in self.tools:
+      if tool.active:
+        tool.OnMiddleUp(evt)
 
   def OnMotion(self, evt):
     if not self.bitmap:

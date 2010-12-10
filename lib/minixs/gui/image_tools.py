@@ -34,6 +34,12 @@ class Tool(object):
   def OnRightUp(self, evt):
     pass
 
+  def OnMiddleDown(self, evt):
+    pass
+
+  def OnMiddleUp(self, evt):
+    pass
+
   def OnMotion(self, evt):
     pass
 
@@ -280,6 +286,32 @@ class RangeTool(Tool):
       self.rects.remove(self.active_rect)
       self.active_rect = None
       self.action = self.ACTION_NONE
+      self.PostEventRangeChanged()
+      self.parent.Refresh()
+
+  def OnMiddleUp(self, evt):
+    """
+    Handle middle mouse up
+    """
+    if self.action & self.ACTION_PROPOSED:
+      r = self.active_rect
+      (x1,y1), (x2,y2) = r
+      r2 = [[x1,y1],[x2,y2]]
+
+      # split active rect in half
+      if evt.ShiftDown():
+        #split horizontally
+        (x1,y1), (x2,y2) = r
+        yp = (y1 + y2) / 2.0
+        r[1][1] = yp-1
+        r2[0][1] = yp+1
+      else:
+        #split vertically
+        xp = (x1 + x2) / 2.0
+        r[1][0] = xp-1
+        r2[0][0] = xp+1
+
+      self.rects.append(r2)
       self.PostEventRangeChanged()
       self.parent.Refresh()
 

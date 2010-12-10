@@ -1,0 +1,58 @@
+#!/usr/bin/env python
+import minixs as mx
+import matplotlib
+#matplotlib.use('GtkAgg')
+from pylab import *
+from optparse import OptionParser
+
+usage = "Usage: %s <.rixs file>"
+
+parser = OptionParser()
+parser.add_option("-l", "--log", dest='log',
+                  action='store_true', default=False,
+                  help="plot logarithm of intensity")
+parser.add_option("-c", "--contour", dest='contour',
+                  action='store_true', default=False,
+                  help="plot contours")
+(options, args) = parser.parse_args()
+
+if len(args) != 1:
+  parser.print_help()
+  exit(1)
+
+r = loadtxt(args[0])
+ei = unique(r[:,0])
+ee = unique(r[:,1])
+r2 = mx.misc.rixs2d(r)
+
+if options.log:
+  r2 = log10(r2)
+
+if options.contour:
+  contourf(
+      ei,
+      ee,
+      r2,
+      40,
+      extent=(ei[0],ei[-1],ee[0],ee[-1]),
+      aspect=.3
+      )
+else:
+  imshow(
+      r2,
+      origin='bottom',
+      extent=(ei[0],ei[-1],ee[0],ee[-1]),
+      aspect=1,
+      #vmin=-6.5,
+      #vmax=-4.0,
+      #interpolation='nearest'
+      )
+
+ax = gca()
+#ax.set_ylim(7007,7127)
+#ax.set_xlim(7110,7127)
+xlabel('Incident Energy (eV)')
+ylabel('Emission Energy (eV)')
+colorbar()
+show()
+

@@ -23,8 +23,10 @@ parser.add_option("-i", "--i0", dest='i0', default=1,
                   help="incident flux")
 parser.add_option("-d", "--dataset", dest='dataset', default='',
                   help="dataset name")
-parser.add_option("-b", "--badpixels", dest='bad_pixels', default='',
+parser.add_option("-l", "--bplist", dest='bad_pixels', default='',
                   help="list of bad pixels (e.g. 15,30;120;52)")
+parser.add_option("-b", "--badpixels", dest='bad_pixels_file', default='',
+                  help="file containing bad pixels (2 columns w. x and y coords)")
 
 (options, args) = parser.parse_args()
 
@@ -51,6 +53,14 @@ if options.bad_pixels:
     sys.stderr.write("Error: Bad Pixel list: '%s' is invalid.\nIt should be a semicolon separated list of points whose x and y coordinates are separated by a comma. E.g. '15,30;120,52'\n" % options.bad_pixels)
     exit(1)
 
+if options.bad_pixels_file:
+  try:
+    bad_pixels = [[x,y] for x,y in np.loadtxt(options.bad_pixels_file)]
+  except Exception as e:
+    sys.stderr.write("Error: unable to load bad pixel file\n")
+    sys.stderr.write(str(e) + '\n')
+    exit(1)
+
 # setup bad pixel filter if needed
 filters = []
 if bad_pixels:
@@ -60,6 +70,7 @@ if bad_pixels:
     mode = fltr.MODE_INTERP_V
   else:
     mode = fltr.MODE_INTERP_H
+  mode = fltr.MODE_ZERO_OUT
   fltr.set_val((mode, bad_pixels))
   filters.append(fltr)
 

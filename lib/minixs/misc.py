@@ -202,7 +202,10 @@ def find_xtal_boundaries(filtered_exposures, shrink=1):
     np.add(p,e.pixels,p)
 
   x1s,x2s = _find_boundaries(p, 1)
-  y1s,y2s = _find_boundaries(p, 0)
+  #y1s,y2s = _find_boundaries(p, 0)
+  y1s = [2]
+  y2s = [193]
+
 
   if len(x1s) != len(x2s) or len(y1s) != len(y2s):
     return None

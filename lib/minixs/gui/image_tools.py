@@ -308,8 +308,8 @@ class RangeTool(Tool):
       else:
         #split vertically
         xp = (x1 + x2) / 2.0
-        r[1][0] = xp-1
-        r2[0][0] = xp+1
+        r[1][0] = xp-2
+        r2[0][0] = xp+2
 
       self.rects.append(r2)
       self.PostEventRangeChanged()

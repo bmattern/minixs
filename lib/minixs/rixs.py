@@ -100,12 +100,9 @@ class RIXS:
         pos = f.tell()
         line = f.readline()
 
-  def process(self, emission_energies=None, progress_callback=None):
+  def process(self, emission_energies=None, progress_callback=None, skip_columns=[]):
     calibration = mx.calibrate.Calibration()
     calibration.load(self.calibration_file)
-
-    for f in self.filters:
-      f.filter(exposure.pixels, self.incident_energy)
 
     # generate emission energies from range of calibration matrix
     if emission_energies is None:
@@ -125,12 +122,16 @@ class RIXS:
 
       exposure = mx.exposure.Exposure(self.exposure_files[i])
 
+      for f in self.filters:
+        f.filter(exposure.pixels, energy)
+
       xes = process_spectrum(calibration.calibration_matrix,
                              exposure,
                              emission_energies,
                              self.I0s[i],
                              calibration.dispersive_direction,
-                             calibration.xtals)
+                             calibration.xtals,
+                             skip_columns=skip_columns)
 
       spectrum[i*stride:(i+1)*stride,0] = energy
       spectrum[i*stride:(i+1)*stride,1:] = xes

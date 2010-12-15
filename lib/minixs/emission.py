@@ -2,7 +2,7 @@
 XES Spectrum processing code
 """
 
-import os
+import os, sys
 import numpy as np
 
 import calibrate
@@ -19,7 +19,7 @@ def load(filename):
   xes.load(filename)
   return xes
 
-def process_spectrum(cal, exposure, energies, I0, direction, xtals, solid_angle=None):
+def process_spectrum(cal, exposure, energies, I0, direction, xtals, solid_angle=None, skip_columns=[]):
   """Interpolated emission spectrum
 
   Parameters
@@ -52,6 +52,9 @@ def process_spectrum(cal, exposure, energies, I0, direction, xtals, solid_angle=
       i1, i2 = y1, y2
 
     for i in range(i1,i2):
+      if i in skip_columns:
+        #sys.stderr.write("skipping %d\n" % i)
+        continue
 
       # select one row/column of calibration matrix and correspond row/column of spectrum exposure
       # XXX this is untested for UP and RIGHT, but *should* be correct
@@ -380,7 +383,7 @@ class EmissionSpectrum:
     self.solid_angle_map_file = map_file
     self.solid_angle_map = map
 
-  def process(self, emission_energies=None):
+  def process(self, emission_energies=None, skip_columns=[]):
     calibration = calibrate.Calibration()
     calibration.load(self.calibration_file)
 
@@ -403,6 +406,7 @@ class EmissionSpectrum:
                                 self.I0,
                                 calibration.dispersive_direction,
                                 calibration.xtals,
-                                self.solid_angle_map)
+                                self.solid_angle_map,
+                                skip_columns=skip_columns)
 
     self.set_spectrum(spectrum) 

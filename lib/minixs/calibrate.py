@@ -107,9 +107,10 @@ def find_combined_maxima(exposures, energies, direction):
 
 FIT_QUADRATIC = 1
 FIT_CUBIC   = 2
-FIT_ELLIPSOID = 3
+FIT_QUARTIC = 3
+FIT_ELLIPSOID = 4
 
-def fit_region(region, points, dest, fit_type = FIT_CUBIC):
+def fit_region(region, points, dest, fit_type = FIT_QUARTIC):
   """
   Fit a smooth function to points that lie in region bounded by `region`
 
@@ -207,6 +208,40 @@ def fit_region(region, points, dest, fit_type = FIT_CUBIC):
            fit
          ).T
 
+  elif fit_type == FIT_QUARTIC:
+    # fit to quartic:
+    A = np.vstack([
+      x**4,
+      y**4,
+      x**2 * y**2,
+      # intentionally skip all terms with cubes
+      x**2 * y,
+      x * y**2,
+      x**2,
+      y**2,
+      x * y,
+      x,
+      y,
+      np.ones(x.shape)
+      ]).T
+    fit, r = np.linalg.lstsq(A,z)[0:2]
+
+    # calculate residues
+    rms_res = np.sqrt(r / len(z)) #[0]
+    lin_res = sum(z - np.dot(A, fit)) / len(z)
+
+    # evaluate at all points
+    zz = np.dot(
+           np.vstack([
+             xx**4, yy**4, xx**2 * yy**2,
+             xx**2 * yy, xx * yy**2,
+             xx**2, yy**2, xx * yy,
+             xx, yy,
+             np.ones(xx.shape)
+           ]).T,
+           fit
+         ).T
+
   elif fit_type == FIT_ELLIPSOID:
     raise Exception("Fit method not yet implemented.")
     # XXX this doesn't seem to work...
@@ -243,7 +278,7 @@ def fit_region(region, points, dest, fit_type = FIT_CUBIC):
 
   return lin_res, rms_res
 
-def calibrate(filtered_exposures, energies, regions, dispersive_direction, fit_type=FIT_CUBIC, return_diagnostics=False):
+def calibrate(filtered_exposures, energies, regions, dispersive_direction, fit_type=FIT_QUARTIC, return_diagnostics=False):
   """
   Build calibration matrix from parameters in Calibration object
 
@@ -444,7 +479,7 @@ class Calibration:
 
     return len(self.load_errors) == 0
 
-  def calibrate(self, fit_type=FIT_CUBIC):
+  def calibrate(self, fit_type=FIT_QUARTIC):
     # load exposure files
     exposures = [Exposure(f) for f in self.exposure_files]
     

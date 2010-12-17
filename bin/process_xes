@@ -4,12 +4,9 @@
 # Configurable things that aren't yet command line options
 #
 
-# any pixels with more than this many counts will be ignored
-# set this to None to disable the filter
-high_count_filter = 10000
-
-# the blue detector pool pilatus has a few columns that have a lot of bad pixels, so we skip them entirely
-skip_columns = [220, 221, 233, 234]
+# the blue detector pool pilatus has a few columns that have a lot of bad pixels, so we skip them entirely (the high filter should be able to catch most), so this can probably be left empty
+skip_columns = []
+#skip_columns = [220, 221, 233, 234]
 
 import minixs as mx
 import numpy as np
@@ -22,15 +19,17 @@ parser = OptionParser(usage=usage)
 parser.add_option("-o", "--output", dest='output', default=sys.stdout,
                   help="filename to save output to (*.xes)")
 parser.add_option("-e", "--energy", dest='energy', default=0,
-                  help="incident energy")
+                  type=float, help="incident energy")
 parser.add_option("-i", "--i0", dest='i0', default=1,
-                  help="incident flux")
+                  type=float, help="incident flux")
 parser.add_option("-d", "--dataset", dest='dataset', default='',
                   help="dataset name")
 parser.add_option("-l", "--bplist", dest='bad_pixels', default='',
                   help="list of bad pixels (e.g. 15,30;120;52)")
 parser.add_option("-b", "--badpixels", dest='bad_pixels_file', default='',
                   help="file containing bad pixels (2 columns w. x and y coords)")
+parser.add_option("-H", "--high_filter", dest='high_filter', default=10000,
+                  type=int, help="Remove any pixels with more counts than HIGH_FILTER ")
 
 (options, args) = parser.parse_args()
 
@@ -79,9 +78,10 @@ if bad_pixels:
   fltr.set_val((mode, bad_pixels))
   filters.append(fltr)
 
-if high_count_filter is not None:
+# set up high filter
+if options.high_filter is not None:
   fltr = mx.filter.HighFilter()
-  fltr.set_val(high_count_filter)
+  fltr.set_val(options.high_filter)
   filters.append(fltr)
 
 # don't overwrite files willy nilly

@@ -168,9 +168,11 @@ def fit_region(region, points, dest, fit_type = FIT_QUARTIC):
     return
 
   # build points to evaluate fit at
-  xx, yy = np.meshgrid(np.arange(x1,x2), np.arange(y1,y2))
-  xx = np.ravel(xx)
-  yy = np.ravel(yy)
+  xxd, yyd = np.meshgrid(np.arange(x1,x2), np.arange(y1,y2))
+  xxd = np.ravel(xxd)
+  yyd = np.ravel(yyd)
+  xx = xxd.astype('double')
+  yy = yyd.astype('double')
 
   if fit_type == FIT_QUADRATIC:
     # fit to quadratic: z = Ax^2 + By^2 + Cxy + Dx + Ey + F
@@ -274,7 +276,7 @@ def fit_region(region, points, dest, fit_type = FIT_QUARTIC):
     zz = (-b + np.sqrt(b**2 - 4*a*c)) / (2*a)
 
   # fill the calibration matrix with values from fit
-  dest[yy,xx] = zz
+  dest[yyd,xxd] = zz
 
   return lin_res, rms_res
 

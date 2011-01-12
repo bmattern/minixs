@@ -1,0 +1,48 @@
+#!/usr/bin/env python
+import minixs as mx
+import numpy as np
+import sys, os
+from itertools import izip
+
+usage = "%s <input file> <output_file> [spacing]" % sys.argv[0]
+
+if len(sys.argv) < 3:
+  print usage
+  exit()
+
+infile = sys.argv[1]
+outfile = sys.argv[2]
+
+spacing = None
+if len(sys.argv) > 3:
+  spacing = float(sys.argv[3])
+
+# load file
+print "Loading..."
+rixs = mx.rixs.RIXS()
+rixs.load(infile)
+x,y,z = rixs.matrix_form()
+
+# determine spacing if not specified
+if spacing is None:
+  spacing = np.diff(x).min()
+  print "Using spacing: %.3f\n", spacing
+
+print "Interpolating..."
+xp = np.arange(x.min(), x.max(), spacing)
+zp = np.vstack([np.interp(xp,x,c) for c in z]).T.flatten()
+
+xx = np.repeat(xp, len(y))
+yy = np.tile(y, len(xp))
+
+# save
+print "Saving..."
+
+with open(outfile, "w") as f:
+  lx = 0
+  for x,y,z in izip(xx,yy,zp):
+    if lx != x and lx > 0:
+      f.write("\n")
+    f.write("%12.2f %12.2f %.6e\n" % (x,y,z))
+    lx = x
+

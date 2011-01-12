@@ -91,7 +91,9 @@ if __name__ == "__main__":
 
     xes.process()
 
-    filename = '%d.xes' % round(energy)
+    energy_str = ("%.2f" % energy).replace('.', 'x')
+
+    filename = energy_str + '.xes'
     print "Saving '%s'..." % filename
     xes.save(filename)
     print "Done"

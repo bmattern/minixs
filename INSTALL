@@ -1,10 +1,32 @@
 Until I get around to creating a proper installation setup, the code must be manually installed.
 
-The contents contents of the lib directory must be made available to python. To do this, either:
+Lines that start with '$' below are unix command lines. The leading '$' represents the command prompt, and should not be typed.
+
+Dependencies
+------------
+  The following python libraries are required (the ubuntu package names are also given):
+
+  numpy        python-numpy
+  scipy        python-scipy
+  matplotlib   python-matplotlib
+  wx           python-wxgtk2.8
+
+  To install these on ubuntu, run:
+    $ sudo apt-get install <name of package(s)>
+
+Environment configuration
+-------------------------
+The contents contents of the lib directory must be made available to python. To do this, either (a) or (b) below:
 
   a) Add the lib/ directory to your PYTHONPATH environment variable.
 
      $ export PYTHONPATH=$PYTHONPATH:/path/to/lib/
+
+     If you would like this change to be permanent, add the above line to your shells init script (typically $HOME/.bashrc)
+
+     You can check that the path si set correctly by running
+
+     $ echo $PYTHONPATH
 
   OR
 
@@ -14,5 +36,5 @@ Once this has been done, the calibrator gui can be run:
 
   $ ./bin/calibrator
 
-If desired, this script can be placed in a directory that is in your PATH.
+If desired, this script can be copied or symlinked into a directory that is in your $PATH.
 

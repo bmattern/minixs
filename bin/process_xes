@@ -30,6 +30,8 @@ parser.add_option("-b", "--badpixels", dest='bad_pixels_file', default='',
                   help="file containing bad pixels (2 columns w. x and y coords)")
 parser.add_option("-H", "--high_filter", dest='high_filter', default=10000,
                   type=int, help="Remove any pixels with more counts than HIGH_FILTER ")
+parser.add_option("-s", "--stepsize", dest='stepsize', default=.1,
+                  type=float, help="emission energy step size")
 
 (options, args) = parser.parse_args()
 
@@ -67,9 +69,9 @@ if options.bad_pixels_file:
 # setup bad pixel filter if needed
 filters = []
 
+calib = mx.calibrate.load(calibration_file)
 if bad_pixels:
   fltr = mx.filter.BadPixelFilter()
-  calib = mx.calibrate.load(calibration_file)
   if calib.dispersive_direction in [mx.UP, mx.DOWN]:
     mode = fltr.MODE_INTERP_V
   else:
@@ -101,7 +103,9 @@ xes.exposure_files = [os.path.abspath(f) for f in exposure_files]
 xes.I0 = options.i0
 xes.filters = filters
 
-xes.process(skip_columns=skip_columns)
+E1,E2 = calib.energy_range()
+grid = np.arange(round(E1),round(E2),options.stepsize)
+xes.process(grid, skip_columns=skip_columns)
 
 if options.output == sys.stdout:
   sys.stderr.write("Saving to stdout\n")

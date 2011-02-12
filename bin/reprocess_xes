@@ -17,7 +17,6 @@ for filename in filenames:
     print '\n'.join(xes.load_errors)
     continue
 
-
   print "  Reprocessing..."
   xes.process()
   print "  Saving..."

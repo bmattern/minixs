@@ -14,6 +14,12 @@ parser.add_option("-s", "--scale", dest='scale',
 parser.add_option("-u", "--unnormalize", dest='unnormalize',
                   action='store_true', default=False,
                   help="remove I0 normalization")
+parser.add_option("-e", "--errorbars", dest='errorbars',
+                  action='store_true', default=False,
+                  help="plot errorbars")
+parser.add_option("-l", "--legend", dest='legend',
+                  action='store_true', default=False,
+                  help="include legend (with filenames as labels)")
 (options, args) = parser.parse_args()
 
 
@@ -27,6 +33,11 @@ for f in args:
   if options.scale:
     y /= y.max()
 
-  pt.plot(xes.emission, xes.intensity)
+  if options.errorbars:
+    pt.errorbar(xes.emission, xes.intensity, xes.uncertainty, label=f)
+  else:
+    pt.plot(xes.emission, xes.intensity, label=f)
 
+if options.legend:
+  pt.legend(loc='best')
 pt.show()

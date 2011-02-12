@@ -217,6 +217,18 @@ def find_xtal_boundaries(filtered_exposures, shrink=1):
 
   return xtals
 
+def find_edges(pixels, direction=0, sign=-1, thresh=5):
+  """
+  Find edges of regions with pixels above thresh
+  """
+  return np.where(np.diff((pixels.max(direction)>thresh)*1) == sign)[direction]
+
+def find_xtal_regions2(filtered_exposures, direction, thresh):
+  r = [find_edges(e.pixels, direction, -1, thresh) for e in filtered_exposures]
+  print r
+  l = [find_edges(e.pixels, direction, +1, thresh) for e in filtered_exposures]
+
+  return l,r
 
 def collection_angle_correction(ci, d, return_theta=False):
   """

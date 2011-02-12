@@ -3,6 +3,7 @@ Raw detector exposures
 """
 from PIL import Image
 import numpy as np
+from itertools import izip
 
 class Exposure:
   """
@@ -126,3 +127,22 @@ class Exposure:
       bad_pixels = []
 
     return bad_pixels
+
+  def detect_bad_pixels2(self):
+    p = self.pixels.copy()
+    n = np.product(p.shape)
+    bad_pixels = []
+    while True:
+      a,b = np.histogram(p.flat)
+
+      if sum(a==0) < 2:
+        break
+
+      i = np.where(p > b[-2])
+      bad_pixels += [(x,y) for y,x in izip(*i)]
+      p[i] = 0
+
+    print a
+    print b
+    return bad_pixels, p
+

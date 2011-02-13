@@ -8,6 +8,7 @@ from itertools import izip
 from filter import get_filter_by_name
 from constants import *
 from gauss import gauss_leastsq, gauss_model
+from parser import Parser, STRING, INT, FLOAT, LIST
 
 import numpy as np
 
@@ -402,71 +403,25 @@ class Calibration:
     else:
       self.filename = filename
 
-    with open(filename, 'r') as f:
-      pos = f.tell()
-      line = f.readline()
+    parser = Parser({
+      'Dataset': STRING,
+      'Dispersive Direction': STRING,
+      'Energies and Exposures': (LIST, (FLOAT, STRING)),
+      'Filters': (LIST, STRING),
+      'Xtal Boundaries': (LIST, (INT, INT, INT, INT)),
+      })
 
+    header = []
+    with open(filename, 'r') as f:
+      line = f.readline()
       if line.strip() != '# minIXS calibration matrix':
         raise InvalidFileError()
 
-      in_exposures = False
-      in_filters = False
-      in_xtals = False
-
+      pos = f.tell()
+      line = f.readline()
       while line:
         if line[0] == "#":
-
-          if in_exposures:
-            if line[2:].strip() == '':
-              in_exposures = False
-            else:
-              energy, ef = line[2:].split(None, 1)
-              energy = float(energy.strip())
-              ef = ef.strip()
-
-              self.energies.append(energy)
-              self.exposure_files.append(ef)
-
-          elif in_filters:
-            if line[2:].strip() == '':
-              in_filters = False
-            else:
-              name,val = line[2:].split(':')
-              name = name.strip()
-              fltr = get_filter_by_name(name)
-              if fltr == None:
-                self.load_errors.append("Unknown Filter: '%s' (Ignoring)" % name)
-              else:
-                fltr.set_str(val.strip())
-                self.filters.append(fltr)
-
-          elif in_xtals:
-            if line[2:].strip() == '':
-              in_xtals = False
-            else:
-              x1,y1,x2,y2 = [int(s.strip()) for s in line[2:].split()]
-              self.xtals.append([[x1,y1],[x2,y2]])
-
-          elif line[2:10] == 'Dataset:':
-            self.dataset_name = line[11:].strip()
-          elif line[2:23] == 'Dispersive Direction:':
-            dirname = line[24:].strip()
-            if dirname in DIRECTION_NAMES:
-              self.dispersive_direction = DIRECTION_NAMES.index(dirname)
-            else:
-              self.load_errors.append("Unknown Dispersive Direction: '%s' (Using default)." % dirname)
-          elif line[2:25] == 'Energies and Exposures:':
-            self.energies = []
-            self.exposure_files = []
-            in_exposures = True
-          elif line[2:10] == 'Filters:':
-            self.filters = []
-            in_filters = True
-          elif line[2:18] == 'Xtal Boundaries:':
-            self.xtals = []
-            in_xtals = True
-          else:
-            pass
+          header.append(line[2:])
         elif header_only:
           break
         else:
@@ -478,6 +433,42 @@ class Calibration:
 
         pos = f.tell()
         line = f.readline()
+
+    # parse
+    parsed = parser.parse(header)
+    if parser.errors:
+      self.load_errors += parser.errors
+
+    self.dataset = parsed.get('Dataset', '')
+
+    # check dispersive direction
+    dirname = parsed.get('Dispersive Direction', DOWN)
+    if dirname in DIRECTION_NAMES:
+      self.dispersive_direction = DIRECTION_NAMES.index(dirname)
+    else:
+      self.load_errors.append("Unknown Dispersive Direction: '%s', using default." % dirname)
+
+    # split up energies and exposure files
+    key = 'Energies and Exposures'
+    if key in parsed.keys():
+      self.energies = [ee[0] for ee in parsed[key]]
+      self.exposure_files= [ee[1] for ee in parsed[key]]
+
+    # read in filters
+    for filter_line in parsed.get('Filters', []):
+      name,val = filter_line.split(':')
+      name = name.strip()
+      fltr = get_filter_by_name(name)
+      if fltr == None:
+        self.load_errors.append("Unknown Filter: '%s' (Ignoring)" % name)
+      else:
+        fltr.set_str(val.strip())
+        self.filters.append(fltr)
+
+    self.xtals = [
+        [[x1,y1],[x2,y2]]
+        for x1,y1,x2,y2 in parsed.get('Xtal Boundaries', [])
+        ]
 
     return len(self.load_errors) == 0
 

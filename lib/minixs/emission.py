@@ -10,6 +10,7 @@ from exposure import Exposure
 from misc import read_scan_info, gen_file_list
 from constants import *
 from filter import  get_filter_by_name
+from parser import Parser, STRING, INT, FLOAT, LIST
 
 from itertools import izip
 
@@ -307,54 +308,14 @@ class EmissionSpectrum:
     else:
       self.filename = filename
 
+    headers = []
     with open(filename, 'r') as f:
       pos = f.tell()
       line = f.readline()
 
-      in_exposures = False
-      in_filters = False
-
       while line:
         if line[0] == "#":
-          if in_exposures:
-            ef = line[2:].strip()
-            if ef:
-              self.exposure_files.append(ef)
-            else:
-              in_exposures = False
-
-          elif in_filters:
-            if line[2:].strip() == '':
-              in_filters = False
-            else:
-              name,val = line[2:].split(':')
-              name = name.strip()
-              fltr = get_filter_by_name(name)
-              if fltr == None:
-                self.load_errors.append("Unknown Filter: '%s' (Ignoring)" % name)
-              else:
-                fltr.set_str(val.strip())
-                self.filters.append(fltr)
-
-          elif line[2:10] == 'Dataset:':
-            self.dataset_name = line[11:].strip()
-          elif line[2:19] == 'Calibration File:':
-            self.calibration_file = line[20:].strip()
-          elif line[2:18] == 'Incident Energy:':
-            self.incident_energy = float(line[19:].strip())
-          elif line[2:5] == 'I0:':
-            self.I0 = float(line[6:].strip())
-          elif line[2:18] == 'Solid Angle Map:':
-            map_file = line[19:].strip()
-            self.load_solid_angle_map(map_file)
-          elif line[2:10] == 'Filters:':
-            self.filters = []
-            in_filters = True
-          elif line[2:12] == 'Exposures:':
-            self.exposure_files = []
-            in_exposures = True
-          else:
-            pass
+          headers.append(line[2:])
         elif header_only:
           break
         else:
@@ -367,6 +328,36 @@ class EmissionSpectrum:
 
         pos = f.tell()
         line = f.readline()
+
+    parser = Parser({
+      'Dataset': STRING,
+      'Calibration File': STRING,
+      'Incident Energy': FLOAT,
+      'I0': FLOAT,
+      'Solid Angle Map': STRING,
+      'Filters': (LIST, STRING),
+      'Exposures': (LIST, STRING)
+      })
+    parsed = parser.parse(headers)
+    self.load_errors += parser.errors
+
+    self.dataset_name = parsed.get('Dataset')
+    self.calibration_file = parsed.get('Calibration File')
+    self.incident_energy = parsed.get('Incident Energy', 0.0)
+    self.I0 = parsed.get('I0', 0.0)
+    self.load_solid_angle_map(parsed.get('Solid Angle Map'))
+    self.exposure_files = parsed.get('Exposures')
+
+    # load filters
+    for filter_line in parsed.get('Filters', []):
+      name,val = filter_line.split(':')
+      name = name.strip()
+      fltr = get_filter_by_name(name)
+      if fltr == None:
+        self.load_errors.append("Unknown Filter: '%s' (Ignoring)" % name)
+      else:
+        fltr.set_str(val.strip())
+        self.filters.append(fltr)
 
     return len(self.load_errors) == 0
 

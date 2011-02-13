@@ -22,6 +22,8 @@ class Parser(object):
 
     for line in lines:
       self.raw.append(line)
+      if line[0] == '#':
+        continue
       if self.state == STATE_LIST:
         # if indented, then part of list, otherwise 
         if line and line[0] in " \t":

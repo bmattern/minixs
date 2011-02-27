@@ -22,7 +22,7 @@ class Parser(object):
 
     for line in lines:
       self.raw.append(line)
-      if line[0] == '#':
+      if line.strip() == '' or line[0] == '#':
         continue
       if self.state == STATE_LIST:
         # if indented, then part of list, otherwise 
@@ -33,7 +33,7 @@ class Parser(object):
             self.errors.append("Error parsing line '%s': %s"% (line.strip(), e))
           continue
         else:
-          state = STATE_NONE
+          self.state = STATE_NONE
 
       bits = line.split(':', 1)
       key = bits[0].strip()

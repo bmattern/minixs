@@ -345,7 +345,9 @@ class EmissionSpectrum:
     self.calibration_file = parsed.get('Calibration File')
     self.incident_energy = parsed.get('Incident Energy', 0.0)
     self.I0 = parsed.get('I0', 0.0)
-    self.load_solid_angle_map(parsed.get('Solid Angle Map'))
+    solid_angle_map = parsed.get('Solid Angle Map')
+    if solid_angle_map:
+      self.load_solid_angle_map(solid_angle_map)
     self.exposure_files = parsed.get('Exposures')
 
     # load filters

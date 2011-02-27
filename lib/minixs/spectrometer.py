@@ -3,13 +3,18 @@ from glob import glob
 from parser import Parser, STRING, INT, FLOAT, LIST
 import numpy as np
 from numpy.linalg import norm
-import geom3 as g
-import bragg
+import geom
 
 HBARC = 1973.2696 # eV * angstroms
 HC    = 2 * np.pi * HBARC 
 
 DIR= os.path.join(os.path.dirname(__file__), 'data', 'spectrometers')
+
+lattice_constants = {
+    'Ge':  5.65735,
+    'Si':  5.4309,
+    'GaP': 5.4512,
+    }
 
 def clamp(v, min, max):
   if v < min:
@@ -67,33 +72,33 @@ class Spectrometer(object):
 
       aperture = info.get('Aperture')
       if len(aperture) == 4:
-        self.aperture = [g.Point(*p) for p in aperture]
+        self.aperture = [geom.Point(*p) for p in aperture]
       else:
         self.load_errors.append('Aperture contains %d points instead of 4.' % len(self.aperture))
 
       xtals = info.get('Xtals')
       if len(xtals) % 4 == 0:
-        self.xtals = [[g.Point(*p) for p in xtals[4*i:4*(i+1)]] for i in range(len(xtals)/4)]
-        self.xtal_planes = [g.Plane.FromPoints(*x[0:3]) for x in self.xtals]
+        self.xtals = [[geom.Point(*p) for p in xtals[4*i:4*(i+1)]] for i in range(len(xtals)/4)]
+        self.xtal_planes = [geom.Plane.FromPoints(*x[0:3]) for x in self.xtals]
       else:
         self.load_errors.append('Xtal list contains %d points, which is not a multiple of 4.' % len(xtals))
 
       sample = info.get('Sample')
       if len(sample) == 1:
-        self.sample = g.Point(*sample[0])
+        self.sample = geom.Point(*sample[0])
       else:
         self.load_errors.append('One sample point must be specified, not %d.' % len(sample))
 
       camera = info.get('Camera')
       if len(camera) == 4:
-        self.camera = [g.Point(*p) for p in camera]
-        self.camera_plane = g.Plane.FromPoints(*self.camera[0:3])
+        self.camera = [geom.Point(*p) for p in camera]
+        self.camera_plane = geom.Plane.FromPoints(*self.camera[0:3])
       else:
         self.load_errors.append('Camera contains %d points instead of 4.' % len(self.camera))
 
       beam = info.get('Beam')
       if len(beam) == 1:
-        self.beam = g.Point(*beam[0])
+        self.beam = geom.Point(*beam[0])
       else:
         self.load_errors.append('One beam direction must be specified, not %d.' % len(beam))
 
@@ -130,6 +135,7 @@ class Spectrometer(object):
     return (px,py)
 
   def camera_pixel_locations(self):
+    w,h = self.camera_shape
     coords = np.zeros((w*h,2))
     index = np.arange(w*h)
     coords[:,0] = index % w
@@ -144,7 +150,9 @@ class Spectrometer(object):
     w,h = self.camera_shape
     calib = np.zeros((h,w))
 
-    d0 = bragg.crystal_info['Germanium'][1]
+    d0 = lattice_constants[self.xtal_type]
+    # XXX this assumes the crystal is cubic (all that we currently use are)
+    #     it would be good to generalize this though
     d = d0 / norm(self.xtal_cut)
 
     images = []
@@ -154,7 +162,7 @@ class Spectrometer(object):
 
     # find image points and xtal projection boundaries
     for xtal_plane in self.xtal_planes:
-      image = g.reflect_through_plane(self.sample, xtal_plane)
+      image = geom.reflect_through_plane(self.sample, xtal_plane)
       images.append(image)
 
       # find xtal boundaries
@@ -164,8 +172,8 @@ class Spectrometer(object):
       y2 = 0
 
       for corner in self.aperture:
-        l = g.Line.FromPoints(image, corner)
-        p = g.intersect_line_with_plane(l, self.camera_plane)
+        l = geom.Line.FromPoints(image, corner)
+        p = geom.intersect_line_with_plane(l, self.camera_plane)
 
         x,y = self.point_to_camera_pixel(p)
         x = clamp(int(x+1e-5),0,w-1)

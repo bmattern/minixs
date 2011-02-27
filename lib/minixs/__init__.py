@@ -7,7 +7,8 @@ import calibrate, \
        filter, \
        misc, \
        rixs, \
-       scanfile
+       scanfile, \
+       spectrometer
 
 from constants import *
 
@@ -19,4 +20,5 @@ __all__ = [
   'misc',
   'rixs',
   'scanfile',
+  'spectrometer',
   ]

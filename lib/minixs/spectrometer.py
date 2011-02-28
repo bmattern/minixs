@@ -146,6 +146,14 @@ class Spectrometer(object):
               np.outer(coords[:,1]/float(h), self.camera[3] - self.camera[0]))
     return points.reshape((h,w,3))
 
+  def image_points(self):
+    images = []
+    for xtal_plane in self.xtal_planes:
+      image = geom.reflect_through_plane(self.sample, xtal_plane)
+      images.append(image)
+
+    return images
+
   def mockup_calibration_matrix(self):
     w,h = self.camera_shape
     calib = np.zeros((h,w))
@@ -204,3 +212,50 @@ class Spectrometer(object):
     self.images = images
     self.projection_bounds = bounds
     return calib
+
+  def solid_angle_map(self, bounds):
+    """
+    Calculate the solid angle subtended by each pixel in sr
+
+    Parameters:
+      bounds - list of (x1,y1,x2,y2) bounding rectangles
+
+    Each rectangle in the list of bounds should correspond to the
+    projection from a single analyzer crystal through the exit aperture.
+
+    The center of the bounds rect is used to determine which xtal it
+    corresponds to. So, this could be incorrect if a small sliver at the
+    edge of a crystal projection is provided.
+    """
+    w,h = self.camera_shape
+    domega = np.zeros((h,w))
+
+    # calculate pixel size
+    pw = norm(self.camera[1] - self.camera[0]) / w
+    ph = norm(self.camera[1] - self.camera[0]) / h
+
+    images = self.image_points()
+
+    pixels = self.camera_pixel_locations()
+    num_xtals = len(self.xtal_planes)
+    dh = h / float(num_xtals)
+
+    for x1,y1,x2,y2 in bounds:
+      xc = (x1+x2)/2.0
+      yc = (y1+y2)/2.0
+
+      # determine which crystal this corresponds to
+      i = int(yc) * num_xtals / h
+      # left to right on camera is right to left in real space
+      #i = num_xtals - i - 1
+
+      # projection shape size
+      sh = y2 - y1
+      sw = x2 - x1
+
+      dn = pixels[y1:y2,x1:x2].reshape((sw*sh,3)) - images[i]
+      length = np.sqrt((dn**2).sum(1))
+      cos_theta = np.abs((dn*self.camera_plane.n).sum(1)) / length
+      domega[y1:y2,x1:x2] = (pw*ph*cos_theta / length**2).reshape((sh,sw))
+
+    return domega

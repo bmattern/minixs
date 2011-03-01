@@ -28,10 +28,32 @@ def clamp(v, min, max):
 def tag_to_path(tag):
   return os.path.join(DIR, tag)
 
-def list_spectrometers():
-  files = glob(name_to_path('*'))
+def list_spectrometers(include_names=False):
+  files = glob(tag_to_path('*'))
   files.sort()
-  return [ os.path.basename(f) for f in files]
+  if include_names:
+    s = Spectrometer()
+    tags = []
+    names = []
+    for f in files:
+      try:
+        s.load(f)
+      except:
+        print ("Invalid spectrometer file: %s" % f)
+        continue
+      tags.append(os.path.basename(f))
+
+      name = s.name
+      if not s.name:
+        name = '%s %s' % (s.element, s.line)
+      names.append(name)
+
+    print "tags: ", tags
+    print "names: ", names
+    return tags, names
+
+  else:
+    return [ os.path.basename(f) for f in files]
 
 class Spectrometer(object):
   def __init__(self, tag=None):
@@ -53,6 +75,7 @@ class Spectrometer(object):
         'Element': STRING,
         'Line': STRING,
         'Xtal': (STRING, INT, INT, INT),
+        'Num Xtals': INT,
         'Energy Range': (FLOAT, FLOAT),
         'Exit Aperture': point_list,
         'Entrance Aperture': point_list,
@@ -67,6 +90,7 @@ class Spectrometer(object):
       
       self.name = info.get('Name')
       self.element = info.get('Element')
+      self.line = info.get('Line')
       self.energy_range = info.get('Energy Range')
 
       xtal = info.get('Xtal')
@@ -97,31 +121,53 @@ class Spectrometer(object):
       else:
         self.load_errors.append('Missing Entrance Apertures')
 
+
+      self.num_xtals = 0
       xtals = info.get('Xtals')
-      if len(xtals) % 4 == 0:
-        self.xtals = [[geom.Point(*p) for p in xtals[4*i:4*(i+1)]] for i in range(len(xtals)/4)]
-        self.xtal_planes = [geom.Plane.FromPoints(*x[0:3]) for x in self.xtals]
+      if xtals:
+        if len(xtals) % 4 == 0:
+          self.xtals = [[geom.Point(*p) for p in xtals[4*i:4*(i+1)]] for i in range(len(xtals)/4)]
+          self.xtal_planes = [geom.Plane.FromPoints(*x[0:3]) for x in self.xtals]
+          self.num_xtals = len(self.xtals)
+        else:
+          self.load_errors.append('Xtal list contains %d points, which is not a multiple of 4.' % len(xtals))
       else:
-        self.load_errors.append('Xtal list contains %d points, which is not a multiple of 4.' % len(xtals))
+        self.load_errors.append('Missing analyzer crystal geometry.')
+
+      num_xtals = info.get('Num Xtals')
+      if num_xtals:
+        if self.num_xtals > 0 and num_xtals != self.num_xtals:
+          self.load_errors.append('Geometry specified for %d xtals, but \'Num Xtals\' key also included with value: %d.' % (self.num_xtals, num_xtals))
+        else:
+          self.num_xtals = num_xtals
 
       sample = info.get('Sample')
-      if len(sample) == 1:
-        self.sample = geom.Point(*sample[0])
+      if sample:
+        if len(sample) == 1:
+          self.sample = geom.Point(*sample[0])
+        else:
+          self.load_errors.append('One sample point must be specified, not %d.' % len(sample))
       else:
-        self.load_errors.append('One sample point must be specified, not %d.' % len(sample))
+        self.load_errors.append('Missing sample point.')
 
       camera = info.get('Camera')
-      if len(camera) == 4:
-        self.camera = [geom.Point(*p) for p in camera]
-        self.camera_plane = geom.Plane.FromPoints(*self.camera[0:3])
+      if camera:
+        if len(camera) == 4:
+          self.camera = [geom.Point(*p) for p in camera]
+          self.camera_plane = geom.Plane.FromPoints(*self.camera[0:3])
+        else:
+          self.load_errors.append('Camera contains %d points instead of 4.' % len(self.camera))
       else:
-        self.load_errors.append('Camera contains %d points instead of 4.' % len(self.camera))
+        self.load_errors.append('Missing camera geometry')
 
       beam = info.get('Beam')
-      if len(beam) == 1:
-        self.beam = geom.Point(*beam[0])
+      if beam:
+        if len(beam) == 1:
+          self.beam = geom.Point(*beam[0])
+        else:
+          self.load_errors.append('One beam direction must be specified, not %d.' % len(beam))
       else:
-        self.load_errors.append('One beam direction must be specified, not %d.' % len(beam))
+        self.load_errors.append('Beam direction not specified')
 
   def camera_pixel_to_point(self, pixel):
     # returns the coordinates of the top left corner of the request pixel
@@ -176,6 +222,11 @@ class Spectrometer(object):
     return images
 
   def calculate_active_regions(self):
+    """
+    Find projection of sample through entrance apertures onto xtal planes.
+
+    Currently requires number of entrance apertures to be same as number of xtals. 
+    """
     if len(self.entrance_aperture) != len(self.xtals):
       raise Exception("Number of entrance apertures and crystals must be same")
 
@@ -186,6 +237,9 @@ class Spectrometer(object):
         p = geom.intersect_line_with_plane(l, xtal_plane)
 
   def project_point_through_rect_onto_camera(self, point, rect):
+    """
+    Find pixels covered by projection of a point through a rectangle
+    """
     h, w = self.camera_shape
     x1 = w
     x2 = 0
@@ -213,6 +267,10 @@ class Spectrometer(object):
     return [x1, y1, x2, y2]
 
   def mockup_calibration_matrix(self):
+    """
+    Create a theoretical calibration matrix for the designed spectrometer
+    geometry.
+    """
     h,w = self.camera_shape
     calib = np.zeros((h,w))
 

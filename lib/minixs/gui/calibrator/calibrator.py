@@ -6,8 +6,8 @@ from calibrator_controller import CalibratorController
 from calibrator_view import CalibratorView
 from calibrator_const import *
 
-import minixs.filter as filter
-import filter_view
+from minixs import filter
+from minixs.gui import filter_view
 
 from glob import glob
 

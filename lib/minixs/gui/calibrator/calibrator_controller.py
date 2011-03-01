@@ -1,3 +1,9 @@
+import os, sys
+import numpy            as np
+import wx
+from matplotlib         import cm, colors
+from itertools          import izip
+
 import minixs           as mx
 import minixs.filetype  as filetype
 from   minixs.calibrate import Calibration
@@ -5,22 +11,18 @@ from   minixs.exposure  import Exposure
 from   minixs.filter    import get_filter_by_name
 from   minixs.misc      import read_scan_info, find_xtal_boundaries
 
-import numpy            as np
-import os, sys
-import util
-import wx
-
-from file_dialog        import FileDialog
-from image_view         import EVT_COORDS
-from image_tools        import RangeTool, Crosshair, \
-                               EVT_RANGE_CHANGED, EVT_RANGE_ACTION_CHANGED
-from filter_view        import EVT_FILTER_CHANGED, filter_ids
-from matplotlib         import cm, colors
-from itertools          import izip
+from minixs.gui import util
+from minixs.gui.file_dialog import FileDialog
+from minixs.gui.image_view  import EVT_COORDS
+from minixs.gui.image_tools import RangeTool, Crosshair, \
+                                   EVT_RANGE_CHANGED, \
+                                   EVT_RANGE_ACTION_CHANGED
+from minixs.gui.filter_view import EVT_FILTER_CHANGED, filter_ids
+from minixs.gui.wildcards import *
 
 from calibrator_view    import LoadEnergiesDialog
 from calibrator_const   import *
-from wildcards          import *
+
 
 class CalibratorController(object):
   """

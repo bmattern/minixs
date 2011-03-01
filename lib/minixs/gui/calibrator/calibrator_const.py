@@ -1,6 +1,6 @@
 import wx
 import minixs.filter as filter
-import filter_view
+from minixs.gui import filter_view
 
 ID_MAIN_FRAME       = wx.NewId()
 ID_SPECTROMETER     = wx.NewId()

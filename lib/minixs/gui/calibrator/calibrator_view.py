@@ -1,16 +1,15 @@
 import wx
-from frame import MenuFrame
-from image_view import ImageView
+from minixs.gui.frame import MenuFrame
+from minixs.gui.image_view import ImageView
+from minixs.gui import util
 
 from calibrator_const import *
 from matplotlib import cm
 
 from minixs import DIRECTION_NAMES
 
-import util
-import minixs.filter as filter
-import minixs.spectrometer as spectrometer
-import filter_view
+from minixs import filter, spectrometer
+from minixs.gui import filter_view
 
 HPAD = 10
 VPAD = 5

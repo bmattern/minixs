@@ -414,7 +414,8 @@ class Calibration:
     header = []
     with open(filename, 'r') as f:
       line = f.readline()
-      if line.strip() != '# minIXS calibration matrix':
+      #XXX this should be done elsewhere...
+      if line.strip().lower() != '# minixs calibration matrix':
         raise InvalidFileError()
 
       pos = f.tell()

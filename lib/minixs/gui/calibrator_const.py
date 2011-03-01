@@ -3,6 +3,7 @@ import minixs.filter as filter
 import filter_view
 
 ID_MAIN_FRAME       = wx.NewId()
+ID_SPECTROMETER     = wx.NewId()
 ID_DATASET_NAME     = wx.NewId()
 ID_EXPOSURE_LIST    = wx.NewId()
 ID_READ_ENERGIES    = wx.NewId()

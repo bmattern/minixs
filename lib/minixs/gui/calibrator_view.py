@@ -9,6 +9,7 @@ from minixs import DIRECTION_NAMES
 
 import util
 import minixs.filter as filter
+import minixs.spectrometer as spectrometer
 import filter_view
 
 HPAD = 10
@@ -337,6 +338,19 @@ class CalibratorPanel(wx.Panel):
     wx.Panel.__init__(self, *args, **kwargs)
 
     vbox = wx.BoxSizer(wx.VERTICAL)
+
+    # spectrometer
+    """
+    hbox = wx.BoxSizer(wx.HORIZONTAL)
+    label = wx.StaticText(self, wx.ID_ANY, "Spectrometer: ")
+    self.spectrometer_tags, spectrometer_names = spectrometer.list_spectrometers(include_names=True)
+    spectrometer_names.append('Other')
+    choice = wx.Choice(self, ID_SPECTROMETER, choices=spectrometer_names)
+    hbox.Add(label, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, HPAD)
+    hbox.Add(choice, 1, wx.RIGHT, HPAD)
+    vbox.Add(hbox, 0, wx.EXPAND | wx.BOTTOM, VPAD)
+    self.spectrometer_choice = choice
+    """
 
     # dataset name box
     hbox = wx.BoxSizer(wx.HORIZONTAL)

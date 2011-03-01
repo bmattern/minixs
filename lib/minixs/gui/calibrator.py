@@ -25,7 +25,7 @@ class CalibratorApp(wx.App):
     self.load_filter_plugins()
 
     model = CalibratorModel()
-    view = CalibratorView(None, ID_MAIN_FRAME, "minIXS Calibrator")
+    view = CalibratorView(None, ID_MAIN_FRAME, "miniXS Calibrator")
     controller = CalibratorController(view, model)
 
     view.Show()

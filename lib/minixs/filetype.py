@@ -19,7 +19,7 @@ def determine_filetype(path):
 
     s = line[2:]
 
-    if not s.startswith('minIXS'):
+    if not s.lower.startswith('minixs'):
       return 0
 
     t = s[7:].strip()

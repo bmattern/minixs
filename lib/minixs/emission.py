@@ -267,7 +267,7 @@ class EmissionSpectrum:
       file_opened = True
 
     try:
-      f.write("# minIXS XES Spectrum\n#\n")
+      f.write("# miniXS XES Spectrum\n#\n")
       f.write("# Dataset: %s\n" % self.dataset_name)
       f.write("# Calibration File: %s\n" % self.calibration_file)
       f.write("# Incident Energy: %.2f\n" % self.incident_energy)

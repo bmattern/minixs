@@ -21,7 +21,7 @@ class RIXS:
       self.filename = filename
 
     with open(filename, 'w') as f:
-      f.write("# minIXS RIXS Spectrum\n#\n")
+      f.write("# miniXS RIXS Spectrum\n#\n")
       f.write("# Dataset: %s\n" % self.dataset_name)
       f.write("# Calibration File: %s\n" % self.calibration_file)
       f.write("# Incident Energies / I0s / Exposures:\n")

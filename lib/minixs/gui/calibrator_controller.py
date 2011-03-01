@@ -65,8 +65,8 @@ class CalibratorController(object):
         }
 
     a = wx.AboutDialogInfo()
-    a.SetName("minIXS Calibrator")
-    a.SetDescription("Mini Inelastic X-ray Spectrometer Calibrator")
+    a.SetName("miniXS Calibrator")
+    a.SetDescription("Mini X-ray Spectrometer Calibrator")
     a.SetVersion("0.0.1")
     a.SetCopyright("(c) Seidler Group 2010")
     a.AddDeveloper("Brian Mattern (bmattern@uw.edu)")
@@ -316,7 +316,7 @@ class CalibratorController(object):
         return
 
     with open(filename, 'w') as f:
-      f.write("# minIXS crystal boundaries\n")
+      f.write("# miniXS crystal boundaries\n")
       f.write("# x1\ty1\tx2\ty2\n")
       for (x1,y1),(x2,y2) in self.model.xtals:
         f.write("%d\t%d\t%d\t%d\n" % (x1,y1,x2,y2))

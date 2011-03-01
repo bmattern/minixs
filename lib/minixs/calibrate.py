@@ -353,7 +353,7 @@ class Calibration:
       self.filename = filename
 
     with open(filename, 'w') as f:
-      f.write("# minIXS calibration matrix\n#\n")
+      f.write("# miniXS calibration matrix\n#\n")
       f.write("# Dataset: %s\n" % self.dataset_name)
       f.write("# Dispersive Direction: %s\n" % DIRECTION_NAMES[self.dispersive_direction])
       f.write("#\n")

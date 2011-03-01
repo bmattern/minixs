@@ -22,7 +22,8 @@ class Parser(object):
 
     for line in lines:
       self.raw.append(line)
-      if line.strip() == '' or line[0] == '#':
+      stripped = line.strip()
+      if stripped == '' or stripped[0] == '#':
         continue
       if self.state == STATE_LIST:
         # if indented, then part of list, otherwise 

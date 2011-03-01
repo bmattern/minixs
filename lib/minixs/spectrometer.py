@@ -25,8 +25,8 @@ def clamp(v, min, max):
   else:
     return v
 
-def name_to_path(name):
-  return os.path.join(DIR, name)
+def tag_to_path(tag):
+  return os.path.join(DIR, tag)
 
 def list_spectrometers():
   files = glob(name_to_path('*'))
@@ -34,11 +34,14 @@ def list_spectrometers():
   return [ os.path.basename(f) for f in files]
 
 class Spectrometer(object):
-  def __init__(self, name=None):
-    if name:
-      self.load(name_to_path(name))
+  def __init__(self, tag=None):
+    if tag:
+      self.load_by_tag(tag)
 
     self.camera_shape = (195, 487)
+
+  def load_by_tag(self, tag):
+    self.load(tag_to_path(tag))
 
   def load(self, filename):
     self.load_errors = []

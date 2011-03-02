@@ -1,7 +1,20 @@
 import wx
 import wx.lib.newevent
+from wx.lib.scrolledpanel import ScrolledPanel
 
 EventCoords, EVT_COORDS = wx.lib.newevent.NewCommandEvent()
+
+class ScrolledImageView(ScrolledPanel):
+  def __init__(self, *args, **kwargs):
+    ScrolledPanel.__init__(self, args[0], wx.ID_ANY, size=kwargs['size'])
+
+    box = wx.BoxSizer()
+    image_view = ImageView(self, *args[1:], **kwargs)
+    self.image_view = image_view
+    self.SetSizer(box)
+
+    self.SetAutoLayout(True)
+    self.SetupScrolling()
 
 class ImageView(wx.Panel):
   def __init__(self, *args, **kwargs):

@@ -1,6 +1,6 @@
 import wx
 from minixs.gui.frame import MenuFrame
-from minixs.gui.image_view import ImageView
+from minixs.gui.image_view import ImageView, ScrolledImageView
 from minixs.gui import util
 
 from calibrator_const import *
@@ -194,9 +194,11 @@ class ExposurePanel(wx.Panel):
     vbox.Add(label, 0, wx.EXPAND | wx.BOTTOM, VPAD)
     self.label = label
 
+    #panel = ScrolledImageView(self, ID_IMAGE_PANEL, size=(487,195))
+    #self.image_view = panel.image_view
     panel = ImageView(self, ID_IMAGE_PANEL, size=(487,195))
-    vbox.Add(panel, 0, wx.EXPAND | wx.BOTTOM, VPAD)
     self.image_view = panel
+    vbox.Add(panel, 0, wx.EXPAND | wx.BOTTOM, VPAD)
 
     slider = wx.Slider(self, ID_EXPOSURE_SLIDER, 0,0,1)
     slider.Enable(False)

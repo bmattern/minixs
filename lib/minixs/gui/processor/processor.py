@@ -3,11 +3,10 @@ import minixs as mx
 import numpy as np
 from minixs.emission import EmissionSpectrum
 import wx
-import wxmpl
 
+from minixs.gui import wxmpl
 from minixs.calibrate import Calibration
-
-from wildcards import *
+from minixs.gui.wildcards import *
 
 HPAD = 10
 VPAD = 5

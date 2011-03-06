@@ -521,7 +521,7 @@ class Calibration:
     """
     return (self.calibration_matrix[np.where(self.calibration_matrix > 0)].min(), self.calibration_matrix.max())
 
-  def diagnose(self, return_spectra=False):
+  def diagnose(self, return_spectra=False, filters=None):
     """
     Process all calibration exposures and fit to gaussians, returning parameters of fit
 
@@ -553,6 +553,7 @@ class Calibration:
         print i
       energy = self.energies[i]
       exposure = Exposure(self.exposure_files[i])
+      exposure.apply_filters(energy, filters)
 
       s = process_spectrum(self.calibration_matrix, exposure, emission_energies, 1, self.dispersive_direction, self.xtals)
       x = s[:,0]

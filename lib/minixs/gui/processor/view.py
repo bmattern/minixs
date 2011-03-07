@@ -25,11 +25,28 @@ ID_EXPOSURE_VIEW = wx.NewId()
 ID_FILTER_ADD = wx.NewId()
 ID_FILTER_REMOVE= wx.NewId()
 
-ID_UPDATE_GRAPH = wx.NewId()
+ID_VIEW_MODE = wx.NewId()
+
+ID_EXPOSURE_SLIDER = wx.NewId()
+
 
 class Panel(wx.Panel):
   def __init__(self, *args, **kwargs):
     wx.Panel.__init__(self, *args, **kwargs)
+
+class ViewModePanel(wx.Panel):
+  def __init__(self, *args, **kwargs):
+    wx.Panel.__init__(self, *args, **kwargs)
+
+    vbox = wx.BoxSizer(wx.VERTICAL)
+
+    choices = ['Combined Exposures', 'Individual Exposures', 'Calibration Matrix', 'Processed Spectrum']
+    radio = wx.RadioBox(self, wx.ID_ANY, 'View', choices=choices,
+        majorDimension=1)
+    vbox.Add(radio, 0, wx.EXPAND | wx.BOTTOM, VPAD)
+
+    self.SetSizerAndFit(vbox)
+
 
 class FilterPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
@@ -111,8 +128,12 @@ class ExposureView(wx.Panel):
 
     vbox = wx.BoxSizer(wx.VERTICAL)
 
-    self.image_view = ImageView(self, ID_EXPOSURE_VIEW, size=(487,195))
+    self.image_view = ImageView(self, ID_EXPOSURE_VIEW, size=(487,195), style=wx.BORDER_SUNKEN)
     vbox.Add(self.image_view, wx.EXPAND)
+
+    slider = wx.Slider(self, ID_EXPOSURE_SLIDER, 0,0,1)
+    slider.Enable(False)
+    vbox.Add(slider, 0, wx.EXPAND)
 
     self.SetSizerAndFit(vbox)
 
@@ -211,7 +232,7 @@ class ProcessorPanel(wx.Panel):
     exposure_selector = ExposureSelectorPanel(self, wx.ID_ANY)
     hbox.Add(exposure_selector, 2, wx.EXPAND | wx.RIGHT, HPAD)
 
-    vbox.Add(hbox, 0, wx.EXPAND | wx.BOTTOM, VPAD)
+    vbox.Add(hbox, 1, wx.EXPAND | wx.BOTTOM, VPAD)
 
     line = wx.StaticLine(self, wx.ID_ANY, style=wx.LI_HORIZONTAL)
     vbox.Add(line, 0, wx.EXPAND | wx.BOTTOM, VPAD)
@@ -224,6 +245,9 @@ class ProcessorPanel(wx.Panel):
 
     exposure_view = ExposureView(self, wx.ID_ANY)
     hbox.Add(exposure_view, 0, wx.EXPAND | wx.RIGHT, HPAD)
+
+    mode_panel = ViewModePanel(self, ID_VIEW_MODE)
+    hbox.Add(mode_panel, 0, wx.EXPAND | wx.RIGHT, HPAD)
 
     vbox.Add(hbox, 0, wx.EXPAND | wx.BOTTOM, VPAD)
 

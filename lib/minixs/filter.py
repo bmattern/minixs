@@ -39,9 +39,12 @@ class Filter(object):
   default_val = None
   default_enabled = False
 
-  def __init__(self):
+  def __init__(self, val=None):
     self.enabled = True
-    self.val = self.default_val
+    if val is None:
+      self.val = self.default_val
+    else:
+      self.set_val(val)
 
   def filter(self, pixels, energy):
     """

@@ -46,7 +46,23 @@ class Filter(object):
     else:
       self.set_val(val)
 
+    self.region = None
+
   def filter(self, pixels, energy):
+    """
+    Apply this filter to the set regions of an array of pixels.
+    This calls `filter_region  for the portion of `pixels` that
+    was set using `set_region`.
+
+    Subclass should overrid the `filter_region` method.
+    """
+    if self.region is None:
+      self.filter_region(pixels, energy)
+    else:
+      x1,y1,x2,y2 = self.region
+      self.filter_region(pixels[y1:y2,x1:x2], energy)
+
+  def filter_region(self, pixels, energy):
     """
     Apply this filter to an array of pixels
 
@@ -82,6 +98,15 @@ class Filter(object):
     Get filter's value
     """
     return self.val
+
+  def set_region(self, region):
+    """
+    Set a rectangular region to limit this filter to
+    """
+    if not self.region_allowed:
+      raise Exception("The '%s' filter does not allow setting a region" % self.name)
+
+    self.region = region
 
   @classmethod
   def str_to_val(cls,valstr):
@@ -187,8 +212,9 @@ class MinFilter(IntFilter):
   view_name = "IntFilterView"
   default_val = 0
   default_enabled = True
+  region_allowed = False
 
-  def filter(self, pixels, energy):
+  def filter_region(self, pixels, energy):
     pass
 
 class MaxFilter(IntFilter):
@@ -199,8 +225,9 @@ class MaxFilter(IntFilter):
   view_name = "IntFilterView"
   default_val = 1000
   default_enabled = False
+  region_allowed = False
 
-  def filter(self, pixels, energy):
+  def filter_region(self, pixels, energy):
     pass
 
 class LowFilter(IntFilter):
@@ -210,8 +237,9 @@ class LowFilter(IntFilter):
   name = "Low Cutoff"
   default_val = 5
   default_enabled = True
+  region_allowed = True
 
-  def filter(self, pixels, energy):
+  def filter_region(self, pixels, energy):
     if self.val is None:
       return
     pixels[np.where(pixels < self.val)] = 0
@@ -223,8 +251,9 @@ class HighFilter(IntFilter):
   name = "High Cutoff"
   default_val = 1000
   default_enabled = False
+  region_allowed = True
 
-  def filter(self, pixels, energy):
+  def filter_region(self, pixels, energy):
     if self.val is None:
       return
     pixels[np.where(pixels > self.val)] = 0
@@ -240,8 +269,9 @@ class NeighborFilter(IntFilter):
   name = "Neighbors"
   default_val = 2
   default_enabled = True
+  region_allowed = True
 
-  def filter(self, pixels, energy):
+  def filter_region(self, pixels, energy):
     from itertools import product
     nbors = (-1,0,1)
     mask = np.sum([
@@ -267,6 +297,7 @@ class BadPixelFilter(Filter):
 
   default_val = (0,[])
   default_enabled = False
+  region_allowed = False
 
   MODE_ZERO_OUT = 0
   MODE_INTERP_H = 1
@@ -318,6 +349,7 @@ class EmissionFilter(ChoiceFilter):
 
   default_val = TYPE_FE_KBETA
   default_enabled = False
+  region_allowed = False
 
   def filter(self, pixels, energy):
     if self.val == self.TYPE_FE_KBETA:

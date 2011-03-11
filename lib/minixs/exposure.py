@@ -41,6 +41,8 @@ class Exposure:
     """
     self.filenames = filenames
     self.pixels = None
+    if filenames:
+      self.loaded = True
     for f in filenames:
       im = Image.open(f)
       p = np.asarray(im)

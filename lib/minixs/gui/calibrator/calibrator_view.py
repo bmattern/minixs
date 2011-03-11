@@ -89,7 +89,6 @@ class LoadEnergiesDialog(wx.Dialog):
   def get_info(self):
     return self.panel.get_info()
 
-
 class FilterPanel(wx.Panel):
 
   def __init__(self, *args, **kwargs):

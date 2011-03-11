@@ -1,6 +1,8 @@
 import wx
-import view
-from minixs import filter
+import view, controller
+from const import *
+
+from minixs import filter, emission
 from minixs.gui import filter_view
 
 class ProcessorApp(wx.App):
@@ -8,7 +10,9 @@ class ProcessorApp(wx.App):
     wx.App.__init__(self, *args, **kwargs)
     self.SetAppName('minixs')
 
-    v = view.ProcessorView(None, wx.ID_ANY, 'miniXS XES Processor')
+    v = view.ProcessorView(None, ID_MAIN_FRAME, 'miniXS XES Processor')
+    m = emission.EmissionSpectrum()
+    c = controller.ProcessorController(v, m)
     
     v.Show()
 

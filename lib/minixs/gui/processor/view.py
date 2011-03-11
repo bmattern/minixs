@@ -1,38 +1,111 @@
 import wx
+
 from wx.lib.scrolledpanel import ScrolledPanel
 from minixs import filter
+from minixs import spectrometer
 from minixs.gui.frame import MenuFrame
 from minixs.gui.image_view import ImageView
 from minixs.gui import filter_view
 
+from const import *
+
 HPAD = 10
 VPAD = 5
-
-ID_DATASET = wx.NewId()
-ID_ENERGY = wx.NewId()
-ID_NORM = wx.NewId()
-
-ID_CALIB = wx.NewId()
-ID_CALIB_LOAD = wx.NewId()
-ID_CALIB_VIEW = wx.NewId()
-
-ID_EXPOSURE_LIST = wx.NewId()
-ID_EXPOSURE_ADD = wx.NewId()
-ID_EXPOSURE_DEL = wx.NewId()
-
-ID_EXPOSURE_VIEW = wx.NewId()
-
-ID_FILTER_ADD = wx.NewId()
-ID_FILTER_REMOVE= wx.NewId()
-
-ID_VIEW_MODE = wx.NewId()
-
-ID_EXPOSURE_SLIDER = wx.NewId()
 
 
 class Panel(wx.Panel):
   def __init__(self, *args, **kwargs):
     wx.Panel.__init__(self, *args, **kwargs)
+
+class ToolsPanel(wx.Panel):
+  def __init__(self, *args, **kwargs):
+    wx.Panel.__init__(self, *args, **kwargs)
+
+    vbox = wx.BoxSizer(wx.VERTICAL)
+
+    self.pages = []
+    page = ToolsPanelCombined(self, wx.ID_ANY)
+    self.pages.append(page)
+    self.combined_min = page.min
+    self.combined_max = page.max
+    self.selected_page = page
+    vbox.Add(page, 1, wx.EXPAND)
+
+    page = ToolsPanelIndividual(self, wx.ID_ANY)
+    self.pages.append(page)
+    self.individual_min = page.min
+    self.individual_max = page.max
+    self.individual_exp = page.exp
+    page.Hide()
+    vbox.Add(page, 1, wx.EXPAND)
+
+    self.vbox = vbox
+    self.SetSizerAndFit(vbox)
+
+  def SetMode(self, mode):
+    self.mode = mode
+
+    if self.selected_page:
+      self.selected_page.Hide()
+
+    if mode < len(self.pages):
+      page = self.pages[mode]
+      page.Show()
+    else:
+      page = None
+
+    self.selected_page = page
+
+    self.Layout()
+    self.Fit()
+    self.SetMinSize(self.GetSize())
+
+class ToolsPanelCombined(wx.Panel):
+  def __init__(self, *args, **kwargs):
+    wx.Panel.__init__(self, *args, **kwargs)
+
+    grid = wx.FlexGridSizer(cols=2, vgap=VPAD, hgap=HPAD)
+
+    label = wx.StaticText(self, wx.ID_ANY, 'Min')
+    spin = wx.SpinCtrl(self, ID_COMBINED_MIN)
+    grid.Add(label)
+    grid.Add(spin)
+    self.min = spin
+
+    label = wx.StaticText(self, wx.ID_ANY, 'Max')
+    spin = wx.SpinCtrl(self, ID_COMBINED_MAX)
+    grid.Add(label)
+    grid.Add(spin)
+    self.max = spin
+
+    self.SetSizerAndFit(grid)
+
+class ToolsPanelIndividual(wx.Panel):
+  def __init__(self, *args, **kwargs):
+    wx.Panel.__init__(self, *args, **kwargs)
+
+    grid = wx.FlexGridSizer(cols=2, vgap=VPAD, hgap=HPAD)
+
+    label = wx.StaticText(self, wx.ID_ANY, 'Min')
+    spin = wx.SpinCtrl(self, ID_INDIVIDUAL_MIN)
+    grid.Add(label)
+    grid.Add(spin)
+    self.min = spin
+
+    label = wx.StaticText(self, wx.ID_ANY, 'Max')
+    spin = wx.SpinCtrl(self, ID_INDIVIDUAL_MAX)
+    grid.Add(label)
+    grid.Add(spin)
+    self.max = spin
+
+    label = wx.StaticText(self, wx.ID_ANY, 'Exp #')
+    spin = wx.SpinCtrl(self, ID_INDIVIDUAL_EXP)
+    spin.SetRange(0,0)
+    grid.Add(label)
+    grid.Add(spin)
+    self.exp = spin
+
+    self.SetSizerAndFit(grid)
 
 class ViewModePanel(wx.Panel):
   def __init__(self, *args, **kwargs):
@@ -41,12 +114,16 @@ class ViewModePanel(wx.Panel):
     vbox = wx.BoxSizer(wx.VERTICAL)
 
     choices = ['Combined Exposures', 'Individual Exposures', 'Calibration Matrix', 'Processed Spectrum']
-    radio = wx.RadioBox(self, wx.ID_ANY, 'View', choices=choices,
+    radio = wx.RadioBox(self, ID_VIEW_MODE, 'View', choices=choices,
         majorDimension=1)
     vbox.Add(radio, 0, wx.EXPAND | wx.BOTTOM, VPAD)
+    self.view_mode = radio
+
+    tools = ToolsPanel(self, wx.ID_ANY)
+    vbox.Add(tools, 0, wx.EXPAND | wx.BOTTOM, VPAD)
+    self.tools = tools
 
     self.SetSizerAndFit(vbox)
-
 
 class FilterPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
@@ -87,14 +164,15 @@ class FilterPanel(wx.Panel):
     if evt.Id == ID_FILTER_ADD:
       i = self.filter_choice.GetSelection()
       self.filter_list.AddFilter(i % len(filter_view.REGISTRY))
-    else:
+    elif evt.Id == ID_FILTER_REMOVE:
       self.filter_list.RemoveFilter(0)
 
 class FilterList(ScrolledPanel):
   def __init__(self, *args, **kwargs):
     ScrolledPanel.__init__(self, *args, **kwargs)
 
-    self.grid = wx.FlexGridSizer(cols=2, vgap=VPAD, hgap=HPAD)
+    self.grid = wx.FlexGridSizer(cols=5, vgap=VPAD, hgap=HPAD)
+    self.grid.AddGrowableCol(2, 1)
     self.SetSizer(self.grid)
 
     self.filter_views = []
@@ -107,18 +185,25 @@ class FilterList(ScrolledPanel):
     label = wx.StaticText(self, wx.ID_ANY, fltr.name)
     view = view_class(self, id, filter=fltr)
 
-    self.filter_views.append((label,view))
+    b = wx.Button(self, wx.ID_ANY, 'X', size=(24, 24))
+    sb = wx.SpinButton(self, wx.ID_ANY, style=wx.SP_VERTICAL)
+    rb = wx.Button(self, wx.ID_ANY, 'R', size=(24, 24))
+
+    self.grid.Add(sb, wx.ALIGN_CENTER_VERTICAL)
     self.grid.Add(label, wx.ALIGN_CENTER_VERTICAL)
     self.grid.Add(view, wx.ALIGN_CENTER_VERTICAL)
+    self.grid.Add(rb, wx.ALIGN_CENTER_VERTICAL)
+    self.grid.Add(b, wx.ALIGN_CENTER_VERTICAL)
+
+    self.filter_views.append((b,rb,sb,label,view))
+
     self.SetupScrolling(False, True)
 
   def RemoveFilter(self, index):
-    label,view = self.filter_views[index]
+    for w in self.filter_views[index]:
+      self.grid.Remove(w)
+      w.Destroy()
     del(self.filter_views[index])
-    self.grid.Remove(label)
-    self.grid.Remove(view)
-    label.Destroy()
-    view.Destroy()
     self.SetupScrolling(False, True)
 
 
@@ -131,12 +216,7 @@ class ExposureView(wx.Panel):
     self.image_view = ImageView(self, ID_EXPOSURE_VIEW, size=(487,195), style=wx.BORDER_SUNKEN)
     vbox.Add(self.image_view, wx.EXPAND)
 
-    slider = wx.Slider(self, ID_EXPOSURE_SLIDER, 0,0,1)
-    slider.Enable(False)
-    vbox.Add(slider, 0, wx.EXPAND)
-
     self.SetSizerAndFit(vbox)
-
 
 class ExposureSelectorPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
@@ -148,7 +228,7 @@ class ExposureSelectorPanel(wx.Panel):
     label = wx.StaticText(self, wx.ID_ANY, "Exposures:")
     vbox.Add(label, 0, wx.BOTTOM, VPAD)
 
-    listbox = wx.ListBox(self, ID_EXPOSURE_LIST)
+    listbox = wx.ListBox(self, ID_EXPOSURE_LIST, style=wx.LB_EXTENDED)
     vbox.Add(listbox, 1, wx.EXPAND | wx.BOTTOM, VPAD)
     self.exposure_listbox = listbox
 
@@ -230,6 +310,7 @@ class ProcessorPanel(wx.Panel):
     hbox.Add(line, 0, wx.EXPAND | wx.RIGHT, HPAD)
 
     exposure_selector = ExposureSelectorPanel(self, wx.ID_ANY)
+    self.exposure_listbox = exposure_selector.exposure_listbox
     hbox.Add(exposure_selector, 2, wx.EXPAND | wx.RIGHT, HPAD)
 
     vbox.Add(hbox, 1, wx.EXPAND | wx.BOTTOM, VPAD)
@@ -244,12 +325,20 @@ class ProcessorPanel(wx.Panel):
     hbox.Add(filter_panel, 1, wx.EXPAND | wx.RIGHT, HPAD)
 
     exposure_view = ExposureView(self, wx.ID_ANY)
+    self.image_view = exposure_view.image_view
     hbox.Add(exposure_view, 0, wx.EXPAND | wx.RIGHT, HPAD)
 
     mode_panel = ViewModePanel(self, ID_VIEW_MODE)
     hbox.Add(mode_panel, 0, wx.EXPAND | wx.RIGHT, HPAD)
+    self.view_mode = mode_panel.view_mode
+    self.tools = mode_panel.tools
 
     vbox.Add(hbox, 0, wx.EXPAND | wx.BOTTOM, VPAD)
+
+    b = wx.Button(self, ID_PROCESS, 'Process Spectrum')
+    vbox.Add(b, 0, wx.EXPAND | wx.BOTTOM, VPAD)
+    self.process_button = b
+
 
     self.SetSizerAndFit(vbox)
 
@@ -273,8 +362,17 @@ class ProcessorView(MenuFrame):
     bar.SetStatusWidths([-1,-3])
 
     box = wx.BoxSizer(wx.VERTICAL)
-    self.panel = ProcessorPanel(self, wx.ID_ANY)
+    panel = ProcessorPanel(self, wx.ID_ANY)
     print "view"
-    box.Add(self.panel, 1, wx.EXPAND | wx.LEFT | wx.TOP, HPAD)
+    box.Add(panel, 1, wx.EXPAND | wx.LEFT | wx.TOP, HPAD)
+
+    self.exposure_listbox = panel.exposure_listbox
+    self.image_view = panel.image_view
+    self.view_mode = panel.view_mode
+    self.tools = panel.tools
 
     self.SetSizerAndFit(box)
+
+  def SetExposureCount(self, num):
+    self.tools.individual_exp.SetRange(1, num)
+

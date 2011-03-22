@@ -9,6 +9,7 @@ from filter import get_filter_by_name
 from constants import *
 from gauss import gauss_leastsq, gauss_model
 from parser import Parser, STRING, INT, FLOAT, LIST
+from filetype import InvalidFileError
 
 import numpy as np
 

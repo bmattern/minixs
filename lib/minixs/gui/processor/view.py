@@ -9,6 +9,13 @@ from minixs.gui import filter_view
 
 from const import *
 
+import matplotlib
+matplotlib.use('WXAgg')
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_wxagg import \
+    FigureCanvasWxAgg as FigureCanvas,  \
+    NavigationToolbar2WxAgg
+
 HPAD = 10
 VPAD = 5
 
@@ -68,12 +75,14 @@ class ToolsPanelCombined(wx.Panel):
 
     label = wx.StaticText(self, wx.ID_ANY, 'Min')
     spin = wx.SpinCtrl(self, ID_COMBINED_MIN)
+    spin.SetRange(0,32768)
     grid.Add(label)
     grid.Add(spin)
     self.min = spin
 
     label = wx.StaticText(self, wx.ID_ANY, 'Max')
     spin = wx.SpinCtrl(self, ID_COMBINED_MAX)
+    spin.SetRange(0,32768)
     grid.Add(label)
     grid.Add(spin)
     self.max = spin
@@ -88,12 +97,14 @@ class ToolsPanelIndividual(wx.Panel):
 
     label = wx.StaticText(self, wx.ID_ANY, 'Min')
     spin = wx.SpinCtrl(self, ID_INDIVIDUAL_MIN)
+    spin.SetRange(0,32768)
     grid.Add(label)
     grid.Add(spin)
     self.min = spin
 
     label = wx.StaticText(self, wx.ID_ANY, 'Max')
     spin = wx.SpinCtrl(self, ID_INDIVIDUAL_MAX)
+    spin.SetRange(0,32768)
     grid.Add(label)
     grid.Add(spin)
     self.max = spin
@@ -171,13 +182,13 @@ class FilterList(ScrolledPanel):
   def __init__(self, *args, **kwargs):
     ScrolledPanel.__init__(self, *args, **kwargs)
 
-    self.grid = wx.FlexGridSizer(cols=5, vgap=VPAD, hgap=HPAD)
-    self.grid.AddGrowableCol(2, 1)
+    self.grid = wx.FlexGridSizer(cols=4, vgap=VPAD, hgap=HPAD)
+    #self.grid.AddGrowableCol(2, 1)
     self.SetSizer(self.grid)
 
     self.filter_views = []
     self.SetAutoLayout(True)
-    self.SetupScrolling(False, True)
+    self.SetupScrolling(True, True)
 
 
   def AddFilter(self, index):
@@ -185,17 +196,15 @@ class FilterList(ScrolledPanel):
     label = wx.StaticText(self, wx.ID_ANY, fltr.name)
     view = view_class(self, id, filter=fltr)
 
-    b = wx.Button(self, wx.ID_ANY, 'X', size=(24, 24))
+    b = wx.Button(self, wx.ID_ANY, 'X', size=(20, 20))
     sb = wx.SpinButton(self, wx.ID_ANY, style=wx.SP_VERTICAL)
-    rb = wx.Button(self, wx.ID_ANY, 'R', size=(24, 24))
 
     self.grid.Add(sb, wx.ALIGN_CENTER_VERTICAL)
     self.grid.Add(label, wx.ALIGN_CENTER_VERTICAL)
     self.grid.Add(view, wx.ALIGN_CENTER_VERTICAL)
-    self.grid.Add(rb, wx.ALIGN_CENTER_VERTICAL)
     self.grid.Add(b, wx.ALIGN_CENTER_VERTICAL)
 
-    self.filter_views.append((b,rb,sb,label,view))
+    self.filter_views.append((b,sb,label,view))
 
     self.SetupScrolling(False, True)
 
@@ -214,9 +223,32 @@ class ExposureView(wx.Panel):
     vbox = wx.BoxSizer(wx.VERTICAL)
 
     self.image_view = ImageView(self, ID_EXPOSURE_VIEW, size=(487,195), style=wx.BORDER_SUNKEN)
-    vbox.Add(self.image_view, wx.EXPAND)
+    vbox.Add(self.image_view, 1, wx.EXPAND)
+
+    self.figure = Figure()
+    self.plot = FigureCanvas(self, wx.ID_ANY, self.figure)
+    self.plot.SetSize((487,195))
+    self.plot.SetWindowStyle(wx.BORDER_SUNKEN)
+    vbox.Add(self.plot, 1, wx.EXPAND)
+    self.plot.Hide()
+
+    self.toolbar = NavigationToolbar2WxAgg(self.plot)
+    vbox.Add(self.toolbar, 0, wx.EXPAND)
+    self.plot.Hide()
 
     self.SetSizerAndFit(vbox)
+
+  def SetViewMode(self, mode):
+    if mode == VIEW_MODE_SPECTRUM:
+      self.image_view.Hide()
+      self.plot.Show()
+      self.toolbar.Show()
+    else:
+      self.image_view.Show()
+      self.plot.Hide()
+      self.toolbar.Hide()
+
+    self.Layout()
 
 class ExposureSelectorPanel(wx.Panel):
   def __init__(self, *args, **kwargs):
@@ -277,6 +309,7 @@ class InfoPanel(wx.Panel):
     hbox.Add(label, 1, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, HPAD)
 
     entry = wx.TextCtrl(self, ID_CALIB, style=wx.TE_READONLY)
+    entry.SetEditable(False)
     hbox.Add(entry, 2, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, HPAD)
     self.calibration_file_entry = entry
 
@@ -304,7 +337,7 @@ class ProcessorPanel(wx.Panel):
     hbox = wx.BoxSizer(wx.HORIZONTAL)
 
     info = InfoPanel(self, wx.ID_ANY)
-    hbox.Add(info, 3, wx.EXPAND | wx.RIGHT, HPAD)
+    hbox.Add(info, 0, wx.EXPAND | wx.RIGHT, HPAD)
 
     line = wx.StaticLine(self, wx.ID_ANY, style=wx.LI_VERTICAL)
     hbox.Add(line, 0, wx.EXPAND | wx.RIGHT, HPAD)
@@ -321,19 +354,28 @@ class ProcessorPanel(wx.Panel):
     # second row
     hbox = wx.BoxSizer(wx.HORIZONTAL)
 
-    filter_panel = FilterPanel(self, wx.ID_ANY)
-    hbox.Add(filter_panel, 1, wx.EXPAND | wx.RIGHT, HPAD)
+    #filter_panel = FilterPanel(self, wx.ID_ANY)
+    #hbox.Add(filter_panel, 1, wx.EXPAND | wx.RIGHT, HPAD)
 
     exposure_view = ExposureView(self, wx.ID_ANY)
+
+    self.dataset_entry = info.dataset_entry
+    self.energy_entry = info.energy_entry
+    self.norm_entry = info.norm_entry
+    self.calibration_file_entry = info.calibration_file_entry
+
     self.image_view = exposure_view.image_view
-    hbox.Add(exposure_view, 0, wx.EXPAND | wx.RIGHT, HPAD)
+    self.plot = exposure_view.plot
+    self.exposure_view = exposure_view
+    self.figure = exposure_view.figure
+    hbox.Add(exposure_view, 1, wx.EXPAND | wx.RIGHT, HPAD)
 
     mode_panel = ViewModePanel(self, ID_VIEW_MODE)
     hbox.Add(mode_panel, 0, wx.EXPAND | wx.RIGHT, HPAD)
     self.view_mode = mode_panel.view_mode
     self.tools = mode_panel.tools
 
-    vbox.Add(hbox, 0, wx.EXPAND | wx.BOTTOM, VPAD)
+    vbox.Add(hbox, 2, wx.EXPAND | wx.BOTTOM, VPAD)
 
     b = wx.Button(self, ID_PROCESS, 'Process Spectrum')
     vbox.Add(b, 0, wx.EXPAND | wx.BOTTOM, VPAD)
@@ -366,13 +408,35 @@ class ProcessorView(MenuFrame):
     print "view"
     box.Add(panel, 1, wx.EXPAND | wx.LEFT | wx.TOP, HPAD)
 
+    self.dataset_entry = panel.dataset_entry
+    self.energy_entry = panel.energy_entry
+    self.norm_entry = panel.norm_entry
+    self.calibration_file_entry = panel.calibration_file_entry
+
     self.exposure_listbox = panel.exposure_listbox
     self.image_view = panel.image_view
     self.view_mode = panel.view_mode
     self.tools = panel.tools
+    self.plot = panel.plot
+    self.exposure_view = panel.exposure_view
+    self.figure = panel.figure
+    self.axes = self.figure.add_axes([.1,.1,.8,.8])
 
     self.SetSizerAndFit(box)
 
   def SetExposureCount(self, num):
     self.tools.individual_exp.SetRange(1, num)
+
+  def SetIndividualMinMax(self, min, max):
+    self.tools.individual_min.SetInt(min)
+    self.tools.individual_max.SetInt(max)
+
+  def SetCombinedMinMax(self, min, max):
+    self.tools.combined_min.SetInt(min)
+    self.tools.combined_max.SetInt(max)
+
+  def SetViewMode(self, mode):
+    self.tools.SetMode(mode)
+    self.exposure_view.SetViewMode(mode)
+    self.view_mode.SetSelection(mode)
 

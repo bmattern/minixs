@@ -7,6 +7,15 @@ from minixs.gui.file_dialog import FileDialog
 from matplotlib.cm import jet, gray
 from matplotlib.colors import Normalize
 
+BG_VALID = '#ffffff'
+BG_INVALID = '#ffdddd'
+
+ERROR_ENERGY    = 0x1
+ERROR_NORM      = 0x2
+ERROR_CALIB     = 0x4
+ERROR_EXPOSURES = 0x8
+ERROR_FILTERS   = 0x10
+
 class ProcessorController(object):
   def __init__(self, view, model):
     """
@@ -29,6 +38,7 @@ class ProcessorController(object):
 
     self.changed = False
     self.spectrum_invalid = True
+    self.error = 0
 
     a = wx.AboutDialogInfo()
     a.SetName("miniXS XES Processor")
@@ -102,11 +112,74 @@ class ProcessorController(object):
     self.view.Close()
 
   def OnSave(self, evt):
-    pass
+    header_only = False
+    if self.spectrum_invalid == True:
+      errdlg = wx.MessageDialog(self.view, "Warning: You have changed parameters since last processing the spectrum. Saving now will only save the parameters, and not the spectrum itself.", "Error", wx.OK | wx.CANCEL | wx.ICON_WARNING)
+      ret = errdlg.ShowModal()
+      errdlg.Destroy()
+
+      if ret == wx.ID_OK:
+        header_only = True
+      else:
+        return
+
+    filename = FileDialog(
+        self.view,
+        self.dialog_dirs,
+        'xes',
+        'Enter a filename to save to',
+        wildcard=WILDCARD_XES,
+        save=True
+        )
+
+    if not filename:
+      return
+
+    # check if file exists
+    if os.path.exists(filename):
+      errdlg = wx.MessageDialog(self.view, "This will overwrite the file:\n%s" % filename, "Warning", wx.OK | wx.CANCEL | wx.ICON_WARNING)
+      ret = errdlg.ShowModal()
+      errdlg.Destroy()
+
+      if ret != wx.ID_OK:
+        return
+
+    # save the file
+    self.model.save(filename, header_only=header_only)
 
   def OnOpen(self, evt):
-    pass
+    filename = FileDialog(
+        self.view,
+        self.dialog_dirs,
+        'xes',
+        'Select an xes file to open',
+        wildcard=WILDCARD_XES
+        )
 
+    if not filename:
+      return
+
+    self.model.load(filename)
+
+    self.ModelToView()
+    self.SetViewMode(VIEW_MODE_SPECTRUM)
+
+  def ModelToView(self):
+
+    self.view.dataset_entry.SetValue(self.model.dataset_name)
+    self.view.energy_entry.SetValue(str(self.model.incident_energy))
+    self.view.norm_entry.SetValue(str(self.model.I0))
+
+    self.exposures = []
+    for f in self.model.exposure_files:
+      base = os.path.basename(f)
+      self.view.exposure_listbox.AppendAndEnsureVisible(base)
+      self.exposures.append(mx.exposure.Exposure(f))
+    self.combined_exposure.load_multi(self.model.exposure_files)
+    self.view.SetExposureCount(len(self.exposures))
+    self.SetCalibrationFilename(self.model.calibration_file)
+    self.view.axes.cla()
+    self.view.axes.plot(self.model.emission, self.model.intensity)
 
   def OnAbout(self, evt):
     """
@@ -119,26 +192,34 @@ class ProcessorController(object):
 
   def OnEnergy(self, evt):
     s = evt.GetString()
+    valid = True
     if s:
       try:
         self.model.incident_energy = float(s)
+        self.error &= ~ERROR_ENERGY
       except ValueError:
-        #XXX make the box reddish or something to indicate bad value
-        pass
-
+        self.error |= ERROR_ENERGY
+        valid = False
     else:
       self.model.incident_energy = 0
 
+    evt.GetEventObject().SetOwnBackgroundColour(BG_VALID if valid else BG_INVALID)
+
   def OnNorm(self, evt):
     s = evt.GetString()
+    valid = True
     if s:
       try:
         self.model.I0 = float(s)
+        self.error &= ~ERROR_NORM
       except ValueError:
-        #XXX make the box reddish or something to indicate bad value
-        pass
+        self.error |= ERROR_NORM
+        valid = False
     else:
       self.model.I0 = 1
+
+    evt.GetEventObject().SetOwnBackgroundColour(BG_VALID if valid else BG_INVALID)
+    self.InvalidateSpectrum()
 
   def OnLoadCalibration(self, evt):
     filename = FileDialog(
@@ -149,12 +230,27 @@ class ProcessorController(object):
         wildcard=WILDCARD_CALIB
         )
 
-    calib = mx.calibrate.load(filename)
+    if not filename:
+      return
 
-    if not calib: return
+    self.SetCalibrationFilename(filename)
+    if len(self.exposures) == 0:
+      self.SetViewMode(VIEW_MODE_CALIB)
+
+  def SetCalibrationFilename(self, filename):
+    try:
+      calib = mx.calibrate.load(filename)
+    except mx.filetype.InvalidFileError:
+      errmsg = "The selected file was not a valid calibration file." 
+      errdlg = wx.MessageDialog(self.view,  errmsg, "Error", wx.OK | wx.ICON_WARNING)
+      errdlg.ShowModal()
+      errdlg.Destroy()
+      return
 
     self.calib = calib
     self.model.calibration_file = filename
+
+    self.view.calibration_file_entry.SetValue(os.path.basename(filename))
 
     if calib.load_errors:
       errmsg = "Warning: the following errors were encountered while loading the calibration file:\n\n  %s.\n\nThese may or may not prevent this calibration matrix from being used." % '\n  '.join(calib.load_errors)
@@ -162,15 +258,13 @@ class ProcessorController(object):
       errdlg.ShowModal()
       errdlg.Destroy()
 
-    self.SetViewMode(VIEW_MODE_CALIB)
-
   def SetViewMode(self, mode=VIEW_MODE_COMBINED):
     self.view_mode = mode
 
     if mode == VIEW_MODE_COMBINED:
       print 'combined'
       if self.combined_exposure.loaded:
-        p = Normalize(0,100)(self.combined_exposure.pixels)
+        p = Normalize(*self.combined_range)(self.combined_exposure.pixels)
         self.view.image_view.SetPixels(p, gray)
       else:
         print 'not yet loaded'
@@ -178,7 +272,7 @@ class ProcessorController(object):
     elif mode == VIEW_MODE_INDIVIDUAL:
       print 'individual'
       if self.exposures:
-        p = Normalize(0,100)(self.exposures[self.exposure_num].pixels)
+        p = Normalize(*self.individual_range)(self.exposures[self.exposure_num].pixels)
         self.view.image_view.SetPixels(p, gray)
       else:
         print 'no exposures'
@@ -193,8 +287,8 @@ class ProcessorController(object):
       print 'spectrum'
       pass
 
-    self.view.view_mode.SetSelection(mode)
-    self.view.tools.SetMode(mode)
+    #self.view.view_mode.SetSelection(mode)
+    self.view.SetViewMode(mode)
 
   def OnAddExposures(self, evt):
     filenames = FileDialog(
@@ -209,18 +303,28 @@ class ProcessorController(object):
     if not filenames:
       return
 
-    # XXX add a timer for the exposure loading?
+    invalid_files = []
+
     for f in filenames:
+      try:
+        e = mx.exposure.Exposure(f)
+      except IOError:
+        invalid_files.append(f)
+        continue
+
       self.model.exposure_files.append(f)
       base = os.path.basename(f)
       self.view.exposure_listbox.AppendAndEnsureVisible(base)
-      self.exposures.append(mx.exposure.Exposure(f))
+      self.exposures.append(e)
 
     self.combined_exposure.load_multi(self.model.exposure_files)
     self.view.SetExposureCount(len(self.exposures))
-    
 
-    self.SetViewMode(VIEW_MODE_COMBINED)
+    if invalid_files:
+      errmsg = "The following files were not recognized:\n\n  " + '\n  '.join(invalid_files)
+      errdlg = wx.MessageDialog(self.view,  errmsg, "Error", wx.OK | wx.ICON_WARNING)
+      errdlg.ShowModal()
+      errdlg.Destroy()
 
   def OnDeleteSelected(self, evt):
     sel = list(self.view.exposure_listbox.GetSelections())
@@ -232,34 +336,46 @@ class ProcessorController(object):
       self.view.exposure_listbox.Delete(i)
 
     self.combined_exposure.load_multi(self.model.exposure_files)
-  
+
   def OnProcess(self, evt):
-    self.model.process()
-    print self.model.spectrum.shape
-    pass
+    if self.model.validate():
+      self.model.process()
+      self.spectrum_invalid = False
+      self.view.axes.cla()
+      self.view.axes.plot(self.model.emission, self.model.intensity)
+      self.SetViewMode(VIEW_MODE_SPECTRUM)
+    else:
+      errors = '\n'.join('%4d. %s' % (i+1,err) for i,err in enumerate(self.model.validation_errors))
+      errmsg = "The following errors prevented this spectrum from being processed:\n\n%s\n" % errors
+      dlg = wx.MessageDialog(self.view, errmsg, 'Error', wx.OK | wx.ICON_ERROR)
+      dlg.ShowModal()
 
   def OnViewMode(self, evt):
     mode = self.view.view_mode.GetSelection()
     self.SetViewMode(mode)
 
   def OnIndividualMin(self, evt):
-    pass
+    self.individual_range[0] = evt.GetInt()
+    self.UpdateImageView()
 
   def OnIndividualMax(self, evt):
-    pass
+    self.individual_range[1] = evt.GetInt()
+    self.UpdateImageView()
 
   def OnIndividualExp(self, evt):
     self.exposure_num = evt.GetInt() - 1
     self.SetViewMode(self.view_mode)
 
   def OnCombinedMin(self, evt):
-    pass
+    self.combined_range[0] = evt.GetInt()
+    self.UpdateImageView()
 
   def OnCombinedMax(self, evt):
-    pass
+    self.combined_range[1] = evt.GetInt()
+    self.UpdateImageView()
 
   def UpdateImageView(self):
-    pass
+    self.SetViewMode(self.view_mode)
 
   def InvalidateSpectrum(self):
     """

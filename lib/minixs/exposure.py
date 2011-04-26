@@ -56,9 +56,19 @@ class Exposure:
     self.pixels = None
     if filenames:
       self.loaded = True
+
     for f in filenames:
-      im = Image.open(f)
-      p = np.asarray(im)
+      ext = f.split(os.path.extsep)[-1]
+      if ext == 'raw':
+        with open(f) as fh:
+          d = fh.read()
+
+        # XXX this assumes pilatus 100K...
+        p = np.fromstring(d, '>f').astype('int32').reshape((195,-1))
+      else:
+        im = Image.open(f)
+        p = np.asarray(im)
+
       if self.pixels is None:
         self.pixels = p.copy()
       else:

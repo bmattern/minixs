@@ -4,6 +4,7 @@ Raw detector exposures
 from PIL import Image
 import numpy as np
 from itertools import izip
+import os
 
 class Exposure:
   """
@@ -26,8 +27,20 @@ class Exposure:
     """
     self.filename = filename
 
-    self.image = Image.open(filename)
-    self.raw = np.asarray(self.image)
+    ext = filename.split(os.path.extsep)[-1]
+    if ext == 'raw':
+      with open(filename) as f:
+        d = f.read()
+
+      # XXX this assumes pilatus 100K...
+      self.image = None
+      self.raw = np.fromstring(d, '>f').astype('int32').reshape((195,-1))
+      pass
+
+    else:
+      self.image = Image.open(filename)
+      self.raw = np.asarray(self.image)
+
     self.pixels = self.raw.copy()
     try:
       self.info = self.parse_description(self.image.tag.get(270))

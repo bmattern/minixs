@@ -112,7 +112,7 @@ FIT_CUBIC   = 2
 FIT_QUARTIC = 3
 FIT_ELLIPSOID = 4
 
-def fit_region(region, points, dest, fit_type = FIT_QUARTIC):
+def fit_region(region, points, dest, fit_type = FIT_QUARTIC, return_fit=False):
   """
   Fit a smooth function to points that lie in region bounded by `region`
 
@@ -280,7 +280,10 @@ def fit_region(region, points, dest, fit_type = FIT_QUARTIC):
   # fill the calibration matrix with values from fit
   dest[yyd,xxd] = zz
 
-  return lin_res, rms_res
+  if return_fit:
+    return lin_res, rms_res, fit
+  else:
+    return lin_res, rms_res
 
 def calibrate(filtered_exposures, energies, regions, dispersive_direction, fit_type=FIT_QUARTIC, return_diagnostics=False):
   """
@@ -319,13 +322,15 @@ def calibrate(filtered_exposures, energies, regions, dispersive_direction, fit_t
   # fit smooth shape for each crystal, storing fit residues
   lin_res = []
   rms_res = []
+  fits = []
   for region in regions:
-    lr, rr = fit_region(region, points, calibration_matrix, fit_type)
+    lr, rr, fit = fit_region(region, points, calibration_matrix, fit_type, return_fit=True)
     lin_res.append(lr)
     rms_res.append(rr)
+    fits.append(fit)
 
   if return_diagnostics:
-    return (calibration_matrix, (lin_res, rms_res, points))
+    return (calibration_matrix, (lin_res, rms_res, points, fits))
   else:
     return calibration_matrix
 
@@ -492,7 +497,7 @@ class Calibration:
                                                      return_diagnostics=True)
 
     # store diagnostic info
-    self.lin_res, self.rms_res, self.fit_points = diagnostics
+    self.lin_res, self.rms_res, self.fit_points, self.fits = diagnostics
 
   def xtal_mask(self):
     """
@@ -534,9 +539,15 @@ class Calibration:
     -------
     (diagnostics, [processed_spectra])
 
-    diagnostics: an array with columns (deviation, sigma) with one row for each calibration exposure
-                 deviation is the difference between the mono energy and the peak center (square and avg for RMS)
-                 sigma is the gaussian width as in: exp(-(x-x0)**2/(2*sigma**2))
+    diagnostics: an array with one row for each calibration exposure
+                 the columns are:
+                   incident beam energy
+                   amplitude
+                   E0
+                   sigma
+
+                 the best Gaussian fit to the data is given by:
+                   exp(-(E-E0)**2/(2*sigma**2))
 
     if `return_spectra` is True, then a list of XES spectra will be returned (one for each calibration exposure)
     """
@@ -554,7 +565,8 @@ class Calibration:
         print i
       energy = self.energies[i]
       exposure = Exposure(self.exposure_files[i])
-      exposure.apply_filters(energy, filters)
+      if filters is not None:
+        exposure.apply_filters(energy, filters)
 
       s = process_spectrum(self.calibration_matrix, exposure, emission_energies, 1, self.dispersive_direction, self.xtals)
       x = s[:,0]

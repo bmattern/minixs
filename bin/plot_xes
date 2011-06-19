@@ -2,6 +2,7 @@
 
 import minixs as mx
 import matplotlib.pyplot as pt
+from numpy import log10
 import sys
 from optparse import OptionParser
 
@@ -20,6 +21,9 @@ parser.add_option("-e", "--errorbars", dest='errorbars',
 parser.add_option("-l", "--legend", dest='legend',
                   action='store_true', default=False,
                   help="include legend (with filenames as labels)")
+parser.add_option("-L", "--log", dest='log',
+                  action='store_true', default=False,
+                  help="plot log10(y) vs x")
 (options, args) = parser.parse_args()
 
 
@@ -32,11 +36,13 @@ for f in args:
     y *= xes.I0
   if options.scale:
     y /= y.max()
+  if options.log:
+    y = log10(y)
 
   if options.errorbars:
-    pt.errorbar(xes.emission, xes.intensity, xes.uncertainty, label=f)
+    pt.errorbar(xes.emission, y, xes.uncertainty, label=f)
   else:
-    pt.plot(xes.emission, xes.intensity, label=f)
+    pt.plot(xes.emission, y, label=f)
 
 if options.legend:
   pt.legend(loc='best')

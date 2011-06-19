@@ -97,6 +97,13 @@ class Spectrometer(object):
       if xtal:
         self.xtal_type = info.get('Xtal')[0]
         self.xtal_cut = info.get('Xtal')[1:4]
+
+        if self.xtal_type in lattice_constants:
+          d0 = lattice_constants[self.xtal_type]
+          self.E0 = HC * norm(self.xtal_cut) / (2 * d0)
+        else:
+          self.E0 = None
+
       else:
         self.load_errors.append('Missing crystal type information ("Xtal" line).')
 
@@ -201,7 +208,14 @@ class Spectrometer(object):
 
     return (px,py)
 
-  def camera_pixel_locations(self):
+  def camera_pixel_locations(self, dx=0.5, dy=0.5):
+    """
+    Calculate the coordinates of all pixels of the detector
+
+    Parameters:
+      dx - horizontal location within pixel (0 = left, .5 = center, 1=right)
+      dy - vertical location within pixel (0 = top, .5 = center, 1=bottom)
+    """
     h,w = self.camera_shape
     coords = np.zeros((w*h,2))
     index = np.arange(w*h)
@@ -209,17 +223,15 @@ class Spectrometer(object):
     coords[:,1] = index / w
 
     points = self.camera[0] + \
-             (np.outer(coords[:,0]/float(w), self.camera[1] - self.camera[0]) +
-              np.outer(coords[:,1]/float(h), self.camera[3] - self.camera[0]))
+             (np.outer((coords[:,0]+dx)/float(w), self.camera[1] - self.camera[0]) +
+              np.outer((coords[:,1]+dy)/float(h), self.camera[3] - self.camera[0]))
     return points.reshape((h,w,3))
 
   def image_points(self):
-    images = []
-    for xtal_plane in self.xtal_planes:
-      image = geom.reflect_through_plane(self.sample, xtal_plane)
-      images.append(image)
-
-    return images
+    """
+    Calculate reflections of sample location about analyzer crystal faces
+    """
+    return [geom.reflect_through_plane(self.sample, xp) for xp in self.xtal_planes]
 
   def calculate_active_regions(self):
     """

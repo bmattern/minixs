@@ -278,7 +278,7 @@ class Spectrometer(object):
 
     return [x1, y1, x2, y2]
 
-  def mockup_calibration_matrix(self):
+  def mockup_calibration_matrix(self, dx=0.5, dy=0.5):
     """
     Create a theoretical calibration matrix for the designed spectrometer
     geometry.
@@ -294,7 +294,7 @@ class Spectrometer(object):
     images = self.image_points()
     bounds = []
 
-    pixels = self.camera_pixel_locations()
+    pixels = self.camera_pixel_locations(dx,dy)
 
     # find image points and xtal projection boundaries
     for xtal_plane, image, entrance_aperture in izip(self.xtal_planes, images, self.entrance_aperture):
@@ -350,7 +350,8 @@ class Spectrometer(object):
 
     # calculate pixel size
     pw = norm(self.camera[1] - self.camera[0]) / w
-    ph = norm(self.camera[1] - self.camera[0]) / h
+    ph = norm(self.camera[3] - self.camera[0]) / h
+    print pw, ph
 
     images = self.image_points()
 
@@ -363,8 +364,9 @@ class Spectrometer(object):
 
       # determine which crystal this corresponds to
       i = int(xc) * num_xtals / w
+      i = num_xtals - i - 1
 
-      print xc,yc, i, self.xtals[i][0]
+      #print xc,yc, i, self.xtals[i][0]
       # projection shape size
       sh = y2 - y1
       sw = x2 - x1

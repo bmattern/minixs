@@ -141,8 +141,6 @@ def binned_emission_spectrum(calib, exposure, low_energy, high_energy, energy_st
   spectrum[i,1] = (spectrum[i,4]>0) * spectrum[i,3] / spectrum[i,4] / I0
   spectrum[i,2] = (spectrum[i,4]>0) * np.sqrt(spectrum[i,3]) / spectrum[i,4] / I0
 
-  sys.stdout.write(".")
-  sys.stdout.flush()
   return spectrum
 
 def process_all(calibfile, scanfile, base_image, image_nums, E_column=0, I0_column=6, low_cutoff=0, high_cutoff=1000, low_energy=None, high_energy=None, energy_step = 0.5, zero_pad=3):
@@ -403,3 +401,18 @@ class EmissionSpectrum:
                                 skip_columns=skip_columns)
 
     self.set_spectrum(spectrum) 
+
+  def process_binned(self, E1, E2, Estep):
+    calib = calibrate.load(self.calibration_file)
+
+    exposure = Exposure()
+    exposure.load_multi(self.exposure_files)
+    exposure.apply_filters(self.incident_energy, self.filters)
+    spectrum = binned_emission_spectrum(calib.calibration_matrix,
+                                        exposure,
+                                        E1,
+                                        E2,
+                                        Estep,
+                                        self.I0)
+    self.set_spectrum(spectrum)
+

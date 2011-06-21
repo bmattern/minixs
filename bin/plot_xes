@@ -9,6 +9,7 @@ from optparse import OptionParser
 usage = "Usage: %s <.xes file(s)>"
 
 parser = OptionParser()
+parser.usage = usage
 parser.add_option("-s", "--scale", dest='scale',
                   action='store_true', default=False,
                   help="scale all plots to max")

@@ -34,6 +34,9 @@ parser.add_option("-s", "--stepsize", dest='stepsize', default=.1,
                   type=float, help="emission energy step size")
 parser.add_option("-a", "--angle", dest='solid_angle_map', default='',
                   help="solid angle correction map")
+parser.add_option("-B", "--binned", dest='binned', action='store_true',
+                  default=False,
+                  help="Use straight binning of pixels instead of an interpolated-average.")
 
 (options, args) = parser.parse_args()
 
@@ -108,8 +111,11 @@ xes.I0 = options.i0
 xes.filters = filters
 
 E1,E2 = calib.energy_range()
-grid = np.arange(round(E1),round(E2),options.stepsize)
-xes.process(grid, skip_columns=skip_columns)
+if options.binned:
+  xes.process_binned(E1,E2,options.stepsize)
+else:
+  grid = np.arange(round(E1),round(E2),options.stepsize)
+  xes.process(grid, skip_columns=skip_columns)
 
 if options.output == sys.stdout:
   sys.stderr.write("Saving to stdout\n")

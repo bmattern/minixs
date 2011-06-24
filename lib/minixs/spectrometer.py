@@ -7,7 +7,7 @@ import geom
 from itertools import izip
 
 HBARC = 1973.2696 # eV * angstroms
-HC    = 2 * np.pi * HBARC 
+HC    = 2 * np.pi * HBARC
 
 DIR= os.path.join(os.path.dirname(__file__), 'data', 'spectrometers')
 
@@ -84,10 +84,10 @@ class Spectrometer(object):
         'Camera': point_list,
         'Beam': point_list
         })
-      
+
       info = p.parse(f.readlines())
       self.load_errors += p.errors
-      
+
       self.name = info.get('Name')
       self.element = info.get('Element')
       self.line = info.get('Line')
@@ -237,7 +237,7 @@ class Spectrometer(object):
     """
     Find projection of sample through entrance apertures onto xtal planes.
 
-    Currently requires number of entrance apertures to be same as number of xtals. 
+    Currently requires number of entrance apertures to be same as number of xtals.
     """
     if len(self.entrance_aperture) != len(self.xtals):
       raise Exception("Number of entrance apertures and crystals must be same")
@@ -278,6 +278,53 @@ class Spectrometer(object):
 
     return [x1, y1, x2, y2]
 
+  def calculate_projection_bounds(self):
+    """
+    Determine exposed region on camera from each xtal.
+
+    Finds projection of specular radiation from source point
+    through entrance aperture, off xtal, through exit aperture
+    and onto camera.
+
+    For now, this finds top left and bottom right corners (in camera coords)
+    and assumes region to be rectangular.
+
+    TODO: should be easy to extend this to calculate full trapezoidal region
+          or, could add option to give largest rect inside, or smallest rect
+          outside...
+    """
+
+    bounds = []
+
+    images = self.image_points()
+
+    for xtal_plane, image, entrance_aperture in izip(self.xtal_planes, images, self.entrance_aperture):
+      # project image points through exit aperture onto camera
+      exit_projection = self.project_point_through_rect_onto_camera(image, self.exit_aperture)
+
+      # find region of crystals exposed by source
+      active_region = [
+          geom.intersect_line_with_plane(
+            geom.Line.FromPoints(self.sample, corner),
+            xtal_plane
+            )
+          for corner in entrance_aperture
+          ]
+
+      # project images through active region on to camera
+      active_projection = self.project_point_through_rect_onto_camera(image, active_region)
+
+      # "intersect" (not complete intersection... see TODO above)
+      x1 = max(exit_projection[0], active_projection[0])
+      y1 = max(exit_projection[1], active_projection[1])
+      x2 = min(exit_projection[2], active_projection[2])
+      y2 = min(exit_projection[3], active_projection[3])
+
+      # add it to the list
+      bounds.append([x1,y1,x2,y2])
+
+    return bounds
+
   def mockup_calibration_matrix(self, dx=0.5, dy=0.5):
     """
     Create a theoretical calibration matrix for the designed spectrometer
@@ -314,7 +361,7 @@ class Spectrometer(object):
       y1 = max(exit_projection[1], active_projection[1])
       x2 = min(exit_projection[2], active_projection[2])
       y2 = min(exit_projection[3], active_projection[3])
-        
+
       bounds.append([x1,y1,x2,y2])
       rw = x2-x1
       rh = y2-y1
@@ -331,7 +378,7 @@ class Spectrometer(object):
     self.projection_bounds = bounds
     return calib
 
-  def solid_angle_map(self, bounds):
+  def solid_angle_map(self, bounds=None):
     """
     Calculate the solid angle subtended by each pixel in sr
 
@@ -345,6 +392,9 @@ class Spectrometer(object):
     corresponds to. So, this could be incorrect if a small sliver at the
     edge of a crystal projection is provided.
     """
+
+    xtals_reversed = False
+
     h,w = self.camera_shape
     domega = np.zeros((h,w))
 
@@ -355,6 +405,17 @@ class Spectrometer(object):
 
     images = self.image_points()
 
+    design_bounds = self.calculate_projection_bounds()
+    if bounds is None:
+      bounds = design_bounds
+
+    # determine if xtals in design file are left to right on camera
+    # or right to left
+    # TODO: this will need to be updated to support spectrometers with
+    #       multiple rows of crystals...
+    if design_bounds[0][0] > design_bounds[-1][0]:
+      xtals_reversed = True
+
     pixels = self.camera_pixel_locations()
     num_xtals = len(self.xtal_planes)
 
@@ -364,7 +425,8 @@ class Spectrometer(object):
 
       # determine which crystal this corresponds to
       i = int(xc) * num_xtals / w
-      i = num_xtals - i - 1
+      if xtals_reversed:
+        i = num_xtals - i - 1
 
       #print xc,yc, i, self.xtals[i][0]
       # projection shape size

@@ -304,7 +304,7 @@ class ProcessorController(object):
 
   def UpdateCoordStatus(self, cx, cy):
     if cx is None or cy is None:
-      self.view.SetStatusText(STATUS_COORDS, '')
+      self.view.SetStatusText('', STATUS_COORDS)
       return
 
     cx = int(cx)

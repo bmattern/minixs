@@ -32,6 +32,11 @@ class ProcessorController(object):
     self.combined_exposure = mx.exposure.Exposure()
     self.exposures = []
 
+    self.spectrometer_tags, self.spectrometer_names = mx.spectrometer.list_spectrometers(include_names = True)
+    self.spectrometer_names.append("Other")
+    self.view.SetSpectrometerNames(self.spectrometer_names)
+    self.view.SetSpectrometer(len(self.spectrometer_names) - 1)
+
     self.combined_range = [0,100]
     self.individual_range = [0,100]
     self.exposure_num = 0

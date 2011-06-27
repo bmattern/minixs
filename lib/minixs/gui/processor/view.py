@@ -299,6 +299,13 @@ class InfoPanel(wx.Panel):
     grid.Add(entry, 1, wx.EXPAND)
     self.norm_entry = entry
 
+
+    label = wx.StaticText(self, wx.ID_ANY, "Spectrometer:")
+    choice = wx.Choice(self, ID_SPECTROMETER)
+    grid.Add(label, 1, wx.ALIGN_CENTER_VERTICAL)
+    grid.Add(choice, 1, wx.EXPAND)
+    self.spectrometer_choice = choice
+
     grid.AddGrowableCol(1, 1)
 
     vbox.Add(grid, 0, wx.EXPAND | wx.BOTTOM, VPAD)
@@ -362,6 +369,7 @@ class ProcessorPanel(wx.Panel):
     self.dataset_entry = info.dataset_entry
     self.energy_entry = info.energy_entry
     self.norm_entry = info.norm_entry
+    self.spectrometer_choice = info.spectrometer_choice
     self.calibration_file_entry = info.calibration_file_entry
 
     self.image_view = exposure_view.image_view
@@ -412,6 +420,7 @@ class ProcessorView(MenuFrame):
     self.energy_entry = panel.energy_entry
     self.norm_entry = panel.norm_entry
     self.calibration_file_entry = panel.calibration_file_entry
+    self.spectrometer_choice = panel.spectrometer_choice
 
     self.exposure_listbox = panel.exposure_listbox
     self.image_view = panel.image_view
@@ -439,4 +448,10 @@ class ProcessorView(MenuFrame):
     self.tools.SetMode(mode)
     self.exposure_view.SetViewMode(mode)
     self.view_mode.SetSelection(mode)
+
+  def SetSpectrometer(self, index):
+    self.spectrometer_choice.SetSelection(index)
+
+  def SetSpectrometerNames(self, names):
+    self.spectrometer_choice.SetItems(names)
 

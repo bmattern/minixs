@@ -14,6 +14,7 @@ ID_NORM            = wx.NewId()
 
 ID_CALIB           = wx.NewId()
 ID_CALIB_LOAD      = wx.NewId()
+ID_SPECTROMETER    = wx.NewId()
 
 ID_EXPOSURE_LIST   = wx.NewId()
 ID_EXPOSURE_ADD    = wx.NewId()

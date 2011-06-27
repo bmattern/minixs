@@ -164,9 +164,7 @@ class ProcessorController(object):
     if not filename:
       return
 
-    self.model.load(filename)
-
-    self.ModelToView()
+    self.load(filename)
     self.SetViewMode(VIEW_MODE_SPECTRUM)
 
   def ModelToView(self):
@@ -393,3 +391,8 @@ class ProcessorController(object):
     Something has changed since last save
     """
     self.changed = True
+
+  def load(self, filename):
+    # XXX handle errors...
+    self.model.load(filename)
+    self.ModelToView()

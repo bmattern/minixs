@@ -4,6 +4,8 @@ from const import *
 import minixs as mx
 from minixs.gui.wildcards import *
 from minixs.gui.file_dialog import FileDialog
+from minixs.gui.image_view import EVT_COORDS
+from minixs.gui.image_tools import Crosshair
 from matplotlib.cm import jet, gray
 from matplotlib.colors import Normalize
 
@@ -44,6 +46,13 @@ class ProcessorController(object):
     self.changed = False
     self.spectrum_invalid = True
     self.error = 0
+
+    # setup image view tools
+    self.view.image_view.zoom_on_wheel = True
+    self.crosshair = Crosshair(self.view.image_view)
+    self.crosshair.SetActive(True)
+    self.crosshair.ToggleDirection(Crosshair.HORIZONTAL | Crosshair.VERTICAL, True)
+
 
     a = wx.AboutDialogInfo()
     a.SetName("miniXS XES Processor")
@@ -90,6 +99,7 @@ class ProcessorController(object):
           (ID_COMBINED_MIN, self.OnCombinedMin),
           (ID_COMBINED_MAX, self.OnCombinedMax),
           ]),
+        (EVT_COORDS, [ (ID_EXPOSURE_VIEW, self.OnImageCoords), ]),
         ]
 
     for event, bindings in callbacks:
@@ -290,8 +300,36 @@ class ProcessorController(object):
       print 'spectrum'
       pass
 
-    #self.view.view_mode.SetSelection(mode)
     self.view.SetViewMode(mode)
+
+  def UpdateCoordStatus(self, cx, cy):
+    if cx is None or cy is None:
+      self.view.SetStatusText(STATUS_COORDS, '')
+      return
+
+    cx = int(cx)
+    cy = int(cy)
+    try:
+      if self.view_mode == VIEW_MODE_COMBINED:
+        if not self.combined_exposure.loaded:
+          return
+        z = "%d" % self.combined_exposure.pixels[cy,cx]
+
+      elif self.view_mode == VIEW_MODE_INDIVIDUAL:
+        if not self.exposures:
+          return
+        z = "%d" % self.exposures[self.exposure_num].pixels[cy,cx]
+      elif self.view_mode == VIEW_MODE_CALIB:
+        if not self.calib:
+          return
+        z = "%.2f" % self.calib.calibration_matrix[cy,cx]
+      else:
+        return
+    except IndexError:
+      z = "N/A"
+
+    s = ("(%d, %d) -> "% (cx,cy)) + z
+    self.view.SetStatusText(s, STATUS_COORDS)
 
   def OnAddExposures(self, evt):
     filenames = FileDialog(
@@ -376,6 +414,10 @@ class ProcessorController(object):
   def OnCombinedMax(self, evt):
     self.combined_range[1] = evt.GetInt()
     self.UpdateImageView()
+
+  def OnImageCoords(self, evt):
+    x, y = evt.x, evt.y
+    self.UpdateCoordStatus(x,y)
 
   def UpdateImageView(self):
     self.SetViewMode(self.view_mode)

@@ -40,10 +40,10 @@ class ImageView(wx.Panel):
     self.tools = []
     self.active_tool = None
 
+    self.zoom_on_wheel = False
     self.zoom = 1
     self.zoom_min = -10
     self.zoom_max = 10
-
     self.set_zoom_delay = 10
     self.set_zoom_timeout = None
 
@@ -171,6 +171,7 @@ class ImageView(wx.Panel):
       return
 
     x, y = evt.GetPosition()
+    x, y = self.CoordScreenToBitmap(x, y)
     self.PostEventCoords(x, y)
 
     for tool in self.tools:
@@ -210,7 +211,8 @@ class ImageView(wx.Panel):
         tool.OnPaint(evt, dc)
 
   def OnMouseWheel(self, evt):
-    return # Not yet fully implemented, so disable for now
+    if not self.zoom_on_wheel:
+      return
 
     if not self.bitmap:
       return

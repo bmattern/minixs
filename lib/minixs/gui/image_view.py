@@ -41,6 +41,11 @@ class ImageView(wx.Panel):
     self.active_tool = None
 
     self.zoom = 1
+    self.zoom_min = -10
+    self.zoom_max = 10
+
+    self.set_zoom_delay = 10
+    self.set_zoom_timeout = None
 
   def GetBitmapSize(self):
     if self.bitmap:
@@ -59,10 +64,8 @@ class ImageView(wx.Panel):
       self.raw_image = wx.ImageFromBuffer(w, h, p.tostring())
       self.SetZoom(self.zoom, force=True)
 
-  def SetZoom(self, zoom, force=False):
-    # XXX use timer to prevent slow down when zooming quickly through several levels
-    if not force and zoom == self.zoom:
-      return
+  def _SetZoomActual(self):
+    zoom = self.zoom
 
     if zoom > 0:
       w = self.raw_image.Width * zoom
@@ -79,6 +82,25 @@ class ImageView(wx.Panel):
 
     self.bitmap = wx.BitmapFromImage(scaled)
     self.Refresh()
+    self.set_zoom_timeout = None
+
+
+  def SetZoom(self, zoom, force=False, immediate=False):
+    if zoom > self.zoom_max:
+      zoom = self.zoom_max
+
+    if zoom < self.zoom_min:
+      zoom = self.zoom_min
+
+    if not force and zoom == self.zoom:
+      return
+
+    self.zoom = zoom
+
+    if immediate:
+      self._SetZoomActual()
+    elif not self.set_zoom_timeout:
+      self.set_zoom_timeout = wx.CallLater(self.set_zoom_delay, self._SetZoomActual)
 
   def CoordBitmapToScreen(self,x,y):
     if self.zoom > 0:

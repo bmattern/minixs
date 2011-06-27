@@ -2,7 +2,10 @@ import wx
 import wx.lib.newevent
 from wx.lib.scrolledpanel import ScrolledPanel
 
+from mouse_event import *
+
 EventCoords, EVT_COORDS = wx.lib.newevent.NewCommandEvent()
+
 
 class ScrolledImageView(ScrolledPanel):
   def __init__(self, *args, **kwargs):
@@ -40,12 +43,18 @@ class ImageView(wx.Panel):
     self.tools = []
     self.active_tool = None
 
+    self.panning = False
+
     self.zoom_on_wheel = False
     self.zoom = 1
     self.zoom_min = -10
     self.zoom_max = 10
     self.set_zoom_delay = 10
     self.set_zoom_timeout = None
+
+    self.pan = [0, 0]
+    self.pan_min = [0,0]
+    self.pan_max = [0,0]
 
   def GetBitmapSize(self):
     if self.bitmap:
@@ -62,7 +71,8 @@ class ImageView(wx.Panel):
       h,w = pixels.shape[0:2]
       p = colormap(pixels, bytes=True)[:,:,0:3]
       self.raw_image = wx.ImageFromBuffer(w, h, p.tostring())
-      self.SetZoom(self.zoom, force=True)
+      self.SetZoom(self.zoom, force=True, immediate=True)
+
 
   def _SetZoomActual(self):
     zoom = self.zoom
@@ -81,6 +91,7 @@ class ImageView(wx.Panel):
     scaled = self.raw_image.Scale(w, h)
 
     self.bitmap = wx.BitmapFromImage(scaled)
+    self.UpdatePanBounds()
     self.Refresh()
     self.set_zoom_timeout = None
 
@@ -102,13 +113,60 @@ class ImageView(wx.Panel):
     elif not self.set_zoom_timeout:
       self.set_zoom_timeout = wx.CallLater(self.set_zoom_delay, self._SetZoomActual)
 
-  def CoordBitmapToScreen(self,x,y):
-    if self.zoom > 0:
-      return (x*self.zoom, y*self.zoom)
+  def SetPan(self, pan_x = None, pan_y = None):
+    if pan_x is not None:
+      self.pan[0] = pan_x
+
+    if pan_y is not None:
+      self.pan[1] = pan_y
+
+    self.Refresh()
+
+  def UpdatePanBounds(self):
+    if not self.bitmap:
+      self.pan_min = [0,0]
+      self.pan_max = [0,0]
+      return
+
+    px, py = self.pan
+    imw, imh = self.bitmap.GetSize()
+    bw, bh = self.GetSize()
+
+    if bw < imw:
+      xmin = bw - imw
+      xmax = 0
     else:
-      return (-x/float(self.zoom), -y/float(self.zoom))
+      xmin = 0
+      xmax = bw - imw
+
+    if bh < imh:
+      ymin = bh - imh
+      ymax = 0
+    else:
+      ymin = 0
+      ymax = bh - imh
+
+    self.pan_min = [xmin, ymin]
+    self.pan_max = [xmax, ymax]
+
+    if px < xmin: px = xmin
+    if px > xmax: px = xmax
+    if py < ymin: py = ymin
+    if py > ymax: py = ymax
+
+    self.SetPan(px, py)
+
+  def CoordBitmapToScreen(self,x,y):
+    px, py = self.pan
+    if self.zoom > 0:
+      return (x*self.zoom + px, y*self.zoom + py)
+    else:
+      return (-x/float(self.zoom) + px, -y/float(self.zoom) + py)
 
   def CoordScreenToBitmap(self,sx,sy):
+    px, py = self.pan
+    sx -= px
+    sy -= py
     if self.zoom > 0:
       return (sx/float(self.zoom), sy/float(self.zoom))
     else:
@@ -122,11 +180,17 @@ class ImageView(wx.Panel):
     if not self.bitmap:
       return
 
+    if mouse_event_modifier_mask(evt) & MOD_CTRL:
+      self.panning = True
+      self.pan_prev = None
+
     for tool in self.tools:
       if tool.active:
         tool.OnLeftDown(evt)
 
   def OnLeftUp(self, evt):
+    self.panning = False
+
     if not self.bitmap:
       return
 
@@ -171,8 +235,18 @@ class ImageView(wx.Panel):
       return
 
     x, y = evt.GetPosition()
+    if self.panning:
+      if self.pan_prev:
+        self.SetPan(
+          self.pan[0] + x - self.pan_prev[0],
+          self.pan[1] + y - self.pan_prev[1]
+          )
+        self.Refresh()
+      self.pan_prev = (x,y)
+
     x, y = self.CoordScreenToBitmap(x, y)
     self.PostEventCoords(x, y)
+
 
     for tool in self.tools:
       if tool.active:
@@ -204,7 +278,7 @@ class ImageView(wx.Panel):
   def Draw(self, evt, dc):
     dc.Clear()
     if self.bitmap:
-      dc.DrawBitmap(self.bitmap, 0, 0)
+      dc.DrawBitmap(self.bitmap, self.pan[0], self.pan[1])
 
     for tool in self.tools:
       if tool.visible:
@@ -235,7 +309,17 @@ class ImageView(wx.Panel):
     # pan so that pixel under mouse stays under mouse
     #x,y = evt.GetPosition()
 
+  def SetPan(self, px, py):
+    mx,my = self.pan_min
+    if px < mx: px = mx
+    if py < my: py = my
 
+    mx,my = self.pan_max
+    if px > mx: px = mx
+    if py > my: py = my
+
+    self.pan = [px,py]
+    self.Refresh()
 
   def AddTool(self, tool):
     self.tools.append(tool)

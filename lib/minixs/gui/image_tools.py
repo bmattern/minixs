@@ -1,6 +1,8 @@
 import wx
 import wx.lib.newevent
 
+from mouse_event import *
+
 EventRangeActionChanged, EVT_RANGE_ACTION_CHANGED = wx.lib.newevent.NewCommandEvent()
 EventRangeChanged, EVT_RANGE_CHANGED = wx.lib.newevent.NewCommandEvent()
 
@@ -209,6 +211,10 @@ class RangeTool(Tool):
     """
     Handle left mouse down
     """
+
+    if mouse_event_modifier_mask(evt) != MOD_NONE:
+      return
+
     x, y = evt.GetPosition()
     x, y = self.parent.CoordScreenToBitmap(x,y)
 
@@ -250,6 +256,10 @@ class RangeTool(Tool):
     """
     Handle left mouse up
     """
+
+    if mouse_event_modifier_mask(evt) != MOD_NONE:
+      return
+
     x,y = evt.GetPosition()
     x,y = self.parent.CoordScreenToBitmap(x,y)
     (x1,y1), (x2,y2) = self.active_rect
@@ -282,6 +292,10 @@ class RangeTool(Tool):
     """
     Handle right mouse up
     """
+
+    if mouse_event_modifier_mask(evt) != MOD_NONE:
+      return
+
     if self.action & self.ACTION_PROPOSED:
       self.rects.remove(self.active_rect)
       self.active_rect = None
@@ -293,6 +307,10 @@ class RangeTool(Tool):
     """
     Handle middle mouse up
     """
+
+    if mouse_event_modifier_mask(evt) != MOD_NONE:
+      return
+
     if self.action & self.ACTION_PROPOSED:
       r = self.active_rect
       (x1,y1), (x2,y2) = r

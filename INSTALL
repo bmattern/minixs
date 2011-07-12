@@ -22,9 +22,9 @@ The contents contents of the lib directory must be made available to python. To 
 
      $ export PYTHONPATH=$PYTHONPATH:/path/to/lib/
 
-     If you would like this change to be permanent, add the above line to your shells init script (typically $HOME/.bashrc)
+     If you would like this change to be permanent, add the above line to your shell's init script (typically $HOME/.bashrc)
 
-     You can check that the path si set correctly by running
+     You can check that the path is set correctly by running
 
      $ echo $PYTHONPATH
 

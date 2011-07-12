@@ -25,7 +25,7 @@ parser.add_option("-i", "--i0", dest='i0', default=1,
 parser.add_option("-d", "--dataset", dest='dataset', default='',
                   help="dataset name")
 parser.add_option("-l", "--bplist", dest='bad_pixels', default='',
-                  help="list of bad pixels (e.g. 15,30;120;52)")
+                  help="list of bad pixels (e.g. 15,30;120,52)")
 parser.add_option("-b", "--badpixels", dest='bad_pixels_file', default='',
                   help="file containing bad pixels (2 columns w. x and y coords)")
 parser.add_option("-H", "--high_filter", dest='high_filter', default=10000,

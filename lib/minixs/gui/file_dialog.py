@@ -25,12 +25,13 @@ def FileDialog(parent, dirlist, type, title, wildcard='', save=False, multiple=F
 
   paths = []
   if ret == wx.ID_OK:
-    directory = dlg.GetDirectory()
+    paths = dlg.GetPaths()
+    paths.sort()
+    if (paths):
+      directory = os.path.dirname(paths[0])
+    else:
+      directory = dlg.GetDirectory()
     dirlist[type] = dirlist['last'] = directory
-    filenames = dlg.GetFilenames()
-    filenames.sort()
-
-    paths = [os.path.join(directory, f) for f in filenames]
 
   dlg.Destroy()
 

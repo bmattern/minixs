@@ -10,7 +10,9 @@ from constants import *
 from gauss import gauss_leastsq, gauss_model
 from parser import Parser, STRING, INT, FLOAT, LIST
 from filetype import InvalidFileError
+from spectrometer import Spectrometer
 
+import os
 import numpy as np
 
 def load(filename):
@@ -347,6 +349,7 @@ class Calibration:
     self.filters = []
     self.xtals = []
     self.calibration_matrix = np.array([])
+    self.spectrometer = None
 
     self.filename = None
 
@@ -360,6 +363,11 @@ class Calibration:
 
     with open(filename, 'w') as f:
       f.write("# miniXS calibration matrix\n#\n")
+      if self.spectrometer is not None:
+        if self.spectrometer.tag:
+          f.write("# Spectrometer: %s\n" % self.spectrometer.tag)
+        else:
+          f.write("# Spectrometer: %s\n" % self.spectrometer.filename)
       f.write("# Dataset: %s\n" % self.dataset_name)
       f.write("# Dispersive Direction: %s\n" % DIRECTION_NAMES[self.dispersive_direction])
       f.write("#\n")
@@ -410,6 +418,7 @@ class Calibration:
       self.filename = filename
 
     parser = Parser({
+      'Spectrometer': STRING,
       'Dataset': STRING,
       'Dispersive Direction': STRING,
       'Energies and Exposures': (LIST, (FLOAT, STRING)),
@@ -445,6 +454,18 @@ class Calibration:
     parsed = parser.parse(header)
     if parser.errors:
       self.load_errors += parser.errors
+
+    sname = parsed.get('Spectrometer')
+    try:
+      if sname == os.path.basename(sname):
+        spect = Spectrometer(sname)
+      else:
+        spect = Spectrometer()
+        spect.load(sname)
+
+      self.spectrometer = spect
+    except Exception as e:
+      self.load_errors.append("Error loading spectrometer: %s" % str(e))
 
     self.dataset = parsed.get('Dataset', '')
 

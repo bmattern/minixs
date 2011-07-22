@@ -41,6 +41,8 @@ class CalibratorController(object):
 
     self.show_calibration_matrix = False
 
+    self.spectrometer_tags, self.spectrometer_names = mx.spectrometer.list_spectrometers(include_names=True)
+
     self.update_view_flag = 0
     self.update_view_timeout = None
 
@@ -116,6 +118,7 @@ class CalibratorController(object):
           (ID_VIEW_TYPE, self.OnViewType),
           ]),
         (wx.EVT_CHOICE, [
+          (ID_SPECTROMETER, self.OnSpectrometerChange),
           (ID_DISPERSIVE_DIR, self.OnDispersiveDir),
           ]),
         (EVT_RANGE_ACTION_CHANGED, [ (ID_IMAGE_PANEL, self.OnImageAction), ]),
@@ -135,8 +138,8 @@ class CalibratorController(object):
     """
     Update view to match model
     """
-    self.view.dataset_name.SetValue(self.model.dataset_name)
 
+    self.view.set_spectrometer(self.model.spectrometer)
     self.view.panel.filter_panel.dispersive_direction.SetSelection(self.model.dispersive_direction)
 
     # set exposures and energies
@@ -493,6 +496,20 @@ class CalibratorController(object):
     self.view.panel.filter_panel.set_filter_enabled(evt.Id, evt.Checked())
     self.UpdateView(self.UPDATE_FILTERS)
     self.CalibrationValid(False)
+    self.Changed()
+
+  def OnSpectrometerChange(self, evt):
+    name = evt.GetString()
+    try:
+      i = self.spectrometer_names.index(name)
+      s = mx.spectrometer.Spectrometer(self.spectrometer_tags[i])
+    except ValueError:
+      s = None
+
+    self.model.spectrometer = s
+    if s:
+      self.model.dispersive_direction = s.dispersive_direction
+      self.view.panel.filter_panel.dispersive_direction.SetSelection(s.dispersive_direction)
     self.Changed()
 
   def OnDispersiveDir(self, evt):

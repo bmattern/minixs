@@ -5,11 +5,12 @@ import numpy as np
 from numpy.linalg import norm
 import geom
 from itertools import izip
+from constants import *
 
 HBARC = 1973.2696 # eV * angstroms
 HC    = 2 * np.pi * HBARC
 
-DIR= os.path.join(os.path.dirname(__file__), 'data', 'spectrometers')
+SPECTROMETER_DATADIR = os.path.join(os.path.dirname(__file__), 'data', 'spectrometers')
 
 lattice_constants = {
     'Ge':  5.65735,
@@ -26,7 +27,7 @@ def clamp(v, min, max):
     return v
 
 def tag_to_path(tag):
-  return os.path.join(DIR, tag)
+  return os.path.join(SPECTROMETER_DATADIR, tag)
 
 def list_spectrometers(include_names=False):
   files = glob(tag_to_path('*'))
@@ -48,8 +49,6 @@ def list_spectrometers(include_names=False):
         name = '%s %s' % (s.element, s.line)
       names.append(name)
 
-    print "tags: ", tags
-    print "names: ", names
     return tags, names
 
   else:
@@ -57,13 +56,20 @@ def list_spectrometers(include_names=False):
 
 class Spectrometer(object):
   def __init__(self, tag=None):
+    self.tag = None
+    self.filename = None
+
+    self.camera_shape = (195, 487)
     if tag:
       self.load_by_tag(tag)
 
-    self.camera_shape = (195, 487)
-
   def load_by_tag(self, tag):
-    self.load(tag_to_path(tag))
+    path = tag_to_path(tag)
+    if os.path.exists(path):
+      self.tag = tag
+      self.load(path)
+    else:
+      raise Exception("Unknown Spectrometer tag: %s" % tag)
 
   def load(self, filename):
     self.load_errors = []
@@ -76,6 +82,7 @@ class Spectrometer(object):
         'Line': STRING,
         'Xtal': (STRING, INT, INT, INT),
         'Num Xtals': INT,
+        'Dispersive Direction': STRING,
         'Energy Range': (FLOAT, FLOAT),
         'Exit Aperture': point_list,
         'Entrance Aperture': point_list,
@@ -84,6 +91,8 @@ class Spectrometer(object):
         'Camera': point_list,
         'Beam': point_list
         })
+
+      self.filename = filename
 
       info = p.parse(f.readlines())
       self.load_errors += p.errors
@@ -147,6 +156,13 @@ class Spectrometer(object):
           self.load_errors.append('Geometry specified for %d xtals, but \'Num Xtals\' key also included with value: %d.' % (self.num_xtals, num_xtals))
         else:
           self.num_xtals = num_xtals
+
+      dirname = info.get('Dispersive Direction')
+      if dirname:
+        if dirname in DIRECTION_NAMES:
+          self.dispersive_direction = DIRECTION_NAMES.index(dirname)
+        else:
+          self.load_errors.append("Unknown dispersive direction: %s. Should be one of 'Up', 'Down', 'Left' or 'Right'")
 
       sample = info.get('Sample')
       if sample:

@@ -340,17 +340,15 @@ class CalibratorPanel(wx.Panel):
     vbox = wx.BoxSizer(wx.VERTICAL)
 
     # spectrometer
-    """
     hbox = wx.BoxSizer(wx.HORIZONTAL)
     label = wx.StaticText(self, wx.ID_ANY, "Spectrometer: ")
     self.spectrometer_tags, spectrometer_names = spectrometer.list_spectrometers(include_names=True)
-    spectrometer_names.append('Other')
+    spectrometer_names.insert(0, 'Unspecified / Other')
     choice = wx.Choice(self, ID_SPECTROMETER, choices=spectrometer_names)
     hbox.Add(label, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, HPAD)
     hbox.Add(choice, 1, wx.RIGHT, HPAD)
     vbox.Add(hbox, 0, wx.EXPAND | wx.BOTTOM, VPAD)
     self.spectrometer_choice = choice
-    """
 
     # dataset name box
     hbox = wx.BoxSizer(wx.HORIZONTAL)
@@ -448,6 +446,7 @@ class CalibratorView(MenuFrame):
     self.SetSizerAndFit(box)
 
     # provide shortcuts for gui elements that controller needs access to
+    self.spectrometer_choice = self.panel.spectrometer_choice
     self.image_view = self.panel.exposure_panel.image_view
     self.exposure_list = self.panel.exposure_list
     self.dataset_name = self.panel.dataset_name
@@ -456,6 +455,12 @@ class CalibratorView(MenuFrame):
     self.exposure_slider = self.exposure_panel.slider
     self.view_type = self.panel.tools_panel.view_type
     self.calibrate_button = self.panel.calibrate_button
+
+  def set_spectrometer(self, spec):
+    if spec is None:
+      self.spectrometer_choice.SetSelection(0)
+    else:
+      self.spectrometer_choice.SetStringSelection(spec.name)
 
   def get_filters(self):
     return self.panel.filter_panel.get_filters()

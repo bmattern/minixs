@@ -456,16 +456,17 @@ class Calibration:
       self.load_errors += parser.errors
 
     sname = parsed.get('Spectrometer')
-    try:
-      if sname == os.path.basename(sname):
-        spect = Spectrometer(sname)
-      else:
-        spect = Spectrometer()
-        spect.load(sname)
+    if sname:
+      try:
+        if sname == os.path.basename(sname):
+          spect = Spectrometer(sname)
+        else:
+          spect = Spectrometer()
+          spect.load(sname)
 
-      self.spectrometer = spect
-    except Exception as e:
-      self.load_errors.append("Error loading spectrometer: %s" % str(e))
+        self.spectrometer = spect
+      except Exception as e:
+        self.load_errors.append("Error loading spectrometer: %s" % str(e))
 
     self.dataset = parsed.get('Dataset', '')
 

@@ -615,3 +615,10 @@ class Calibration:
       return (diagnostics, spectra)
     else:
       return diagnostics
+
+  def calc_solid_angle_map(self):
+    if not self.spectrometer:
+      raise Exception("A spectrometer must be set in order to generate a solid angle map")
+    bounds = [(x1,y1,x2,y2) for (x1,y1),(x2,y2) in self.xtals]
+    return self.spectrometer.solid_angle_map(bounds)
+      

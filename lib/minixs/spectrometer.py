@@ -417,7 +417,7 @@ class Spectrometer(object):
     # calculate pixel size
     pw = norm(self.camera[1] - self.camera[0]) / w
     ph = norm(self.camera[3] - self.camera[0]) / h
-    print pw, ph
+    #print pw, ph
 
     images = self.image_points()
 

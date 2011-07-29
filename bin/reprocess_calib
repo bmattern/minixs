@@ -13,7 +13,7 @@ for filename in filenames:
   print "Loading %s..." % filename
   calib = mx.calibrate.load(filename)
   if calib.load_errors:
-    print "Unable to load .xes file:"
+    print "Unable to load .calib file:"
     print '\n'.join(calib.load_errors)
     continue
 

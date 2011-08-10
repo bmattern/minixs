@@ -55,6 +55,15 @@ def list_spectrometers(include_names=False):
     return [ os.path.basename(f) for f in files]
 
 class Spectrometer(object):
+  """
+  Properties of a spectrometer.
+
+  This contains geometric properties (camera, xtals, apertures, etc), and
+  the xtal material and orientation.
+
+  Additionally, includes methods to perform raytracing and generate
+  mockup calibration.
+  """
   def __init__(self, tag=None):
     self.tag = None
     self.filename = None
@@ -143,7 +152,7 @@ class Spectrometer(object):
       if xtals:
         if len(xtals) % 4 == 0:
           self.xtals = [[geom.Point(*p) for p in xtals[4*i:4*(i+1)]] for i in range(len(xtals)/4)]
-          self.xtal_planes = [geom.Plane.FromPoints(*x[0:3]) for x in self.xtals]
+          self.xtal_rects = [geom.Rectangle(x[0], x[1], x[3]) for x in self.xtals]
           self.num_xtals = len(self.xtals)
         else:
           self.load_errors.append('Xtal list contains %d points, which is not a multiple of 4.' % len(xtals))
@@ -247,22 +256,7 @@ class Spectrometer(object):
     """
     Calculate reflections of sample location about analyzer crystal faces
     """
-    return [geom.reflect_through_plane(self.sample, xp) for xp in self.xtal_planes]
-
-  def calculate_active_regions(self):
-    """
-    Find projection of sample through entrance apertures onto xtal planes.
-
-    Currently requires number of entrance apertures to be same as number of xtals.
-    """
-    if len(self.entrance_aperture) != len(self.xtals):
-      raise Exception("Number of entrance apertures and crystals must be same")
-
-    # run through apertures and crystals
-    for aperture, xtal_plane in izip(self.entrance_aperture, self.xtal_planes):
-      for corner in aperture:
-        l = geom.Line.FromPoints(self.sample, corner)
-        p = geom.intersect_line_with_plane(l, xtal_plane)
+    return [geom.reflect_through_plane(self.sample, xp) for xp in self.xtal_rects]
 
   def project_point_through_rect_onto_camera(self, point, rect):
     """
@@ -311,10 +305,9 @@ class Spectrometer(object):
     """
 
     bounds = []
-
     images = self.image_points()
 
-    for xtal_plane, image, entrance_aperture in izip(self.xtal_planes, images, self.entrance_aperture):
+    for xtal_plane, image, entrance_aperture in izip(self.xtal_rects, images, self.entrance_aperture):
       # project image points through exit aperture onto camera
       exit_projection = self.project_point_through_rect_onto_camera(image, self.exit_aperture)
 
@@ -360,7 +353,7 @@ class Spectrometer(object):
     pixels = self.camera_pixel_locations(dx,dy)
 
     # find image points and xtal projection boundaries
-    for xtal_plane, image, entrance_aperture in izip(self.xtal_planes, images, self.entrance_aperture):
+    for xtal_plane, image, entrance_aperture in izip(self.xtal_rects, images, self.entrance_aperture):
       exit_projection = self.project_point_through_rect_onto_camera(image, self.exit_aperture)
 
       active_region = [
@@ -433,7 +426,7 @@ class Spectrometer(object):
       xtals_reversed = True
 
     pixels = self.camera_pixel_locations()
-    num_xtals = len(self.xtal_planes)
+    num_xtals = len(self.xtal_rects)
 
     for x1,y1,x2,y2 in bounds:
       xc = (x1+x2)/2.0

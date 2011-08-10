@@ -29,6 +29,52 @@ class Plane(object):
   def __repr__(self):
     return "Plane(%s, %s)" % (self.p0.__repr__(), self.n.__repr__())
 
+class Rectangle(Plane):
+  """
+  A bounded, rectilinear region of a plane.
+  """
+  def __init__(self, p0, p1, p2):
+    """
+    A rectangular surface.
+
+    Parameters:
+      p0: point with local coords (0,0)
+      p1: point with local coords (1,0)
+      p2: point with local coords (0,1)
+    """
+
+    # defining points
+    self.p0 = np.asarray(p0, dtype='float')
+    self.p1 = np.asarray(p1, dtype='float')
+    self.p2 = np.asarray(p2, dtype='float')
+
+    # basis vectors for rectangle
+    self.x = (self.p1 - self.p0)
+    self.y = (self.p2 - self.p0)
+
+    # reciprocal vectors
+    self.kx = self.x / np.dot(self.x, self.x)
+    self.ky = self.y / np.dot(self.y, self.y)
+
+    # normal vector
+    self.n = np.cross(self.x, self.y)
+    self.n /= np.linalg.norm(self.n)
+
+  def closest_point(self, p):
+    dp = np.asarray(p) - self.p0
+    dp -= np.dot(dp, self.n) * self.n
+    return self.p0 + dp
+
+  def global_to_local(self, p):
+    dp = np.asarray(p) - self.p0
+    return np.array([np.dot(dp, self.kx), np.dot(dp, self.ky)])
+
+  def local_to_global(self, p):
+    return self.p0 + p[0] * self.x + p[1] * self.y
+
+  def __repr__(self):
+    return "Rectangle(%s, %s, %s)" % (self.p0.__repr__(), self.p1.__repr__(), self.p2.__repr__())
+
 class Line(object):
   def __init__(self, l0, n):
     """
@@ -47,9 +93,18 @@ class Line(object):
     return cls(p1, n)
 
   def __repr__(self):
-    return "Plane(%s, %s)" % (self.p0.__repr__(), self.n.__repr__())
+    return "Line(%s, %s)" % (self.l0.__repr__(), self.n.__repr__())
 
 def intersect_line_with_plane(line, plane):
+  """
+  Find intersection point of a line with a plane.
+
+  Returns:
+    The intersection point if it exists and is unique.
+    The origin of the plane if the line is contained within the plane.
+    None if the line is parallel to, but out of, the plane.
+  """
+
   a = np.dot(plane.p0 - line.l0, plane.n)
   b = np.dot(line.n, plane.n)  
 

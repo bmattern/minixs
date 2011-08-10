@@ -186,7 +186,10 @@ class Spectrometer(object):
       if camera:
         if len(camera) == 4:
           self.camera = [geom.Point(*p) for p in camera]
-          self.camera_plane = geom.Plane.FromPoints(*self.camera[0:3])
+          self.camera_rect = geom.Rectangle(
+              self.camera[0],
+              self.camera[1],
+              self.camera[3])
         else:
           self.load_errors.append('Camera contains %d points instead of 4.' % len(self.camera))
       else:
@@ -213,10 +216,10 @@ class Spectrometer(object):
 
   def point_to_camera_pixel(self, point, tolerance=.001):
 
-    d = point - self.camera_plane.p0
+    d = point - self.camera_rect.p0
 
     # check that point is within tolerance of plane
-    if abs(np.dot(d,self.camera_plane.n)) > tolerance:
+    if abs(np.dot(d,self.camera_rect.n)) > tolerance:
       return None # not in plane
 
     cx = self.camera[1] - self.camera[0]
@@ -270,7 +273,7 @@ class Spectrometer(object):
 
     for corner in rect:
       l = geom.Line.FromPoints(point, corner)
-      p = geom.intersect_line_with_plane(l, self.camera_plane)
+      p = geom.intersect_line_with_plane(l, self.camera_rect)
 
       x,y = self.point_to_camera_pixel(p)
       x = clamp(int(x+1e-5),0,w-1)
@@ -444,7 +447,7 @@ class Spectrometer(object):
 
       dn = pixels[y1:y2,x1:x2].reshape((sw*sh,3)) - images[i]
       length = np.sqrt((dn**2).sum(1))
-      cos_theta = np.abs((dn*self.camera_plane.n).sum(1)) / length
+      cos_theta = np.abs((dn*self.camera_rect.n).sum(1)) / length
       domega[y1:y2,x1:x2] = (pw*ph*cos_theta / length**2).reshape((sh,sw))
 
     return domega

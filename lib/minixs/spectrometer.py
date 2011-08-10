@@ -448,3 +448,46 @@ class Spectrometer(object):
       domega[y1:y2,x1:x2] = (pw*ph*cos_theta / length**2).reshape((sh,sw))
 
     return domega
+
+  def calculate_active_regions(self):
+    """
+    Find projection of sample through entrance apertures onto xtals.
+
+    FIXME: This currently assumes rectangular projections onto crytals.
+
+    Returns:
+      List of active regions for each crystal.
+      Each entry in list is also a list (since multiple apertures may
+        illuminate same xtal).
+      Finally, each subentry is a list of 4 points.
+    """
+    if len(self.entrance_aperture) != len(self.xtals):
+      raise Exception("Number of entrance apertures and crystals must be same")
+
+    # run through apertures and crystals
+
+    active_regions = []
+    for i, rect in enumerate(self.xtal_rects):
+      active_regions.append([])
+      for aperture in self.entrance_aperture:
+        lines = [geom.Line.FromPoints(self.sample, corner) for corner in aperture]
+        points = np.array([geom.intersect_line_with_plane(l, rect) for l in lines])
+        #if np.any(p is None for p in points): continue
+
+        # convert to xtal coordinates
+        lpoints = np.array([rect.global_to_local(p) for p in points])
+        # clamp to xtal
+        # FIXME: this is only correct if the projection is rectangular
+        #        and has sides parallel to xtal sides...
+        lpoints[lpoints<0] = 0
+        lpoints[lpoints>1] = 1
+
+        # check if there is any overlap with xtal, and skip if not
+        size = lpoints.max(0) - lpoints.min(0)
+        if np.any(size < 1e-5):
+          continue
+
+        # convert back to global coordinates
+        active_regions[i].append([rect.local_to_global(p) for p in lpoints])
+    return active_regions
+

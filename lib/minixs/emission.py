@@ -364,6 +364,7 @@ class EmissionSpectrum:
   def load_solid_angle_map(self, map_file):
     try:
       if os.path.exists(map_file):
+        map_file = os.path.abspath(map_file)
         map = np.loadtxt(map_file)
       else:
         path = os.path.join(os.path.dirname(__file__), 'data', map_file)

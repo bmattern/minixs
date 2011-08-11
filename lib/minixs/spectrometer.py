@@ -494,3 +494,86 @@ class Spectrometer(object):
         active_regions[i].append([rect.local_to_global(p) for p in lpoints])
     return active_regions
 
+  def calculate_projection_bounds2(self):
+    """
+    Determine exposed region on camera from each xtal.
+
+    Finds projection of specular radiation from source point
+    through entrance aperture, off xtal, through exit aperture
+    and onto camera.
+
+    For now, this finds top left and bottom right corners (in camera coords)
+    and assumes region to be rectangular.
+
+    TODO: should be easy to extend this to calculate full trapezoidal region
+          or, could add option to give largest rect inside, or smallest rect
+          outside...
+    """
+
+    bounds = []
+    images = self.image_points()
+    active_regions_by_xtal = self.calculate_active_regions()
+
+    for rect, image, active_regions in izip(self.xtal_rects, images, active_regions_by_xtal):
+      xtal_bounds = []
+      bounds.append(xtal_bounds)
+      # project image points through exit aperture onto camera
+      exit_projection = self.project_point_through_rect_onto_camera(image, self.exit_aperture)
+
+      for active_region in active_regions:
+        # project images through active region on to camera
+        active_projection = self.project_point_through_rect_onto_camera(image, active_region)
+
+        # "intersect" (not complete intersection... see TODO above)
+        x1 = max(exit_projection[0], active_projection[0])
+        y1 = max(exit_projection[1], active_projection[1])
+        x2 = min(exit_projection[2], active_projection[2])
+        y2 = min(exit_projection[3], active_projection[3])
+
+        if x2 <= x1 or y2 <= y1:
+          # no overlap between exit aperture and entrance aperture 
+          xtal_bounds.append(None)
+        else:
+          # add it to the list
+          xtal_bounds.append([x1,y1,x2,y2])
+
+    return bounds
+
+
+  def mockup_calibration_matrix2(self, dx=0.5, dy=0.5):
+    """
+    Create a theoretical calibration matrix for the designed spectrometer
+    geometry.
+    """
+    h,w = self.camera_shape
+    calib = np.zeros((h,w))
+
+    d0 = lattice_constants[self.xtal_type]
+    # XXX this assumes the crystal is cubic (all that we currently use are)
+    #     it would be good to generalize this though
+    d = d0 / norm(self.xtal_cut)
+
+    images = self.image_points()
+
+    bounds_by_xtal = self.calculate_projection_bounds2()
+
+    pixels = self.camera_pixel_locations(dx,dy)
+
+    # find image points and xtal projection boundaries
+    for xtal_plane, image, bounds in izip(self.xtal_rects, images, bounds_by_xtal):
+      for b in bounds:
+        if b is None: continue
+        x1,y1,x2,y2 = b
+        rw = x2-x1
+        rh = y2-y1
+
+        print rw, rh
+        dn = pixels[y1:y2, x1:x2].reshape((rw*rh,3)) - image
+        length = np.sqrt((dn**2).sum(1))
+        cos_theta = np.abs((dn*xtal_plane.n).sum(1)) / length
+        energy = HC / (2 * d) / cos_theta
+        energy = energy.reshape((rh,rw))
+
+        calib[y1:y2,x1:x2] = energy
+
+    return calib

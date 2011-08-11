@@ -18,7 +18,7 @@ for filename in filenames:
     continue
 
   print "  Reprocessing..."
-  xes.process()
+  xes.process(xes.emission)
   print "  Saving..."
   xes.save()
   print "Done"

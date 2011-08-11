@@ -258,6 +258,11 @@ class RangeTool(Tool):
     """
 
     if mouse_event_modifier_mask(evt) != MOD_NONE:
+
+      # not all computers (Macs) have middle mouse buttons, so let
+      # shift-left-click
+      if evt.ShiftDown():
+        self.SplitActiveRect(evt.ControlDown())
       return
 
     x,y = evt.GetPosition()
@@ -308,8 +313,17 @@ class RangeTool(Tool):
     Handle middle mouse up
     """
 
-    if mouse_event_modifier_mask(evt) != MOD_NONE:
-      return
+    horizontal = evt.ControlDown()
+    self.SplitActiveRect(horizontal)
+
+
+  def SplitActiveRect(self, horizontal=False):
+    """
+    Split active rectangle in half.
+
+    Parameters:
+      horizontal: if True, split rect horizontally. else, split rect vertically
+    """
 
     if self.action & self.ACTION_PROPOSED:
       r = self.active_rect
@@ -317,7 +331,7 @@ class RangeTool(Tool):
       r2 = [[x1,y1],[x2,y2]]
 
       # split active rect in half
-      if evt.ShiftDown():
+      if horizontal:
         #split horizontally
         (x1,y1), (x2,y2) = r
         yp = (y1 + y2) / 2.0

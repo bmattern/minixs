@@ -432,6 +432,7 @@ class CalibratorController(object):
   def OnDeleteRow(self, evt):
     self.view.exposure_list.DeleteRow()
     self.Changed()
+    self.UpdateView(self.UPDATE_EXPOSURES)
 
   def OnImageAction(self, evt):
     action = evt.action

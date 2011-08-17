@@ -198,7 +198,7 @@ class KillzoneController(object):
         self.dialog_dirs,
         'xes',
         'Enter a filename to save to',
-        wildcard=WILDCARD_XES,
+        wildcard=WILDCARD_DATA,
         save=True
         )
 
@@ -223,7 +223,7 @@ class KillzoneController(object):
         self.dialog_dirs,
         'xes',
         'Select an xes file to open',
-        wildcard=WILDCARD_XES
+        wildcard=WILDCARD_DATA
         )
 
     if not filename:
@@ -233,18 +233,11 @@ class KillzoneController(object):
     self.UpdateImageView()
 
   def ModelToView(self):
-
-    self.view.dataset_entry.SetValue(self.model.dataset_name)
-    self.view.energy_entry.SetValue(str(self.model.incident_energy))
-    self.view.norm_entry.SetValue(str(self.model.I0))
-
     for f in self.model.exposure_files:
       base = os.path.basename(f)
       self.view.exposure_listbox.AppendAndEnsureVisible(base)
     self.view.SetExposureCount(len(self.model.exposure_files))
-    self.SetCalibrationFilename(self.model.calibration_file)
-    self.view.axes.cla()
-    self.view.axes.plot(self.model.emission, self.model.intensity)
+    self.SelectExposure(0)
 
   def OnAbout(self, evt):
     """

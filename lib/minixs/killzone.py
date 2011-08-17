@@ -1,5 +1,7 @@
+import os
+import numpy as np
 
-class KillzoneModel(object):
+class KillzoneList(object):
   def __init__(self):
     # ordered list of filenames
     self.exposure_files = []
@@ -50,4 +52,23 @@ class KillzoneModel(object):
       killzones[ef] = {'rects': rects, 'circles': circles}
     f.close()
 
+    self.exposure_files = exposure_files
     self.killzones = killzones
+
+  def mask(self, filename, shape=(197,485)):
+    kz = self.killzones.get(os.path.abspath(filename))
+    if not kz:
+      return None
+
+    m = np.zeros(shape)
+    rows,cols = shape
+    y,x = mgrid[:rows, :cols]
+
+    for x0,y0,r0 in kz['circles']:
+      dr = np.hypot(x-x0, y-y0)
+      m[dr <= r0] = 1
+
+    for x1,y1,x2,y2 in kz['rects']:
+      m[y1:y2,x1:x2] = 1
+
+    return m

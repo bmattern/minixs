@@ -104,9 +104,9 @@ if (options.output != sys.stdout and os.path.exists(options.output)):
 sys.stderr.write("Processing...\n")
 xes = mx.emission.EmissionSpectrum()
 xes.dataset = options.dataset
-xes.calibration_file = os.path.abspath(calibration_file)
+xes.calibration_file = os.path.realpath(calibration_file)
 xes.incident_energy = options.energy
-xes.exposure_files = [os.path.abspath(f) for f in exposure_files]
+xes.exposure_files = [os.path.realpath(f) for f in exposure_files]
 if options.solid_angle_map:
   xes.load_solid_angle_map(options.solid_angle_map)
 xes.I0 = options.i0

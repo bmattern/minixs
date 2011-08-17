@@ -1,10 +1,10 @@
 import wx
-import view, controller, model
+import view, controller
 from const import *
 
 from minixs import filter, emission
 from minixs.gui import filter_view
-
+from minixs.killzone import KillzoneList
 
 class KillzoneApp(wx.App):
   def __init__(self, *args, **kwargs):
@@ -12,12 +12,12 @@ class KillzoneApp(wx.App):
     self.SetAppName('minixs')
 
     v = view.KillzoneView(None, ID_MAIN_FRAME, 'miniXS XES Killzone')
-    m = model.KillzoneModel()
+    m = KillzoneList()
     c = controller.KillzoneController(v, m)
 
     self.controller = c
 
-    self.load_dummy_data()
+    #self.load_dummy_data()
     
     v.Show()
 

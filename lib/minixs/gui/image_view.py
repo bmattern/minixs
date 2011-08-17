@@ -56,6 +56,8 @@ class ImageView(wx.Panel):
     self.pan_min = [0,0]
     self.pan_max = [0,0]
 
+    self.queue_zoom_pan = None
+
   def GetBitmapSize(self):
     if self.bitmap:
       return self.raw_image.GetSize()
@@ -91,6 +93,11 @@ class ImageView(wx.Panel):
 
     self.bitmap = wx.BitmapFromImage(scaled)
     self.UpdatePanBounds()
+
+    if self.queue_zoom_pan:
+      self.SetPan(*self.queue_zoom_pan)
+      self.queue_zoom_pan = None
+
     self.Refresh()
     self.set_zoom_timeout = None
 
@@ -293,7 +300,7 @@ class ImageView(wx.Panel):
 
     rot = evt.GetWheelRotation()
 
-    zoom = self.zoom
+    orig_zoom = zoom = self.zoom
     if rot > 0:
       zoom += 1
       if zoom == -1:
@@ -304,10 +311,19 @@ class ImageView(wx.Panel):
       if zoom == 0:
         zoom = -2
 
+    x,y = evt.GetPosition()
+    bx, by = self.CoordScreenToBitmap(x,y)
+
     self.SetZoom(zoom)
 
     # pan so that pixel under mouse stays under mouse
-    #x,y = evt.GetPosition()
+    bx2,by2 = self.CoordScreenToBitmap(x,y)
+    px, py = self.pan
+    scale = float(zoom)
+    if scale < 0: scale = -1.0/scale
+    px += (bx2-bx)*scale
+    py += (by2-by)*scale
+    self.queue_zoom_pan = (px,py)
 
   def SetPan(self, px, py):
     mx,my = self.pan_min

@@ -104,7 +104,6 @@ class KillzoneController(object):
     self.view.image_view.Bind(wx.EVT_KEY_DOWN, self.OnImageKeyDown)
 
   def OnImageKeyDown(self, evt):
-    print "key down"
     bindings = {
         wx.WXK_LEFT: self.PreviousExposure,
         wx.WXK_RIGHT: self.NextExposure,
@@ -160,7 +159,10 @@ class KillzoneController(object):
     self.view.image_view.SetZoom(zoom)
 
   def SelectExposure(self, num, from_spinbox=False):
-    num %= len(self.model.exposure_files)
+    num_exposures = len(self.model.exposure_files)
+    if num_exposures == 0:
+      return
+    num %= num_exposures
     self.exposure_num = num
     filename = self.model.exposure_files[num]
     self.exposure.load(filename)
@@ -296,6 +298,7 @@ class KillzoneController(object):
       errdlg.Destroy()
 
   def OnDeleteSelected(self, evt):
+    cur = self.model.exposure_files[self.exposure_num]
     sel = list(self.view.exposure_listbox.GetSelections())
     # run through indices backwards and remove from lists
     sel.sort(reverse=True)
@@ -305,6 +308,11 @@ class KillzoneController(object):
       del(self.model.killzones[f])
       self.view.exposure_listbox.Delete(i)
 
+    try:
+      self.SelectExposure(self.model.exposure_files.index(cur))
+    except ValueError:
+      self.SelectExposure(0)
+
     # XXX if current exposure was deleted, select another one!
 
   def AppendExposure(self, f):
@@ -313,6 +321,7 @@ class KillzoneController(object):
     base = os.path.basename(f)
     self.view.exposure_listbox.AppendAndEnsureVisible(base)
     self.view.SetExposureCount(len(self.model.exposure_files))
+    self.SelectExposure(self.exposure_num)
 
   def OnIndividualMin(self, evt):
     self.individual_range[0] = evt.GetInt()
@@ -330,7 +339,6 @@ class KillzoneController(object):
 
   def OnSelectionMode(self, evt):
     mode = evt.GetString()
-    print mode
     if mode == 'Circle':
       self.circle_tool.SetActive(True)
       self.range_tool.SetActive(False)

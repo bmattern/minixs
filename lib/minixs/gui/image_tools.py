@@ -654,7 +654,6 @@ class CircleTool(Tool):
 
     scale = self.parent.zoom
     if scale < 0: scale = -1.0/scale
-    print scale
     off = 5.0 / scale
     #off = 4.0
 
@@ -699,17 +698,9 @@ class CircleTool(Tool):
     w, h = self.parent.GetBitmapSize()
 
     if self.action & self.ACTION_PROPOSED:
-      if self.action & self.ACTION_MOVE:
-        print "MOVE"
-      elif self.action & self.ACTION_RESIZE:
-        print "RESIZE"
-      else:
-        print "UNKNOWN"
-
       # perform an action on exisiting circle
       self.action &= ~self.ACTION_PROPOSED
       self.action_start = (x,y)
-      print "ACTION_START: ", x, y
     else:
       # create a new circle
       circle = [x,y,self.radius]
@@ -807,7 +798,6 @@ class CircleTool(Tool):
       xs,ys = self.action_start
       dx, dy = x - xs, y - ys
 
-      print "MOVING: ", xs, ys, x, y, dx, dy
       self.active_circle[0:2] = (xs+dx,ys+dy)
       self.action_start = (x,y)
 
@@ -824,7 +814,6 @@ class CircleTool(Tool):
     """
     Handle leaving window
     """
-    print "leave"
     self.coords = None
 
     if self.action & self.ACTION_PROPOSED or self.action == self.ACTION_NONE:

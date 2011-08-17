@@ -145,7 +145,6 @@ class KillzoneView(MenuFrame):
 
     box = wx.BoxSizer(wx.VERTICAL)
     panel = KillzonePanel(self, wx.ID_ANY)
-    print "view"
     box.Add(panel, 1, wx.EXPAND | wx.LEFT | wx.TOP, HPAD)
 
     self.exposure_listbox = panel.exposure_listbox

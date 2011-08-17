@@ -76,7 +76,6 @@ class ImageView(wx.Panel):
 
   def _SetZoomActual(self):
     zoom = self.zoom
-
     if zoom > 0:
       w = self.raw_image.Width * zoom
       h = self.raw_image.Height * zoom

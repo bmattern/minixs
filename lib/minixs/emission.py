@@ -20,7 +20,7 @@ def load(filename):
   xes.load(filename)
   return xes
 
-def process_spectrum(cal, exposure, energies, I0, direction, xtals, solid_angle=None, skip_columns=[]):
+def process_spectrum(cal, exposure, energies, I0, direction, xtals, solid_angle=None, skip_columns=[], killzone_mask=None):
   """Interpolated emission spectrum
 
   Parameters
@@ -56,6 +56,15 @@ def process_spectrum(cal, exposure, energies, I0, direction, xtals, solid_angle=
       if i in skip_columns:
         #sys.stderr.write("skipping %d\n" % i)
         continue
+
+      # if any part of this row/column has been killzoned, skip it
+      if killzone_mask is not None:
+        if direction == DOWN or direction == UP:
+          if np.any(killzone_mask[y1:y2,i]):
+            continue
+        else:
+          if np.any(killzone_mask[i,x1:x2]):
+            continue
 
       # select one row/column of calibration matrix and correspond row/column of spectrum exposure
       # XXX this is untested for UP and RIGHT, but *should* be correct
@@ -375,7 +384,7 @@ class EmissionSpectrum:
     self.solid_angle_map_file = map_file
     self.solid_angle_map = map
 
-  def process(self, emission_energies=None, skip_columns=[]):
+  def process(self, emission_energies=None, skip_columns=[], killzone_mask=None):
     calibration = calibrate.Calibration()
     calibration.load(self.calibration_file)
 
@@ -399,12 +408,18 @@ class EmissionSpectrum:
                                 calibration.dispersive_direction,
                                 calibration.xtals,
                                 self.solid_angle_map,
-                                skip_columns=skip_columns)
+                                skip_columns=skip_columns,
+                                killzone_mask=killzone_mask)
 
     self.set_spectrum(spectrum) 
 
-  def process_binned(self, E1, E2, Estep):
+  def process_binned(self, E1, E2, Estep, killzone_mask=None):
     calib = calibrate.load(self.calibration_file)
+
+    # zero out killzones of calibration matrix
+    # (this causes those pixels to be ignored)
+    if killzone_mask is not None:
+      calib.calibration_matrix[killzone_mask] = 0
 
     exposure = Exposure()
     exposure.load_multi(self.exposure_files)

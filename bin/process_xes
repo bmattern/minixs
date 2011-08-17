@@ -5,6 +5,7 @@
 #
 
 # the blue detector pool pilatus has a few columns that have a lot of bad pixels, so we skip them entirely (the high filter should be able to catch most), so this can probably be left empty
+# note that if killzones are defined, this is ignored...
 skip_columns = []
 #skip_columns = [220, 221, 233, 234]
 
@@ -37,6 +38,7 @@ parser.add_option("-a", "--angle", dest='solid_angle_map', default='',
 parser.add_option("-B", "--binned", dest='binned', action='store_true',
                   default=False,
                   help="Use straight binning of pixels instead of an interpolated-average.")
+parser.add_option("-k", "--kilzones", dest='killzones', help="Killzone definition file.")
 
 (options, args) = parser.parse_args()
 
@@ -110,12 +112,27 @@ if options.solid_angle_map:
 xes.I0 = options.i0
 xes.filters = filters
 
+# read in killzones and generate mask
+killzone_mask = None
+if options.killzones:
+  from minixs.killzone import KillzoneList
+  killzone_list = KillzoneList()
+  killzone_list.load(options.killzones)
+
+  for f in xes.exposure_files:
+    file_mask = killzone_list.mask(f)
+    if file_mask is not None:
+      if killzone_mask is None:
+        killzone_mask = file_mask
+      else:
+        killzone_mask |= file_mask
+
 E1,E2 = calib.energy_range()
 if options.binned:
-  xes.process_binned(E1,E2,options.stepsize)
+  xes.process_binned(E1,E2,options.stepsize, killzone_mask)
 else:
   grid = np.arange(round(E1),round(E2),options.stepsize)
-  xes.process(grid, skip_columns=skip_columns)
+  xes.process(grid, skip_columns=skip_columns, killzone_mask=killzone_mask)
 
 if options.output == sys.stdout:
   sys.stderr.write("Saving to stdout\n")

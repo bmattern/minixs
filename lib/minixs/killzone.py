@@ -27,7 +27,9 @@ class KillzoneList(object):
       print self.killzones[ef]['circles']
       circles = '|'.join("%d,%d,%d" % (xc,yc,r) for xc,yc,r in self.killzones[ef]['circles'])
 
-      f.write("%s:%s:%s\n" % (ef, rects, circles))
+      # save out using real path so that symlinks are resolved
+      rf = os.path.realpath(ef)
+      f.write("%s:%s:%s\n" % (rf, rects, circles))
 
     f.close()
 
@@ -62,7 +64,7 @@ class KillzoneList(object):
 
     m = np.zeros(shape)
     rows,cols = shape
-    y,x = mgrid[:rows, :cols]
+    y,x = np.mgrid[:rows, :cols]
 
     for x0,y0,r0 in kz['circles']:
       dr = np.hypot(x-x0, y-y0)

@@ -5,6 +5,7 @@ import calibrate, \
        emission, \
        exposure, \
        filter, \
+       killzone, \
        misc, \
        rixs, \
        scanfile, \
@@ -17,6 +18,7 @@ __all__ = [
   'emission',
   'exposure',
   'filter',
+  'killzone',
   'misc',
   'rixs',
   'scanfile',

@@ -1,10 +1,22 @@
 import wx
 import wx.lib.newevent
+from numpy import sqrt
 
 from mouse_event import *
 
 EventRangeActionChanged, EVT_RANGE_ACTION_CHANGED = wx.lib.newevent.NewCommandEvent()
 EventRangeChanged, EVT_RANGE_CHANGED = wx.lib.newevent.NewCommandEvent()
+
+KILLZONE_COLORS = {
+    'fill': wx.Colour(200,0,0,200),
+    'active_fill': wx.Colour(255, 150, 150, 200),
+    'place_fill': wx.Colour(200, 200, 200, 200),
+    'stroke': wx.Colour(255, 255, 255, 255),
+    'active_stroke': wx.Colour(255, 255, 255, 255),
+    'resize_stroke': wx.Colour(34, 255, 255, 255),
+    'move_stroke': wx.Colour(255, 255, 255, 255),
+    'place_stroke': wx.Colour(255, 255, 255, 255),
+    }
 
 class Tool(object):
   def __init__(self, parent):
@@ -53,7 +65,6 @@ class Tool(object):
 
   def OnPaint(self, evt, dc):
     pass
-
 
 class RangeTool(Tool):
   """
@@ -543,3 +554,333 @@ class Crosshair(Tool):
       dc.DrawLine(x1,y1,x2,y2)
 
     dc.SetLogicalFunction(wx.COPY)
+
+
+
+
+class CircleTool(Tool):
+  """
+  A tool to allow selecting one or more circular regions
+  """
+  ACTION_NONE = 0
+  ACTION_RESIZE = 0x01
+  ACTION_MOVE     = 0x02
+  ACTION_PROPOSED = 0x100
+
+  def __init__(self, *args, **kwargs):
+    """
+    Initialize tool
+    """
+    Tool.__init__(self, *args, **kwargs)
+
+    self.circles = []
+    self.active_circle = None
+
+    self.multiple = True
+
+    self.action = self.ACTION_NONE
+
+    self.colors = {
+        'fill': wx.Colour(200,0,0,200),
+        'active_fill': wx.Colour(255, 150, 150, 200),
+        'place_fill': wx.Colour(200, 200, 200, 200),
+        'stroke': wx.Colour(255, 255, 255, 255),
+        'active_stroke': wx.Colour(255, 255, 255, 255),
+        'resize_stroke': wx.Colour(34, 255, 255, 255),
+        'move_stroke': wx.Colour(255, 255, 255, 255),
+        'place_stroke': wx.Colour(255, 255, 255, 255),
+        }
+
+    self.UpdateColors()
+
+    self.coords = None
+
+    self.range_changed = False
+    self.post_range_change_immediate = False
+
+    self.radius = 6
+
+  def UpdateColors(self):
+    self.brush = wx.Brush(self.colors['fill'])
+    self.active_brush = wx.Brush(self.colors['active_fill'])
+    self.place_brush = wx.Brush(self.colors['place_fill'])
+
+    self.pen = wx.Pen(self.colors['stroke'], 1, wx.SOLID)
+    self.active_pen = wx.Pen(self.colors['active_stroke'], 1, wx.SOLID)
+    self.resize_pen = wx.Pen(self.colors['resize_stroke'], 2, wx.SOLID)
+    self.move_pen = wx.Pen(self.colors['move_stroke'], 2, wx.SOLID)
+    self.place_pen = wx.Pen(self.colors['place_stroke'], 2, wx.SOLID)
+
+
+  def RangeChanged(self):
+    if self.post_range_change_immediate:
+      self.PostEventRangeChanged()
+    else:
+      self.range_changed = True
+
+  def PostEventRangeChanged(self):
+    """
+    Send event indicating that selected range has changed
+    """
+    evt = EventRangeChanged(self.parent.Id, range=self.circles)
+    wx.PostEvent(self.parent, evt)
+
+  def PostEventRangeActionChanged(self, in_window):
+    """
+    Send event indicating that current action has changed
+    """
+    evt = EventRangeActionChanged(self.parent.Id,
+        action=self.action,
+        range=self.active_circle,
+        in_window=in_window)
+    wx.PostEvent(self.parent, evt)
+
+  def DetermineAction(self, x, y):
+    """
+    Determine action to perform based on the provided location
+
+    Parameters
+    ----------
+      x: x coordinate
+      y: y coordinate
+
+    Returns
+    -------
+      (circle, action)
+
+      circle: the circle to act on
+      action: the action to perform (a bitmask of self.ACTION_*)
+    """
+
+    scale = self.parent.zoom
+    if scale < 0: scale = -1.0/scale
+    print scale
+    off = 5.0 / scale
+    #off = 4.0
+
+    action = self.ACTION_NONE
+    active_circle = None
+   
+    # run through circles backwards (newest are on top)
+    for circle in self.circles[::-1]:
+      xc, yc, r = circle
+
+      d = sqrt((x-xc)**2 + (y-yc)**2)
+
+      # if within circle, move it
+      if d < r:
+        action = self.ACTION_MOVE
+        active_circle = circle
+
+      # if outside of circle, but close, resize it
+      elif d < r+off:
+        action = self.ACTION_RESIZE
+        active_circle = circle
+
+      if action != self.ACTION_NONE:
+        return (circle, action)
+
+    return (None, self.ACTION_NONE)
+
+  def SetMultiple(self, multiple):
+    self.multiple = multiple
+
+  def OnLeftDown(self, evt):
+    """
+    Handle left mouse down
+    """
+
+    if mouse_event_modifier_mask(evt) != MOD_NONE:
+      return
+
+    x, y = evt.GetPosition()
+    x, y = self.parent.CoordScreenToBitmap(x,y)
+
+    w, h = self.parent.GetBitmapSize()
+
+    if self.action & self.ACTION_PROPOSED:
+      if self.action & self.ACTION_MOVE:
+        print "MOVE"
+      elif self.action & self.ACTION_RESIZE:
+        print "RESIZE"
+      else:
+        print "UNKNOWN"
+
+      # perform an action on exisiting circle
+      self.action &= ~self.ACTION_PROPOSED
+      self.action_start = (x,y)
+      print "ACTION_START: ", x, y
+    else:
+      # create a new circle
+      circle = [x,y,self.radius]
+      if self.multiple:
+        self.circles.append(circle)
+      else:
+        self.circles = [circle]
+
+      self.active_circle = circle 
+      self.action = self.ACTION_MOVE
+      self.action_start = (x,y)
+
+    self.parent.Refresh()
+
+  def OnLeftUp(self, evt):
+    """
+    Handle left mouse up
+    """
+
+    if mouse_event_modifier_mask(evt) != MOD_NONE:
+
+      # not all computers (Macs) have middle mouse buttons, so let
+      # shift-left-click
+      if evt.ShiftDown():
+        self.SplitActiveRect(evt.ControlDown())
+      return
+
+    x,y = evt.GetPosition()
+    x,y = self.parent.CoordScreenToBitmap(x,y)
+
+    if self.action == self.ACTION_RESIZE and self.active_circle[2] < 1:
+      self.circles.remove(self.active_circle)
+      self.active_circle = None
+
+    circle, action = self.DetermineAction(x, y)
+    if action != self.ACTION_NONE:
+      action |= self.ACTION_PROPOSED
+    self.active_circle = circle
+    self.action = action 
+
+    if self.range_changed:
+      self.PostEventRangeChanged()
+      self.range_changed = False
+
+    self.parent.Refresh()
+
+  def OnRightUp(self, evt):
+    """
+    Handle right mouse up
+    """
+
+    if mouse_event_modifier_mask(evt) != MOD_NONE:
+      return
+
+    if self.action & self.ACTION_PROPOSED:
+      self.circles.remove(self.active_circle)
+      self.active_circle = None
+      self.action = self.ACTION_NONE
+      self.PostEventRangeChanged()
+      self.parent.Refresh()
+
+  def OnMotion(self, evt):
+    """
+    Handle mouse motion
+    """
+    x, y = evt.GetPosition()
+    x, y = self.parent.CoordScreenToBitmap(x,y)
+
+    w, h = self.parent.GetBitmapSize()
+
+    # store current coords to show where new circle will be placed
+    self.coords = (x,y)
+
+    # not currently performing an action
+    if self.action == self.ACTION_NONE or self.action & self.ACTION_PROPOSED:
+      circle, action = self.DetermineAction(x,y)
+
+      if circle:
+        action |= self.ACTION_PROPOSED
+
+      if action != self.action or circle != self.active_circle or circle is None:
+        self.action = action
+        self.active_circle = circle
+
+        self.PostEventRangeActionChanged(in_window=True)
+
+    elif self.action & self.ACTION_RESIZE:
+      xc,yc = self.active_circle[0:2]
+      radius = int(sqrt((x-xc)**2 + (y-yc)**2))
+      if radius < 2: radius = 2
+      self.active_circle[2] = radius
+      self.RangeChanged()
+
+    elif self.action & self.ACTION_MOVE:
+      xs,ys = self.action_start
+      dx, dy = x - xs, y - ys
+
+      print "MOVING: ", xs, ys, x, y, dx, dy
+      self.active_circle[0:2] = (xs+dx,ys+dy)
+      self.action_start = (x,y)
+
+      self.RangeChanged()
+    self.parent.Refresh()
+
+  def OnEnterWindow(self, evt):
+    """
+    Handle entering window
+    """
+    pass
+
+  def OnLeaveWindow(self, evt):
+    """
+    Handle leaving window
+    """
+    print "leave"
+    self.coords = None
+
+    if self.action & self.ACTION_PROPOSED or self.action == self.ACTION_NONE:
+      self.action = self.ACTION_NONE
+      self.active_circle = None
+
+      self.PostEventRangeActionChanged(in_window=False)
+      self.parent.Refresh()
+
+  def OnPaint(self, evt, dc):
+    """
+    Draw tool
+    """
+    gcdc = wx.GCDC(dc)
+
+    dc.SetBrush(wx.TRANSPARENT_BRUSH)
+    gcdc.SetBrush(self.brush)
+    gcdc.SetPen(wx.TRANSPARENT_PEN)
+
+    scale = self.parent.zoom
+    if scale < 0: scale = -1.0/scale
+
+    for c in self.circles:
+      xc,yc, r = c
+
+      # transform coords
+      xc,yc = self.parent.CoordBitmapToScreen(xc,yc)
+      r *= scale
+
+      pen = self.pen
+      brush = self.brush
+      # determine fill and stroke
+      if c == self.active_circle:
+        if self.action & self.ACTION_RESIZE:
+          pen = self.resize_pen
+          brush = self.active_brush
+        elif self.action & self.ACTION_MOVE:
+          pen = self.move_pen
+          brush = self.active_brush
+        else:
+          pen = self.active_pen
+          brush = self.active_brush
+      gcdc.SetBrush(brush)
+      gcdc.SetPen(pen)
+      gcdc.DrawCircle(xc, yc, r)
+
+    if self.action == self.ACTION_NONE and self.coords is not None:
+      gcdc.SetPen(self.place_pen)
+      gcdc.SetBrush(self.place_brush)
+      x,y = self.parent.CoordBitmapToScreen(*self.coords)
+      
+      r = self.radius * scale
+
+      gcdc.DrawCircle(x, y, r)
+
+  def SetRadius(self, radius):
+    self.radius = radius
+    self.parent.Refresh()
+

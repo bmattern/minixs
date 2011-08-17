@@ -253,6 +253,7 @@ class ImageView(wx.Panel):
         tool.OnMotion(evt)
 
   def OnEnterWindow(self, evt):
+    self.SetFocus()
     for tool in self.tools:
       if tool.active:
         tool.OnEnterWindow(evt)

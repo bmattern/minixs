@@ -57,20 +57,23 @@ class KillzoneList(object):
     self.exposure_files = exposure_files
     self.killzones = killzones
 
-  def mask(self, filename, shape=(197,485)):
+  def mask(self, filename, shape=(195,487)):
     kz = self.killzones.get(os.path.abspath(filename))
     if not kz:
       return None
 
+    return killzone_mask(kz['rects'], kz['circles'], shape)
+
+def killzone_mask(rects=[], circles=[], shape=(195,487)):
     m = np.zeros(shape)
     rows,cols = shape
     y,x = np.mgrid[:rows, :cols]
 
-    for x0,y0,r0 in kz['circles']:
+    for x0,y0,r0 in circles:
       dr = np.hypot(x-x0, y-y0)
       m[dr <= r0] = 1
 
-    for x1,y1,x2,y2 in kz['rects']:
+    for x1,y1,x2,y2 in rects:
       m[y1:y2,x1:x2] = 1
 
     return m

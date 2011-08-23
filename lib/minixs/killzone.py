@@ -19,19 +19,26 @@ class KillzoneList(object):
 
     return len(self.validation_errors) == 0
 
-  def save(self, filename):
-    f = open(filename, "w")
+  def save(self, file):
+    file_opened = False
+
+    if hasattr(file, 'write'):
+      f = file
+    else:
+      f = open(file, 'w')
+      self.filename = file
+      file_opened = True
 
     for ef in self.exposure_files:
       rects = '|'.join("%d,%d,%d,%d" % (x1,y1,x2,y2) for (x1,y1),(x2,y2) in self.killzones[ef]['rects'])
-      print self.killzones[ef]['circles']
       circles = '|'.join("%d,%d,%d" % (xc,yc,r) for xc,yc,r in self.killzones[ef]['circles'])
 
       # save out using real path so that symlinks are resolved
       rf = os.path.realpath(ef)
       f.write("%s:%s:%s\n" % (rf, rects, circles))
 
-    f.close()
+    if file_opened:
+      f.close()
 
   def load(self, filename):
     f = open(filename)

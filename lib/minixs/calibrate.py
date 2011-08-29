@@ -287,6 +287,20 @@ def fit_region(region, points, dest, fit_type = FIT_QUARTIC, return_fit=False):
   else:
     return lin_res, rms_res
 
+def evaluate_fit(fit, x, y, fit_type=FIT_QUARTIC):
+
+  if fit_type == FIT_QUARTIC:
+    return np.dot(
+           np.vstack([
+             x**4, y**4, x**2 * y**2,
+             x**2 * y, x * y**2,
+             x**2, y**2, x * y,
+             x, y,
+             np.ones(x.shape)
+           ]).T,
+           fit
+         ).T
+
 def calibrate(filtered_exposures, energies, regions, dispersive_direction, fit_type=FIT_QUARTIC, return_diagnostics=False):
   """
   Build calibration matrix from parameters in Calibration object

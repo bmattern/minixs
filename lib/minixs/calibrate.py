@@ -636,3 +636,18 @@ class Calibration:
     bounds = [(x1,y1,x2,y2) for (x1,y1),(x2,y2) in self.xtals]
     return self.spectrometer.solid_angle_map(bounds)
       
+  def calc_residuals(self):
+    if not hasattr(self, 'fit_points'):
+      raise Exception("Fit points are not defined. Make sure you rerun the calibration before trying to calculate residuals.")
+
+    all_res = []
+    for i, ((x1,y1),(x2,y2)) in enumerate(self.xtals):
+      pts = np.array([(x,y,z) for x,y,z in self.fit_points if x1<=x<x2 and y1<=y<y2])
+      fit = evaluate_fit(self.fits[i], pts[:,0], pts[:,1])
+
+      res = fit - pts[:,2]
+
+      # keep track of (xcoord, residual, energy, xtal number)
+      all_res.append(np.vstack([pts[:,0], res, pts[:,2]]).T)
+
+    return all_res

@@ -412,6 +412,7 @@ class Spectrometer(object):
 
     h,w = self.camera_shape
     domega = np.zeros((h,w))
+    distance = np.zeros((h,w))
 
     # calculate pixel size
     pw = norm(self.camera[1] - self.camera[0]) / w
@@ -451,8 +452,10 @@ class Spectrometer(object):
       dn = pixels[y1:y2,x1:x2].reshape((sw*sh,3)) - images[i]
       length = np.sqrt((dn**2).sum(1))
       cos_theta = np.abs((dn*self.camera_rect.n).sum(1)) / length
+      distance[y1:y2,x1:x2] = length.reshape((sh,sw))
       domega[y1:y2,x1:x2] = (pw*ph*cos_theta / length**2).reshape((sh,sw))
 
+    self.distance = distance
     return domega
 
   def calculate_active_regions(self):

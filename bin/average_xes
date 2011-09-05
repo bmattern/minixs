@@ -5,7 +5,7 @@ Interpolate input x,y data onto a common x grid and average
 
 import minixs as mx
 import os, sys
-from numpy import loadtxt, linspace, zeros, sqrt
+from numpy import loadtxt, linspace, zeros, sqrt, isnan
 from scipy.interpolate import splrep, splev
 
 usage = "Usage: %s [.xes files to average] > output.xes" % sys.argv[0]
@@ -29,7 +29,10 @@ for d in data:
   rep = splrep(d.spectrum[:,0], d.spectrum[:,1])
   xes.spectrum[:,1] += splev(xes.spectrum[:,0], rep)
   rep = splrep(d.spectrum[:,0], d.spectrum[:,2]**2)
-  xes.spectrum[:,2] += splev(xes.spectrum[:,0], rep)
+  sigma = splev(xes.spectrum[:,0], rep)
+  sigma[sigma<0] = 0
+  sigma[isnan(sigma)] = 0
+  xes.spectrum[:,2] += sigma
 
 # average
 xes.spectrum[:,1] /= len(data)

@@ -13,6 +13,7 @@ from   minixs.misc      import read_scan_info, find_xtal_boundaries
 
 from minixs.gui import util
 from minixs.gui.file_dialog import FileDialog
+from minixs.gui.progress import WxProgressIndicator
 from minixs.gui.image_view  import EVT_COORDS
 from minixs.gui.image_tools import RangeTool, Crosshair, \
                                    EVT_RANGE_CHANGED, \
@@ -578,7 +579,9 @@ class CalibratorController(object):
 
     self.view.SetStatusText("Calibrating... Please Wait...", STATUS_MESSAGE)
 
-    self.model.calibrate()
+    progress = WxProgressIndicator("Calibrating", "Calibrating")
+    self.model.calibrate(progress=progress)
+
     print self.model.rms_res, self.model.lin_res
 
     #XXX check that calib seems reasonable (monotonic, etc)

@@ -64,9 +64,11 @@ def find_maxima(pixels, direction, window_size = 3):
     colMoment += local_max * np.roll(cols * p, i, rolldir)
     norm += local_max * np.roll(p, i, rolldir)
 
+  # avoid dividing by zero
+  norm[norm==0] = 1
   # calculate average
   windowedAvg = colMoment / norm
-  windowedAvg[np.isnan(windowedAvg)] = 0
+  #windowedAvg[np.isnan(windowedAvg)] = 0
 
   # we only want the locations of actual maxima
   index = np.where(windowedAvg > 0)

@@ -11,6 +11,7 @@ from gauss import gauss_leastsq, gauss_model
 from parser import Parser, STRING, INT, FLOAT, LIST
 from filetype import InvalidFileError
 from spectrometer import Spectrometer
+from progress import ProgressIndicator
 
 import os
 import numpy as np
@@ -85,7 +86,7 @@ def find_maxima(pixels, direction, window_size = 3):
   return np.vstack([x,y]).T
 
 
-def find_combined_maxima(exposures, energies, direction):
+def find_combined_maxima(exposures, energies, direction, progress=None):
   """
   Build array of all maxima locations and energies in a list of exposures
 
@@ -94,6 +95,7 @@ def find_combined_maxima(exposures, energies, direction):
     exposures: a list of Exposure objects
     energies:  a list of corresponding energies (must be same length as `exposures`)
     direction: the dispersive direction
+    progress: ProgressIndicator
 
   Returns
   -------
@@ -101,7 +103,15 @@ def find_combined_maxima(exposures, energies, direction):
   """
   points = []
 
+  i = 0
+  n = len(energies)
   for exposure, energy in izip(exposures, energies):
+    if progress:
+      msg = "Finding maxima for mono energy %.2f" % energy
+      prog = i / float(n)
+      progress.update(msg, prog)
+      i += 1
+
     # extract locations of peaks
     xy = find_maxima(exposure.pixels, direction)
     z = energy * np.ones((len(xy), 1))
@@ -303,7 +313,7 @@ def evaluate_fit(fit, x, y, fit_type=FIT_QUARTIC):
            fit
          ).T
 
-def calibrate(filtered_exposures, energies, regions, dispersive_direction, fit_type=FIT_QUARTIC, return_diagnostics=False):
+def calibrate(filtered_exposures, energies, regions, dispersive_direction, fit_type=FIT_QUARTIC, return_diagnostics=False, progress=ProgressIndicator()):
   """
   Build calibration matrix from parameters in Calibration object
 
@@ -313,6 +323,7 @@ def calibrate(filtered_exposures, energies, regions, dispersive_direction, fit_t
     energies: list of energies corresponding to exposures 
     regions: list of regions containing individual spectra
     dispersive_direction: direction of increasing energy on camera (minixs.const.{DOWN,UP,LEFT,RIGHT})
+    progress: ProgressIndicator
 
   Optional Parameters
   -------------------
@@ -331,8 +342,11 @@ def calibrate(filtered_exposures, energies, regions, dispersive_direction, fit_t
 
     The last 3 of these are only returned if `return_diagnostics` is True.
   """
+
+  progress.push_step("Find maxima", 0.5)
   # locate maxima
-  points = find_combined_maxima(filtered_exposures, energies, dispersive_direction)
+  points = find_combined_maxima(filtered_exposures, energies, dispersive_direction, progress=progress)
+  progress.pop_step()
 
   # create empty calibration matrix
   calibration_matrix = np.zeros(filtered_exposures[0].pixels.shape)
@@ -341,11 +355,17 @@ def calibrate(filtered_exposures, energies, regions, dispersive_direction, fit_t
   lin_res = []
   rms_res = []
   fits = []
+  i = 0
+  n = len(regions)
+
+  progress.push_step("Fit smooth surface", 0.5)
   for region in regions:
+
     lr, rr, fit = fit_region(region, points, calibration_matrix, fit_type, return_fit=True)
     lin_res.append(lr)
     rms_res.append(rr)
     fits.append(fit)
+  progress.pop_step()
 
   if return_diagnostics:
     return (calibration_matrix, (lin_res, rms_res, points, fits))
@@ -517,22 +537,33 @@ class Calibration:
 
     return len(self.load_errors) == 0
 
-  def calibrate(self, fit_type=FIT_QUARTIC):
+  def calibrate(self, fit_type=FIT_QUARTIC, progress=ProgressIndicator()):
     # load exposure files
+    progress.push_step("Load Exposures", 0.1)
     exposures = [Exposure(f) for f in self.exposure_files]
+    progress.pop_step()
     
     # apply filters
+    progress.push_step("Apply Filters", 0.3)
+    i = 0
+    n = len(exposures)
     for exposure, energy in izip(exposures, self.energies):
+      progress.update("Filter exposure %d" % (i+1,), i/float(n))
+      i += 1
       for f in self.filters:
         f.filter(exposure.pixels, energy)
+    progress.pop_step()
 
     # calibrate
+    progress.push_step("Calibrate", 0.6)
     self.calibration_matrix, diagnostics = calibrate(exposures,
                                                      self.energies,
                                                      self.xtals,
                                                      self.dispersive_direction,
                                                      fit_type,
-                                                     return_diagnostics=True)
+                                                     return_diagnostics=True,
+                                                     progress=progress)
+    progress.pop_step()
 
     # store diagnostic info
     self.lin_res, self.rms_res, self.fit_points, self.fits = diagnostics
@@ -647,7 +678,7 @@ class Calibration:
 
       res = fit - pts[:,2]
 
-      # keep track of (xcoord, residual, energy, xtal number)
+      # keep track of (xcoord, residual, energy)
       all_res.append(np.vstack([pts[:,0], res, pts[:,2]]).T)
 
     return all_res

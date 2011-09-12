@@ -14,3 +14,6 @@ class WxProgressIndicator(ProgressIndicator):
 
   def do_update(self):
     self.dialog.Update(int(self.progress * 100), self.msg)
+
+  def __del__(self):
+    self.dialog.Destroy()

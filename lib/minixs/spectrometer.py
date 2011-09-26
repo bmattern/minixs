@@ -70,7 +70,10 @@ class Spectrometer(object):
 
     self.camera_shape = (195, 487)
     if tag:
-      self.load_by_tag(tag)
+      if os.path.exists(tag):
+        self.load(tag)
+      else:
+        self.load_by_tag(tag)
 
   def load_by_tag(self, tag):
     path = tag_to_path(tag)

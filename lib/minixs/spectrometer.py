@@ -580,3 +580,23 @@ class Spectrometer(object):
         calib[y1:y2,x1:x2] = energy
 
     return calib
+
+  def scattering_angles(self, degrees=False):
+    """
+    Calculate scattering angles for all analyzer crystals
+
+    Parameters:
+      degrees: return values in degrees if True, radians otherwise
+
+    Returns:
+      array of scattering angles for all analyzers
+    """
+    # vectors from sample to virtual images
+    dvs = [im - self.sample for im in self.image_points()]
+
+    # angles in radians
+    thetas = np.array([np.arccos(np.dot(self.beam, dv)/np.sqrt(np.dot(dv,dv))) for dv in dvs])
+
+    if degrees:
+      thetas *= 180 / np.pi
+    return thetas

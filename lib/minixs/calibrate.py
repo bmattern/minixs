@@ -597,8 +597,6 @@ class Calibration:
       spectra = []
 
     for i in range(len(self.energies)):
-      if i % 10 == 0:
-        print i
       energy = self.energies[i]
       exposure = Exposure(self.exposure_files[i])
       if filters is not None:

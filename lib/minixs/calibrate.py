@@ -596,7 +596,7 @@ class Calibration:
     """
     return (self.calibration_matrix[np.where(self.calibration_matrix > 0)].min(), self.calibration_matrix.max())
 
-  def diagnose(self, return_spectra=False, filters=None):
+  def diagnose(self, return_spectra=False, filters=None, progress=None):
     """
     Process all calibration exposures and fit to gaussians, returning parameters of fit
 
@@ -630,6 +630,11 @@ class Calibration:
       spectra = []
 
     for i in range(len(self.energies)):
+      if progress:
+        msg = "Processing calibration exposure %d / %d" % (i, len(self.energies))
+        prog = i / float(len(self.energies))
+        progress.update(msg, prog)
+
       energy = self.energies[i]
       exposure = Exposure(self.exposure_files[i])
       if filters is not None:

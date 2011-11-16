@@ -476,28 +476,14 @@ class Spectrometer(object):
     # run through apertures and crystals
 
     active_regions = []
-    for i, rect in enumerate(self.xtal_rects):
+    for i, xtal_rect in enumerate(self.xtal_rects):
       active_regions.append([])
       for aperture in self.entrance_aperture:
-        lines = [geom.Line.FromPoints(self.sample, corner) for corner in aperture]
-        points = np.array([geom.intersect_line_with_plane(l, rect) for l in lines])
-        #if np.any(p is None for p in points): continue
+        ap_rect = geom.Rectangle(aperture[0], aperture[1], aperture[3])
+        projection = geom.project_point_through_rect_onto_rect(self.sample, ap_rect, xtal_rect)
+        if projection is not None:
+          active_regions[i].append(projection)
 
-        # convert to xtal coordinates
-        lpoints = np.array([rect.global_to_local(p) for p in points])
-        # clamp to xtal
-        # FIXME: this is only correct if the projection is rectangular
-        #        and has sides parallel to xtal sides...
-        lpoints[lpoints<0] = 0
-        lpoints[lpoints>1] = 1
-
-        # check if there is any overlap with xtal, and skip if not
-        size = lpoints.max(0) - lpoints.min(0)
-        if np.any(size < 1e-5):
-          continue
-
-        # convert back to global coordinates
-        active_regions[i].append([rect.local_to_global(p) for p in lpoints])
     return active_regions
 
   def calculate_projection_bounds2(self):
@@ -573,7 +559,7 @@ class Spectrometer(object):
         rw = x2-x1
         rh = y2-y1
 
-        print rw, rh
+        #print rw, rh
         dn = pixels[y1:y2, x1:x2].reshape((rw*rh,3)) - image
         length = np.sqrt((dn**2).sum(1))
         cos_theta = np.abs((dn*xtal_plane.n).sum(1)) / length

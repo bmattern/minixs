@@ -58,7 +58,8 @@ class Rectangle(Plane):
 
     # normal vector
     self.n = np.cross(self.x, self.y)
-    self.n /= np.linalg.norm(self.n)
+    self.area = np.linalg.norm(self.n)
+    self.n /= self.area
 
   def closest_point(self, p):
     dp = np.asarray(p) - self.p0
@@ -71,6 +72,9 @@ class Rectangle(Plane):
 
   def local_to_global(self, p):
     return self.p0 + p[0] * self.x + p[1] * self.y
+
+  def corners(self):
+    return [self.local_to_global(p) for p in [(0,0),(1,0),(1,1),(0,1)]]
 
   def __repr__(self):
     return "Rectangle(%s, %s, %s)" % (self.p0.__repr__(), self.p1.__repr__(), self.p2.__repr__())
@@ -120,3 +124,25 @@ def intersect_line_with_plane(line, plane):
 def reflect_through_plane(point, plane):
   tmp = point - plane.p0
   return plane.p0 + tmp - 2 * np.dot(tmp, plane.n) * plane.n
+
+def project_point_through_rect_onto_rect(point, rect1, rect2):
+
+  lines = [Line.FromPoints(point, corner) for corner in rect1.corners()]
+  points = np.array([intersect_line_with_plane(l, rect2) for l in lines])
+  #if np.any(p is None for p in points): continue
+
+  # convert to xtal coordinates
+  lpoints = np.array([rect2.global_to_local(p) for p in points])
+  # clamp to xtal
+  # FIXME: this is only correct2 if the projection is rect2angular
+  #        and has sides parallel to xtal sides...
+  lpoints[lpoints<0] = 0
+  lpoints[lpoints>1] = 1
+
+  # check if there is any overlap with xtal, and skip if not
+  size = lpoints.max(0) - lpoints.min(0)
+  if np.any(size < 1e-5):
+    return None
+
+  # convert back to global coordinates
+  return [rect2.local_to_global(p) for p in lpoints]

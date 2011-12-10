@@ -361,10 +361,12 @@ def calibrate(filtered_exposures, energies, regions, dispersive_direction, fit_t
   progress.push_step("Fit smooth surface", 0.5)
   for region in regions:
 
-    lr, rr, fit = fit_region(region, points, calibration_matrix, fit_type, return_fit=True)
-    lin_res.append(lr)
-    rms_res.append(rr)
-    fits.append(fit)
+    ret = fit_region(region, points, calibration_matrix, fit_type, return_fit=True)
+    if ret is not None:
+      lr, rr, fit = ret
+      lin_res.append(lr)
+      rms_res.append(rr)
+      fits.append(fit)
   progress.pop_step()
 
   if return_diagnostics:

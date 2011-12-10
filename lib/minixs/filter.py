@@ -330,6 +330,31 @@ class BadPixelFilter(Filter):
       elif mode == self.MODE_INTERP_V:
         pixels[y,x] = (pixels[y-1,x] + pixels[y+1,x])/2.
 
+
+class KillZoneFilter(Filter):
+  """
+  Filter out rectangular regions of pixels
+  """
+
+  name = "Kill Zones"
+
+  default_val = []
+  default_enabled = False
+  region_allowed = False
+
+  @classmethod
+  def str_to_val(cls, valstr):
+    return [[int(x) for x in rect.split(',')] for rect in valstr.split(';')]
+    #XXX check that each rect is correct
+
+  @classmethod
+  def val_to_str(cls, val):
+    return ';'.join([','.join([str(x) for x in rect]) for rect in val])
+
+  def filter(self, pixels, energy):
+    for x1,y1,x2,y2 in self.val:
+      pixels[y1:y2,x1:x2] = 0
+
 class EmissionFilter(ChoiceFilter):
   """
   A filter to remove fluorescence from elastic exposures
@@ -421,7 +446,8 @@ FILTERS = [
   HighFilter,
   NeighborFilter,
   BadPixelFilter,
-  EmissionFilter
+  EmissionFilter,
+  KillZoneFilter
   ]
 for f in FILTERS:
   register(f)

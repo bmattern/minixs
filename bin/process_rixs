@@ -70,6 +70,12 @@ if __name__ == "__main__":
     print usage
     exit()
 
+  import platform
+  if platform.system() == 'Windows':
+    import glob, operator
+    exposures = reduce(operator.add, map(glob.glob, exposures))
+    scans = reduce(operator.add, map(glob.glob, scans))
+
   # read in scan files
   energies = None
   I0s = None

@@ -1,0 +1,34 @@
+#!/usr/bin/env python
+
+import minixs as mx
+import numpy as np
+import matplotlib.pyplot as pt
+import sys
+import warnings
+
+warnings.simplefilter('ignore', DeprecationWarning)
+
+calfile = sys.argv[1]
+calib = mx.calibrate.load(calfile)
+
+sys.stderr.write("Processing elastic exposures...\n")
+
+filters = [f for f in calib.filters if f.name is not "Low Filter"]
+diag, spectra = calib.diagnose(return_spectra=True, filters=calib.filters)
+
+print "   E      E_fit   sigma  FWHM E-E0  "
+print "------------------------------------"
+for s,d in zip(spectra, diag):
+  E,A,E0,sigma = d
+
+  pt.plot(s.emission, A*mx.gauss.gauss(s.emission, E0, sigma))
+  pt.plot(s.emission, s.intensity, 'k.')
+ 
+  FWHM = 2 * sigma * np.sqrt(2*np.log(2))
+  print "%8.2f %8.2f %5.2f %5.2f %5.3f" % (E, E0, sigma, FWHM,  E-E0)
+
+pt.xlabel('Energy (eV)')
+pt.ylabel('Intensity (arb. u.)')
+pt.show()
+
+

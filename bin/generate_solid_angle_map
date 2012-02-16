@@ -1,0 +1,34 @@
+#!/usr/bin/env python
+
+import minixs as mx
+from numpy import savetxt
+import sys
+from optparse import OptionParser
+
+usage = "%s <.calib file>" % sys.argv[0]
+
+parser = OptionParser()
+parser.usage = usage
+parser.add_option("-s", "--spectrometer", dest='spectrometer', default=None,
+                  help="spectrometer tag or info file. this overrides value from .calib file")
+parser.add_option("-o", "--output", dest='output', default=None,
+                  help="file to save solid angle map to. defaults to stdout")
+(options, args) = parser.parse_args()
+
+if len(args) != 1:
+  parser.print_usage()
+  exit(1)
+
+cal = mx.calibrate.load(args[0])
+
+if options.spectrometer:
+  cal.spectrometer = mx.spectrometer.Spectrometer(options.spectrometer)
+
+outfile = sys.stdout
+if options.output:
+  outfile = open(options.output, "w")
+
+sys.stderr.write("Calculating solid angle map...\n")
+smap = cal.calc_solid_angle_map()
+savetxt(outfile, smap)
+sys.stderr.write("Done.\n")

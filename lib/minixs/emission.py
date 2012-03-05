@@ -2,15 +2,14 @@
 XES Spectrum processing code
 """
 
-import os, sys
+import os
 import numpy as np
+import minixs as mx
 
 import calibrate
 from exposure import Exposure
-from misc import read_scan_info, gen_file_list
-from constants import *
 from filter import  get_filter_by_name
-from parser import Parser, STRING, INT, FLOAT, LIST
+from parser import Parser, STRING, FLOAT, LIST
 
 from itertools import izip
 
@@ -47,7 +46,7 @@ def process_spectrum(cal, exposure, energies, I0, direction, xtals, solid_angle=
   for xtal in xtals:
     (x1,y1), (x2,y2) = xtal
 
-    if direction == DOWN or direction == UP:
+    if direction == mx.DOWN or direction == mx.UP:
       i1, i2 = x1, x2
     else:
       i1, i2 = y1, y2
@@ -59,7 +58,7 @@ def process_spectrum(cal, exposure, energies, I0, direction, xtals, solid_angle=
 
       # if any part of this row/column has been killzoned, skip it
       if killzone_mask is not None:
-        if direction == DOWN or direction == UP:
+        if direction == mx.DOWN or direction == mx.UP:
           if np.any(killzone_mask[y1:y2,i]):
             continue
         else:
@@ -68,22 +67,22 @@ def process_spectrum(cal, exposure, energies, I0, direction, xtals, solid_angle=
 
       # select one row/column of calibration matrix and correspond row/column of spectrum exposure
       # XXX this is untested for UP and RIGHT, but *should* be correct
-      if direction == DOWN:
+      if direction == mx.DOWN:
         dE = cal[y1:y2,i]
         dI = exposure.pixels[y1:y2,i]
         if solid_angle is not None:
           dS = solid_angle[y1:y2,i]
-      elif direction == UP:
+      elif direction == mx.UP:
         dE = cal[y2-1:y1-1:-1,i]
         dI = exposure.pixels[y2-1:y1-1:-1,i]
         if solid_angle is not None:
           dS = solid_angle[y2-1:y1-1:-1,i]
-      elif direction == RIGHT:
+      elif direction == mx.RIGHT:
         dE = cal[i, x1:x2]
         dI = exposure.pixels[i, x1:x2]
         if solid_angle is not None:
           dS = solid_angle[i, x1:x2]
-      elif direction == LEFT:
+      elif direction == mx.LEFT:
         dE = cal[i, x2-1:x1-1:-1]
         dI = exposure.pixels[i, x2-1:x1-1:-1]
         if solid_angle is not None:
@@ -152,46 +151,23 @@ def binned_emission_spectrum(calib, exposure, low_energy, high_energy, energy_st
 
   return spectrum
 
-def process_all(calibfile, scanfile, base_image, image_nums, E_column=0, I0_column=6, low_cutoff=0, high_cutoff=1000, low_energy=None, high_energy=None, energy_step = 0.5, zero_pad=3):
-
-  calib = np.loadtxt(calibfile)
-
-  if low_energy is None:
-    low_energy = calib[np.where(calib > 0)].min()
-
-  if high_energy is None:
-    high_energy = calib.max()
-
-
-  Es, I0s = read_scan_info(scanfile, [E_column, I0_column])
-  filenames = gen_file_list(base_image, image_nums, zero_pad)
-
-  print "Directory: %s" % os.path.dirname(filenames[0])
-  print "Files %s to %s" % (os.path.basename(filenames[0]),
-      os.path.basename(filenames[-1]))
-  exposures = [ Exposure(filename) for filename in filenames ]
-
-  for e in exposures:
-    e.filter_low_high(low_cutoff, high_cutoff)
-    e.filter_neighbors(1)
-
-  spectra = [ emission_spectrum(calib, e, low_energy, high_energy, energy_step, I0) for e, I0 in izip(exposures, I0s) ]
-
-  return spectra
-
-
 def interp_poisson(x, y, var, xp, yp, left=None, right=None):
   """
   Linearly interpolate points and calculate Poisson variance
+
+  This propogates the uncertainties through the interpolation, which really
+  can't be the right thing to do. (The propogated uncertainty is by definition
+  smaller than either of the original uncertainties...)
   """
+
   i = -1
   n = len(xp)
 
   if y is None:
-    y = zeros(len(x))
+    y = np.zeros(len(x))
 
   if var is None:
-    var = zeros(len(x))
+    var = np.zeros(len(x))
 
   if left is None:
     left = yp[0]
@@ -224,8 +200,8 @@ def interp_poisson(x, y, var, xp, yp, left=None, right=None):
   return y,var
 
 
-class EmissionSpectrum:
-  def __init__(self):
+class EmissionSpectrum(object):
+  def __init__(self, filename=None):
     self.dataset_name = ""
     self.calibration_file = ""
     self.incident_energy = 0
@@ -241,6 +217,9 @@ class EmissionSpectrum:
     self.filename = None
 
     self.load_errors = []
+
+    if filename:
+      self.load(filename)
 
   def set_incident_energy(self, incident_energy):
     self.incident_energy = incident_energy
@@ -260,20 +239,15 @@ class EmissionSpectrum:
     self.raw_counts = self.spectrum[:,3]
     self.num_pixels = self.spectrum[:,4]
  
-  def save(self, file=None, header_only=False):
-    if file is None:
-      file= self.filename
+  def save(self, filename=None, header_only=False):
+    if filename is None:
+      filename = self.filename
 
-    file_opened = False
-
-    if hasattr(file, 'write'):
-      f = file
-    else:
-      f = open(file, 'w')
       self.filename = file
-      file_opened = True
+    with mx.misc.to_filehandle(filename, "w") as (f, filename):
+      if filename:
+        self.filename = filename
 
-    try:
       f.write("# miniXS XES Spectrum\n#\n")
       f.write("# Dataset: %s\n" % self.dataset_name)
       f.write("# Calibration File: %s\n" % self.calibration_file)
@@ -302,12 +276,6 @@ class EmissionSpectrum:
         else:
           f.write("# E_emission    Intensity  Uncertainty  Raw_Counts   Solid_Angle\n")
           np.savetxt(f, self.spectrum, fmt=('%12.2f','%.6e','%.6e','% 11d',' %.6e'))
-
-    finally:
-      # close the file if we opened it
-      if file_opened:
-        f.close()
-      
 
   def load(self, filename=None, header_only=False):
     if filename is None:

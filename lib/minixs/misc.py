@@ -3,7 +3,7 @@ Miscellanous functions
 """
 
 import numpy as np
-from itertools import izip, product as iproduct
+from itertools import izip
 from scanfile import ScanFile
 
 def gen_rects(horizontal_bounds=None, vertical_bounds=None):
@@ -75,13 +75,13 @@ def save_rixs(filename, rixs):
     f.write("#    E_incident      E_emission       Intensity           Sigma          Counts      Num_pixels\n")
 
     fmt = ('% 15.2f', '% 15.2f', '% 15.8e','% 15.8e','% 15d', '% 15d')
-    savetxt(f, rixs, fmt=fmt)
+    np.savetxt(f, rixs, fmt=fmt)
 
 
 def rixs_xes_cut(rixs, energy):
   energies = np.unique(rixs[:,0])
  
-  i = argmin(np.abs(energies - energy))
+  i = np.argmin(np.abs(energies - energy))
 
   return rixs[np.where(rixs[:,0] == energies[i])]
 
@@ -95,9 +95,6 @@ def rixs_pfy_cut(rixs, energy):
 
 def rixs2d(rixs):
   inc_energies = np.unique(rixs[:,0])
-  emit_energies = np.unique(rixs[:,1])
-
-  rixs2d = np.zeros((len(emit_energies), len(inc_energies)))
 
   i = len(inc_energies)
   return rixs[:,2].reshape((i,len(rixs)/i)).T
@@ -270,3 +267,25 @@ def collection_angle_correction(ci, d, return_theta=False):
     return fulltheta, cac
   else:
     return cac
+
+def writable(fname):
+  return hasattr(fname, 'write')
+
+from contextlib import contextmanager
+@contextmanager
+def to_filehandle(fname_or_fh, flag="r"):
+  """
+  Either open a new file or use existing filehandle for IO
+  """
+  try:
+    if writable(fname_or_fh):
+      fh = fname_or_fh
+      own_fh = False
+      fname_or_fh = None
+    else:
+      fh = open(fname_or_fh, flag)
+      own_fh = True
+    yield fh, fname_or_fh
+  finally:
+    if own_fh:
+      fh.close()

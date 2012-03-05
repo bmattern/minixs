@@ -3,8 +3,8 @@ from emission import process_spectrum
 import numpy as np
 from itertools import izip
 
-class RIXS:
-  def __init__(self):
+class RIXS(object):
+  def __init__(self, filename=None):
     self.dataset_name = ""
     self.calibration_file = ""
     self.energies = []
@@ -13,14 +13,22 @@ class RIXS:
     self.filters = []
     self.spectrum = np.array([]) 
     self.filename = None
+    if filename:
+      self.load(filename)
 
   def save(self, filename=None):
-    if filename is None:
-      filename = self.filename
-    else:
-      self.filename = filename
+    """
+    Save RIXS file
 
-    with open(filename, 'w') as f:
+    Parameters:
+      filename - either filename or file handle to save to
+    """
+    with mx.misc.to_filehandle(filename, "w") as (f, filename):
+      if filename is None:
+        filename = self.filename
+      else:
+        self.filename = filename
+
       f.write("# miniXS RIXS Spectrum\n#\n")
       f.write("# Dataset: %s\n" % self.dataset_name)
       f.write("# Calibration File: %s\n" % self.calibration_file)
@@ -47,7 +55,6 @@ class RIXS:
 
       elif len(self.spectrum) > 0:
         raise Exception("Invalid shape for RIXS spectrum array")
-      
 
   def load(self, filename=None, header_only=False):
     if filename is None:

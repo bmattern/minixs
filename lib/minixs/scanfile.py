@@ -3,6 +3,26 @@ import numpy as np
 SCAN_COLUMN_WIDTH = 21
 
 class ScanFile:
+  """
+  A PNC (Advanced Photon Source Sector 20) scan file.
+
+  Example:
+    >>> import minixs as mx
+    >>> s = mx.scanfile.ScanFile(filename)
+    >>> s.headers[0]
+    '# 1-D Scan File created by LabVIEW Control Panel  2/18/2012  5:21:44 PM; Scan time 1 hrs 2 min 42 sec. \r\n'
+    >>> s.columns
+    ['Mono Energy (alt) *', 'Scaler preset time *', 'ID Gap *', 'PreSlit', 'preKB', 'I0', 'IT', 'Iref (Cal)', 'cyberstar', 'S20-PILATUS1:Stats1:T']
+    >>> s.data.shape
+    (121,10)
+    >>> energies = s.data[:,0]
+    >>> I0 = s.data[:,5]
+    >>> total_intensity = s.data[:,9]
+    >>> plot(energies, total_intensity / I0)
+    >>> len(s.headers)
+    59
+
+  """
   def __init__(self, filename=None):
     if filename:
       self.load(filename)

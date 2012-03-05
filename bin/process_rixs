@@ -1,144 +1,131 @@
 #!/usr/bin/env python
-
-#
-# Configurable options
-#
-
-energy_column = 0  # (subtract 1 from the PNC file column number!)
-i0_column = 5
-
-high_filter = 5000 # set this to None to disable
-
-bad_pixels = []    
-#bad_pixels = [ (14, 185) ] # PNC Pilatus
-
-# load up list of bad pixels (probably not needed if high_filter is set appropriately)
-#bp = np.loadtxt('../bp_dp_pilatus_2.dat')
-#bad_pixels = [(x,y) for x,y in bp]
-
-# list of bad columns to skip
-#skip_columns = [220, 221, 233, 234] #(DP-PILATUS2)
-skip_columns = []
-
-#
-# Everything below here should generally not need to be changed
-#
-
+import sys
+try:
+  import argparse
+except ImportError:
+  sys.stderr.write("This script requires the argparse module from python 2.7 or higher.\n")
+  exit()
 import minixs as mx
 import numpy as np
-import sys, os
+import os
 
-usage = "Usage: %s <calibration> --scans <scan files> --exposures <exposure files> --outfile <output filename>" % sys.argv[0]
+# create argument parser
+# XXX add arguments for bad pixels (either list or file)
+epilog="""The -E option can be used to specify which column contains the mono energy. If left unspecified, the first column that contains either of the strings 'mono' or 'energy' (case insensitive) in its header is used. Likewise, the -I option is used to set the I0 column. If left off, the first column containing 'i0' is used. For both of these options, the leftmost column is 1 (not 0).
 
+It is possible to sum data from several identical scans. To do so, simply specify multiple scan files in the --scans options. All scan files given must contain the same energy points. The exposure files for the first scan should be listed first, followed by those for the second, etc. A check is made to ensure that the number of exposure files is a multiple of the number of energy points."""
+parser = argparse.ArgumentParser(description='Process RIXS data', epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter)
+parser.add_argument('calibration_file', help='Calibration File')
+parser.add_argument('--scans', '-s', nargs='+', help='Scan File(s)', required=True, metavar='SCANFILE') 
+parser.add_argument('--exposures', '-e', nargs='+', help='Exposure File(s)', required=True, metavar='EXPOSURE_FILE')
+parser.add_argument('--outfile', '-o', help='Output Filename') 
+parser.add_argument('-E', '--energy-column', type=int, help='Energy Column (1 indexed)') 
+parser.add_argument('-I', '--i0-column', type=int, help='I0 Column (1 indexed)') 
+parser.add_argument('-H', '--high-filter', type=int, help='High Count Filter (for bad pixels)') 
+parser.add_argument('--bad-pixels', '-b', help='Bad Pixels (colon separated list of comma separated points. e.g. "100,23:425,10")') 
 
-def parse_args():
-  # read command line options
-  scans = []
-  exposures = []
-  outputs = []
-  cur = scans
-  calib_file = sys.argv[1]
-  for arg in sys.argv[2:]:
-    if arg == '-s' or arg == '--scans':
-      cur = scans
-    elif arg == '-e' or arg == '--exposures':
-      cur = exposures
-    elif arg == '-o' or arg == '--outfile':
-      cur = outputs
-    else:
-      cur.append(arg)
-
-  if len(outputs) == 0:
-    print "Please specify an output filename."
-    print usage
-    exit
-
-  return calib_file, scans, exposures, outputs[0]
+args = parser.parse_args()
 
 def progress_cb(i, energy):
   sys.stdout.write(".")
   sys.stdout.flush()
 
-if __name__ == "__main__":
-  if len(sys.argv) < 4:
-    print usage
-    exit()
+# The Windows command shell does not expand glob expressions (e.g. foo*),
+# so we do that manually here for scans and exposures.
+import platform
+if platform.system() == 'Windows':
+  import glob, operator
+  args.exposures = reduce(operator.add, map(glob.glob, args.exposures))
+  args.scans = reduce(operator.add, map(glob.glob, args.scans))
 
-  calibration_file, scans, exposures, outfile = parse_args()
+# read in scan files
+energies = None
+I0s = None
 
-  if len(scans) < 1 or len(exposures) < 1:
-    print usage
-    exit()
+for scan in args.scans:
+  s = mx.scanfile.ScanFile(scan)
 
-  import platform
-  if platform.system() == 'Windows':
-    import glob, operator
-    sorted_glob = lambda x: sorted(glob.glob(x))
-    exposures = reduce(operator.add, map(sorted_glob, exposures))
-    scans = reduce(operator.add, map(glob.glob, scans))
+  # if energy column is not specified
+  energy_column = args.energy_column
+  if energy_column is None:
+    energy_column = s.find_column('mono')
+    if energy_column is None:
+      energy_column = s.find_column('energy')
+    if energy_column is None:
+      sys.stderr.write("Unable to determine which column of scan file contains monochrometer energy. Please specify using the -E option")
+      exit()
+    sys.stderr.write("Using column %d for monochrometer energy.\n" % (energy_column+1))
 
-  # read in scan files
-  energies = None
-  I0s = None
+  # find I0 column if not specified
+  i0_column = args.i0_column
+  if i0_column is None:
+    i0_column = s.find_column('i0')
+    if i0_column is None:
+      sys.stderr.write("Unable to determine which column of scan file contains I0. Please specify using the -E option")
+      exit()
+    sys.stderr.write("Using column %d for I0.\n" % (i0_column+1))
 
-  for scan in scans:
-    e,i = mx.misc.read_scan_info(scan, [energy_column, i0_column])
+  e,i = s.data[:, [energy_column, i0_column]].transpose()
 
-    if energies is None:
-      energies = e
-    else:
-      print len(energies), len(e)
-      diff = np.max(np.abs(energies - e))
-      if diff > 0.25:
-        print "Energies from scan %s differ from others. Aborting." % scan
-        exit()
-    
-    if I0s is None:
-      I0s = i
-    else:
-      I0s += i
+  if energies is None:
+    energies = e
+  else:
+    print len(energies), len(e)
+    diff = np.max(np.abs(energies - e))
+    if diff > 0.25:
+      print "Energies from scan %s differ from others. Aborting." % scan
+      exit()
 
-  # ensure that # of exposures is correct for number of entries in scan
-  if len(exposures) % len(energies) is not 0:
-    print "Number of energies does not divide number of exposures. Aborting."
-    exit()
+  if I0s is None:
+    I0s = i
+  else:
+    I0s += i
 
-  calib = mx.calibrate.load(calibration_file)
+# ensure that # of exposures is correct for number of entries in scan
+if len(args.exposures) % len(energies) is not 0:
+  print "Number of energies does not divide number of exposures. Aborting."
+  exit()
 
-  # setup bad pixel filter if needed
-  filters = []
-  if bad_pixels:
-    fltr = mx.filter.BadPixelFilter()
-    if calib.dispersive_direction in [mx.UP, mx.DOWN]:
-      mode = fltr.MODE_INTERP_V
-    else:
-      mode = fltr.MODE_INTERP_H
-    fltr.set_val((mode, bad_pixels))
-    filters.append(fltr)
+calib = mx.calibrate.load(args.calibration_file)
 
-  if high_filter is not None:
-    fltr = mx.filter.HighFilter()
-    fltr.set_val(high_filter)
-    filters.append(fltr)
+filters = []
 
-  rixs = mx.rixs.RIXS()
-  rixs.exposure_files = [os.path.abspath(f) for f in exposures]
-  rixs.calibration_file = os.path.abspath(calibration_file)
-  rixs.energies = energies
-  rixs.I0s = I0s
-  rixs.filters = filters
+# setup bad pixel filter if needed
+if args.bad_pixels:
+  bad_pixels = [map(int, s.split(',')) for s in args.bad_pixels.split(':')]
+  print bad_pixels
 
-  c = calib.calibration_matrix
-  emission_energies = np.arange(c[np.where(c>0)].min(), c.max(), .25)
+  fltr = mx.filter.BadPixelFilter()
+  if calib.dispersive_direction in [mx.UP, mx.DOWN]:
+    mode = fltr.MODE_INTERP_V
+  else:
+    mode = fltr.MODE_INTERP_H
+  fltr.set_val((mode, bad_pixels))
+  filters.append(fltr)
 
-  sys.stdout.write("Processing")
-  sys.stdout.flush()
+# add high filter
+if args.high_filter is not None:
+  fltr = mx.filter.HighFilter()
+  fltr.set_val(args.high_filter)
+  filters.append(fltr)
 
-  rixs.process(emission_energies, progress_callback=progress_cb, skip_columns=skip_columns)
-  print("")
+rixs = mx.rixs.RIXS()
+rixs.exposure_files = [os.path.abspath(f) for f in args.exposures]
+rixs.calibration_file = os.path.abspath(args.calibration_file)
+rixs.energies = energies
+rixs.I0s = I0s
+rixs.filters = filters
 
-  print("Saving...")
-  rixs.save(outfile)
-  print("Done")
+c = calib.calibration_matrix
+emission_energies = np.arange(c[np.where(c>0)].min(), c.max(), .25)
 
+sys.stdout.write("Processing")
+sys.stdout.flush()
+
+rixs.process(emission_energies, progress_callback=progress_cb)
+print("")
+
+print("Saving...")
+rixs.save(args.outfile)
+print("Done")
 

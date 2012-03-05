@@ -56,3 +56,8 @@ class ScanFile:
           f.write(' ')
         f.write('\r\n')
 
+  def find_column(self, key):
+    for i,col in enumerate(self.columns):
+      if key in col.lower():
+        return i
+    return None

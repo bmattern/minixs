@@ -142,8 +142,6 @@ class RIXS:
     inc_energies = np.unique(self.spectrum[:,0])
     emit_energies = np.unique(self.spectrum[:,1])
 
-    rixs2d = np.zeros((len(emit_energies), len(inc_energies)))
-
     i = len(inc_energies)
     return (inc_energies, emit_energies, self.spectrum[:,2].reshape((i,len(self.spectrum)/i)).T)
 

@@ -16,7 +16,7 @@ class RIXS(object):
     if filename:
       self.load(filename)
 
-  def save(self, filename=None):
+  def save(self, filename=None, headers_only=False):
     """
     Save RIXS file
 
@@ -36,6 +36,15 @@ class RIXS(object):
       for energy, I0, ef in izip(self.energies, self.I0s, self.exposure_files):
         f.write("#   %12.2f %12.2f %s\n" % (energy, I0, ef))
       f.write("#\n")
+
+      if self.filters:
+        f.write("# Filters:\n")
+        for fltr in self.filters:
+          f.write('#   %s: %s\n' % (fltr.name, fltr.get_str()))
+        f.write("#\n")
+
+      if headers_only:
+        return
 
       f.write("# E_incident   E_emission    Intensity  Uncertainty  Raw_Counts   Num_Pixels\n")
       if len(self.spectrum.shape) == 2 and self.spectrum.shape[1] == 6:

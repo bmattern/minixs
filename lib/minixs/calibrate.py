@@ -387,6 +387,42 @@ def calibrate(filtered_exposures, energies, regions, dispersive_direction, fit_t
 class Calibration(object):
   """
   A calibration matrix and all corresponding information
+
+  Methods:
+    save                  - save to file
+    load                  - load from file
+    calibrate             - generate calibration matrix
+    xtal_mask             - form mask of regions covered by self.xtals
+    energy_range          - lowest and highest nonzero energies
+    diagnose              - process all caliibration exposures and fit gaussians to elastic peaks
+                              (useful for determining spectrometer energy resolution)
+    calc_solid_angle_map  - calculate solid angle subtended by each pixel
+                              (requires self.spectrometer to be set!)
+    calc_residuals        - calculate residuals between fit and detected peaks
+
+  Example usage:
+
+    >>> import minixs as mx
+    >>> from matplotlib import pyplot as pt
+    >>> c = mx.calibrate.Calibration('example.calib')
+    >>> c.xtals
+    [[[17, 7], [119, 190]], [[135, 6], [229, 190]], [[249, 7], [343, 187]], [[357, 9], [457, 189]]]
+    >>> pt.imshow(c.calibration_matrix, vmin=c.energy_range()[0])
+    <matplotlib.image.AxesImage object at 0x424afd0>
+    >>> pt.show()
+
+  The first xtal region can be extracted as follows:
+    >>> (x1,y1),(x2,y2) = c.xtals[0]
+    >>> region1 = c.calibration_matrix[y1:y2,x1:x2]
+
+  The calibration can also be redone after changing filters
+    >>> c.filters
+    [<minixs.filter.LowFilter object at 0x4252210>, <minixs.filter.NeighborFilter object at 0x4252310>]
+    >>> c.filters[0].val
+    10
+    >>> c.filters[0].val = 5
+    >>> c.calibrate()
+    >>> c.save('example2.calib')
   """
 
   def __init__(self, filename=None):
@@ -558,6 +594,23 @@ class Calibration(object):
     return len(self.load_errors) == 0
 
   def calibrate(self, fit_type=FIT_QUARTIC, progress=ProgressIndicator()):
+    """
+    Calculate calibration matrix
+
+    Prerequisites:
+      self.exposure_files must be a list of exposure files
+      self.energies must be a list of corresponding energies
+      self.xtals must be a list of regions exposed by each analyzer crystal
+                      each entry must be of the form [[x1,y1],[x2,y2]]
+      self.filters may contain a list of mx.filter.Filter descendents to apply to the exposures
+
+    Results:
+      self.calibration_matrix contains the calibration matrix
+      self.lin_res contains average linear residuals of fit (one for each xtal)
+      self.rms_res contains rms residuals of fit (one for each xtal)
+      self.fit_points contains all detected peak values as array with columns (x,y,energy)
+      self.fits contains a list of fit parameters (one for each xtal)
+    """
     # load exposure files
     progress.push_step("Load Exposures", 0.1)
     exposures = [Exposure(f) for f in self.exposure_files]
@@ -619,6 +672,21 @@ class Calibration(object):
   def diagnose(self, return_spectra=False, filters=None, progress=None):
     """
     Process all calibration exposures and fit to gaussians, returning parameters of fit
+
+    Example:
+      >>> import minixs as mx
+      >>> from matplotlib import pyplot as pt
+      >>> c = mx.calibrate.Calibration('example.calib')
+      >>> d, spectra = c.diagnose(return_spectra = True, filters=[mx.filter.HighFilter(1000)])
+      >>> d[:,3] # sigma for gaussian fits
+      array([ 0.4258905 ,  0.54773887,  0.58000567,  0.57056559,  0.56539868,
+        0.58693027,  0.60704443,  0.61898894,  0.62726828,  0.63519546,
+        0.65309853,  0.66317984,  0.67826396,  0.69466781,  0.75039033,
+        0.78887514,  0.84248593,  0.8974527 ])
+      >>> s = spectra[5]
+      >>> pt.plot(s.emission, s.intensity, 'o')
+      >>> pt.plot(s.emission, mx.gauss.gauss_model(d[5,1:], s.emission))
+      >>> pt.show()
 
     Parameters
     ----------

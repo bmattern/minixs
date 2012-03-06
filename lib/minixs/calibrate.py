@@ -1,12 +1,24 @@
 """
 Calibration functions
+
+Classes:
+  Calibration - a calibration matrix and associated data
+
+Functions:
+  calibrate - main calibration routine
+  find_maxima - locate peaks in a pixel array
+  find_combined_maxima - locate peaks in series of exposures
+  fit_region - fit a smooth function to peaks located with a rectangular region
+  evaluate_fit - evaluate the fit returned by fit_region
+
+  load - load a calibration matrix (deprecated)
 """
 
+import minixs as mx
 from exposure import Exposure
 from emission import EmissionSpectrum, process_spectrum
 from itertools import izip
 from filter import get_filter_by_name
-from constants import *
 from gauss import gauss_leastsq
 from parser import Parser, STRING, INT, FLOAT, LIST
 from filetype import determine_filetype_from_header
@@ -57,7 +69,7 @@ def find_maxima(pixels, direction, window_size = 3):
 
   # build vector of indices along column (row) 
   cols = np.arange(0,p.shape[rolldir])
-  if rolldir == VERTICAL:
+  if direction in [mx.UP, mx.DOWN]:
     cols.shape = (len(cols),1)
 
   # find first moments about local maxima
@@ -75,7 +87,7 @@ def find_maxima(pixels, direction, window_size = 3):
   index = np.where(windowedAvg > 0)
  
   # pull out the pixel locations of the peak centers
-  if rolldir == VERTICAL:
+  if direction in [mx.UP, mx.DOWN]:
     y = windowedAvg[index]
     x = index[1]
   else:
@@ -321,7 +333,7 @@ def calibrate(filtered_exposures, energies, regions, dispersive_direction, fit_t
   ----------
     filtered_exposures: list of loaded and cleaned up Exposure objects
     energies: list of energies corresponding to exposures 
-    regions: list of regions containing individual spectra
+    regions: list of regions containing individual spectra [((x1,y1), (x2,y2)), ...]
     dispersive_direction: direction of increasing energy on camera (minixs.const.{DOWN,UP,LEFT,RIGHT})
     progress: ProgressIndicator
 
@@ -355,8 +367,6 @@ def calibrate(filtered_exposures, energies, regions, dispersive_direction, fit_t
   lin_res = []
   rms_res = []
   fits = []
-  i = 0
-  n = len(regions)
 
   progress.push_step("Fit smooth surface", 0.5)
   for region in regions:
@@ -381,7 +391,7 @@ class Calibration:
 
   def __init__(self, filename=None):
     self.dataset_name = ""
-    self.dispersive_direction = DOWN
+    self.dispersive_direction = mx.DOWN
     self.energies = []
     self.exposure_files = []
     self.filters = []
@@ -410,7 +420,7 @@ class Calibration:
         else:
           f.write("# Spectrometer: %s\n" % self.spectrometer.filename)
       f.write("# Dataset: %s\n" % self.dataset_name)
-      f.write("# Dispersive Direction: %s\n" % DIRECTION_NAMES[self.dispersive_direction])
+      f.write("# Dispersive Direction: %s\n" % mx.DIRECTION_NAMES[self.dispersive_direction])
       f.write("#\n")
       f.write("# Energies and Exposures:\n")
       for en, ex in izip(self.energies, self.exposure_files):
@@ -517,9 +527,9 @@ class Calibration:
     self.dataset = parsed.get('Dataset', '')
 
     # check dispersive direction
-    dirname = parsed.get('Dispersive Direction', DOWN)
-    if dirname in DIRECTION_NAMES:
-      self.dispersive_direction = DIRECTION_NAMES.index(dirname)
+    dirname = parsed.get('Dispersive Direction', mx.DOWN)
+    if dirname in mx.DIRECTION_NAMES:
+      self.dispersive_direction = mx.DIRECTION_NAMES.index(dirname)
     else:
       self.load_errors.append("Unknown Dispersive Direction: '%s', using default." % dirname)
 

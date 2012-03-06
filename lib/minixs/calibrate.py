@@ -7,9 +7,9 @@ from emission import EmissionSpectrum, process_spectrum
 from itertools import izip
 from filter import get_filter_by_name
 from constants import *
-from gauss import gauss_leastsq, gauss_model
+from gauss import gauss_leastsq
 from parser import Parser, STRING, INT, FLOAT, LIST
-from filetype import InvalidFileError
+from filetype import determine_filetype_from_header
 from spectrometer import Spectrometer
 from progress import ProgressIndicator
 
@@ -379,7 +379,7 @@ class Calibration:
   A calibration matrix and all corresponding information
   """
 
-  def __init__(self):
+  def __init__(self, filename=None):
     self.dataset_name = ""
     self.dispersive_direction = DOWN
     self.energies = []
@@ -392,6 +392,9 @@ class Calibration:
     self.filename = None
 
     self.load_errors = []
+
+    if filename:
+      self.load(filename)
 
   def save(self, filename=None, header_only=False):
     if filename is None:
@@ -455,6 +458,10 @@ class Calibration:
     else:
       self.filename = filename
 
+    if not os.path.exists(self.filename):
+      self.load_errors.append("Unable to load nonexistant file: '%s'"%filename)
+      return False
+
     parser = Parser({
       'Spectrometer': STRING,
       'Dataset': STRING,
@@ -467,9 +474,10 @@ class Calibration:
     header = []
     with open(filename, 'r') as f:
       line = f.readline()
-      #XXX this should be done elsewhere...
-      if line.strip().lower() != '# minixs calibration matrix':
-        raise InvalidFileError()
+
+      if determine_filetype_from_header(line):
+        self.load_errors.append("'%s' is not a calibration file" % filename)
+        return False
 
       pos = f.tell()
       line = f.readline()

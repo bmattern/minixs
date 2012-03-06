@@ -17,6 +17,7 @@ __all__ = [
   'calibrate',
   'emission',
   'exposure',
+  'filetype',
   'filter',
   'killzone',
   'misc',
@@ -24,3 +25,5 @@ __all__ = [
   'scanfile',
   'spectrometer',
   ]
+
+load = filetype.load

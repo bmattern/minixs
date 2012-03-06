@@ -211,10 +211,36 @@ class EmissionSpectrum(object):
   An X-Ray emission spectrum and associated information
 
   Methods:
-    load - load from file
-    save - save to file
-    process - process spectrum using interpolated average
-    process_binned - process spectrum using simple binning
+    load             - load from file
+    save             - save to file
+    process          - process spectrum using interpolated average
+    process_binned   - process spectrum using simple binning
+
+  Instance Variables:
+    dataset_name     - indentifier
+    calibration_file - filename of calibration matrix
+    incident_energy  - monochrometer energy at which this exposure was taken
+    I0               - incident beam flux
+    exposure_files   - list of filenames of exposures
+    filters          - list of mx.filter.Filter descendents to apply to exposures
+    solid_angle_map  - map of solid angle subtended by each pixel
+    solid_angle_map_file - filename of solid angle map
+
+    spectrum         - XES spectrum (5 columns: emission energy, intensity, I0, raw counts and number of contributing pixels)
+    emission         - 1st column of spectrum (emission energies)
+    intensity        - 2nd column of spectrum
+    I0               - 3rd column of spectrum
+    raw_counts       - 4th column of spectrum
+    num_pixels       - 5th column of spectrum
+
+  Example:
+
+    # load and plot emission spectrum
+    >>> import minixs as mx
+    >>> from matplotlib import pyplot as pt
+    >>> xes = mx.emission.EmissionSpectrum('example.xes')
+    >>> pt.plot(xes.emission, xes.intensity)
+    >>> pt.show()
   """
   def __init__(self, filename=None):
     self.dataset_name = ""
@@ -246,6 +272,13 @@ class EmissionSpectrum(object):
     self.num_pixels = self.spectrum[:,4]
  
   def save(self, filename=None, header_only=False):
+    """
+    Save emission spectrum
+
+    Parameters:
+      filename - either filename or file handle opened for writing
+      header_only - if True, only header is saved, not spectrum
+    """
     if filename is None:
       filename = self.filename
 
@@ -283,6 +316,13 @@ class EmissionSpectrum(object):
           np.savetxt(f, self.spectrum, fmt=('%12.2f','%.6e','%.6e','% 11d',' %.6e'))
 
   def load(self, filename=None, header_only=False):
+    """
+    Load emission spectrum from file
+
+    Paramaters:
+      filename - filename to load
+      header_only - if True, only header is loaded
+    """
     if filename is None:
       filename = self.filename
     else:
@@ -358,6 +398,27 @@ class EmissionSpectrum(object):
     self.solid_angle_map = map
 
   def process(self, emission_energies=None, skip_columns=[], killzone_mask=None):
+    """
+    Process Emission Spectrum
+
+    Parameters:
+      emission_energies - list of points in emission energy grid
+                          if None, a uniform 0.1 eV grid covering range of calibration energies is used
+      skip_columns      - columns (for vertical disp. dir.) or rows (for horizontal) to skip entirely
+      killzone_mask     - mask of regions to skip in processing
+
+    Prerequisites:
+      self.calibration_file must be set to calibration filename
+      self.exposure_files must be a list of exposure filenames
+      self.filters must be a list of mx.filter.Filter descendents to apply to integrated exposures
+                   (may be empty list)
+      self.solid_angle_map may be a map of solid angles subtended by each pixel
+
+    Results:
+      self.spectrum is set to processed spectrum
+      self.emission, self.intensity, self.uncertainty, self.raw_counts and self.num_pixels are set to
+        corresponding columns of spectrum
+    """
     calibration = calibrate.Calibration()
     calibration.load(self.calibration_file)
 
@@ -369,9 +430,7 @@ class EmissionSpectrum(object):
 
     # generate emission energies from range of calibration matrix
     if emission_energies is None:
-      Emin = calibration.calibration_matrix[np.where(calibration.calibration_matrix > 0)].min()
-      Emax = calibration.calibration_matrix.max()
-
+      Emin, Emax = calibration.energy_range()
       emission_energies = np.arange(Emin,Emax,.1)
 
     spectrum = process_spectrum(calibration.calibration_matrix,
@@ -387,6 +446,17 @@ class EmissionSpectrum(object):
     self._set_spectrum(spectrum)
 
   def process_binned(self, E1, E2, Estep, killzone_mask=None):
+    """
+    Process spectrum binning
+
+    Parameters:
+      E1 - low edge of lowest bin
+      E2 - high edge of highest bin
+      Estep = bin width
+      killzone_mask - optional mask of regions to ignore entirely
+
+    See Calibration.process for prerequisites and results
+    """
     calib = calibrate.load(self.calibration_file)
 
     # zero out killzones of calibration matrix

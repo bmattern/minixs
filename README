@@ -1,5 +1,5 @@
 miniXS Calibration
-------------------
+==================
 
 In order to calibrate the miniXS spectrometer, an energy value needs to be assigned to each pixel of the Pilatus camera. To do this, several exposures should be taken with the incident beam set to various energies within the range of the spectrometer. The elastically scattered beam will then show up on the camera as a thin arc for each crystal. From the respective energies of these arcs, we can fit a smooth function to assign energy values to all pixels on the camera face.
 
@@ -41,3 +41,39 @@ Before calibration can proceed, we need to define the boundaries of spectra from
 
 To do so, click in the exposure view and drag to draw a rectangle. Once drawn, the rectangle can be moved by clicking inside it and dragging, or resized by clicking near one of its borders and dragging.
 
+Calibrating and saving
+----------------------
+
+Click the large "Calibrate" button at the bottom. When finished, the calibration matrix will be displayed instead of the raw exposures.
+
+Click File > Save to save the calibration matrix to a file ending in ".calib". 
+
+XES Processing
+==============
+
+Emission exposures can be processed using the process_xes script.
+
+First, a calibration matrix must have been created as described in the `miniXS Calibration` section.
+
+A typical invocation is as follows:
+
+    $ process_xes example.calib example.tif -o example.xes
+
+It is also possible to combine multiple emission exposures by simply including multiple file names. e.g.
+
+    $ process_xes example.calib example_0001.tif example_0002.tif -o example.xes
+
+For more options, see
+    $ process_xes -h
+
+RIXS Processing
+===============
+
+RIXS data consists of a series of emission exposures taken with varying incident energy. To process RIXS, use the `process_rixs` script. For example:
+
+    $ process_rixs example.calib --scans example_scan.0001 --exposures example_scan_*.tif -o example.rixs
+If you have several identical scans that you wish to combine (e.g. a scan set on repeat and run overnight), you can do so with:
+
+    $ process_rixs example.calib --scans example_scan.0001 example_scan.0002 --exposures example_scan1_*.tif example_scan2_*.tif -o example.rixs
+
+Each scan must contain the same data points, and the exposures for the first scan must be listed in order followed by those from the second, etc.

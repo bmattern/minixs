@@ -108,7 +108,7 @@ xes.calibration_file = os.path.realpath(calibration_file)
 xes.incident_energy = options.energy
 xes.exposure_files = [os.path.realpath(f) for f in exposure_files]
 if options.solid_angle_map:
-  xes.load_solid_angle_map(options.solid_angle_map)
+  xes._load_solid_angle_map(options.solid_angle_map)
 xes.I0 = options.i0
 xes.filters = filters
 

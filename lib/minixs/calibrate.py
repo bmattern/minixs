@@ -744,7 +744,7 @@ class Calibration(object):
         xes = EmissionSpectrum()
         xes.incident_energy = energy
         xes.exposure_files = [exposure.filename]
-        xes.set_spectrum(s)
+        xes._set_spectrum(s)
         spectra.append(xes)
 
     diagnostics = diagnostics[np.where(diagnostics[:,0] != 0)]

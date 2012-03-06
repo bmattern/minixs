@@ -1,5 +1,13 @@
 """
 XES Spectrum processing code
+
+Classes:
+  EmissionSpectrum - XES spectrum and associated data
+
+Functions:
+  load - load EmissionSpectrum (deprecated)
+  process_spectrum - main processing routine
+  binned_emission_spectrum - alternative processing routine
 """
 
 import os
@@ -199,6 +207,15 @@ def interp_poisson(x, y, var, xp, yp, left=None, right=None):
 
 
 class EmissionSpectrum(object):
+  """
+  An X-Ray emission spectrum and associated information
+
+  Methods:
+    load - load from file
+    save - save to file
+    process - process spectrum using interpolated average
+    process_binned - process spectrum using simple binning
+  """
   def __init__(self, filename=None):
     self.dataset_name = ""
     self.calibration_file = ""
@@ -210,7 +227,7 @@ class EmissionSpectrum(object):
     self.filters = []
 
     spectrum = np.array([]).reshape(0,5)
-    self.set_spectrum(spectrum)
+    self._set_spectrum(spectrum)
 
     self.filename = None
 
@@ -219,16 +236,7 @@ class EmissionSpectrum(object):
     if filename:
       self.load(filename)
 
-  def set_incident_energy(self, incident_energy):
-    self.incident_energy = incident_energy
-
-  def set_I0(self, I0):
-    self.I0 = I0
-
-  def set_exposure_files(self, exposure_files):
-    self.exposure_files = exposure_files
-
-  def set_spectrum(self, spectrum):
+  def _set_spectrum(self, spectrum):
     self.spectrum = spectrum
 
     self.emission = self.spectrum[:,0]
@@ -241,7 +249,6 @@ class EmissionSpectrum(object):
     if filename is None:
       filename = self.filename
 
-      self.filename = file
     with mx.misc.to_filehandle(filename, "w") as (f, filename):
       if filename:
         self.filename = filename
@@ -297,7 +304,7 @@ class EmissionSpectrum(object):
           if len(self.spectrum.shape) == 1:
             spectrum.shape = (1,spectrum.shape[0])
 
-          self.set_spectrum(spectrum)
+          self._set_spectrum(spectrum)
 
         pos = f.tell()
         line = f.readline()
@@ -320,7 +327,7 @@ class EmissionSpectrum(object):
     self.I0 = parsed.get('I0', 0.0)
     solid_angle_map = parsed.get('Solid Angle Map')
     if solid_angle_map:
-      self.load_solid_angle_map(solid_angle_map)
+      self._load_solid_angle_map(solid_angle_map)
     self.exposure_files = parsed.get('Exposures')
 
     # load filters
@@ -336,7 +343,7 @@ class EmissionSpectrum(object):
 
     return len(self.load_errors) == 0
 
-  def load_solid_angle_map(self, map_file):
+  def _load_solid_angle_map(self, map_file):
     try:
       if os.path.exists(map_file):
         map_file = os.path.abspath(map_file)
@@ -377,7 +384,7 @@ class EmissionSpectrum(object):
                                 skip_columns=skip_columns,
                                 killzone_mask=killzone_mask)
 
-    self.set_spectrum(spectrum) 
+    self._set_spectrum(spectrum)
 
   def process_binned(self, E1, E2, Estep, killzone_mask=None):
     calib = calibrate.load(self.calibration_file)
@@ -396,5 +403,5 @@ class EmissionSpectrum(object):
                                         E2,
                                         Estep,
                                         self.I0)
-    self.set_spectrum(spectrum)
+    self._set_spectrum(spectrum)
 

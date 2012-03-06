@@ -15,9 +15,7 @@ from itertools import izip
 
 def load(filename):
   """Load EmissionSpectrum from file"""
-  xes = EmissionSpectrum()
-  xes.load(filename)
-  return xes
+  return EmissionSpectrum(filename)
 
 def process_spectrum(cal, exposure, energies, I0, direction, xtals, solid_angle=None, skip_columns=[], killzone_mask=None):
   """Interpolated emission spectrum

@@ -70,14 +70,6 @@ def build_rixs(spectra, energies):
 
   return full_spectrum
 
-def save_rixs(filename, rixs):
-  with open(filename, 'w') as f:
-    f.write("#    E_incident      E_emission       Intensity           Sigma          Counts      Num_pixels\n")
-
-    fmt = ('% 15.2f', '% 15.2f', '% 15.8e','% 15.8e','% 15d', '% 15d')
-    np.savetxt(f, rixs, fmt=fmt)
-
-
 def rixs_xes_cut(rixs, energy):
   energies = np.unique(rixs[:,0])
  

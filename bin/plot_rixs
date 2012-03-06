@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 import minixs as mx
-import matplotlib
-#matplotlib.use('GtkAgg')
-from pylab import *
+from matplotlib import pyplot as pt
+import numpy as np
+
 from optparse import OptionParser
 
 usage = "Usage: %s <.rixs file>"
@@ -20,16 +20,14 @@ if len(args) != 1:
   parser.print_help()
   exit(1)
 
-r = loadtxt(args[0])
-ei = unique(r[:,0])
-ee = unique(r[:,1])
-r2 = mx.misc.rixs2d(r)
+r = mx.rixs.RIXS(args[0])
+ei, ee, r2 = r.matrix_form()
 
 if options.log:
-  r2 = log10(r2)
+  r2 = np.log10(r2)
 
 if options.contour:
-  contourf(
+  pt.contourf(
       ei,
       ee,
       r2,
@@ -38,7 +36,7 @@ if options.contour:
       aspect=.3
       )
 else:
-  imshow(
+  pt.imshow(
       r2,
       origin='bottom',
       extent=(ei[0],ei[-1],ee[0],ee[-1]),
@@ -48,11 +46,11 @@ else:
       #interpolation='nearest'
       )
 
-ax = gca()
+ax = pt.gca()
 #ax.set_ylim(7007,7127)
 #ax.set_xlim(7110,7127)
-xlabel('Incident Energy (eV)')
-ylabel('Emission Energy (eV)')
-colorbar()
-show()
+pt.xlabel('Incident Energy (eV)')
+pt.ylabel('Emission Energy (eV)')
+pt.colorbar()
+pt.show()
 

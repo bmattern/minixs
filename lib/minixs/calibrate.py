@@ -485,7 +485,7 @@ class Calibration(object):
     with open(filename, 'r') as f:
       line = f.readline()
 
-      if determine_filetype_from_header(line):
+      if determine_filetype_from_header(line) != mx.filetype.FILE_CALIBRATION:
         self.load_errors.append("'%s' is not a calibration file" % filename)
         return False
 

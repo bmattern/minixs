@@ -7,7 +7,7 @@ This could also include any plots generated from the data
 Needless to say, this hasn't been written yet...
 """
 
-class DataSet:
+class DataSet(object):
   def __init__(self):
     self.name = ""
     self.description = ""

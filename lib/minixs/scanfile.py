@@ -2,7 +2,7 @@ import numpy as np
 
 SCAN_COLUMN_WIDTH = 21
 
-class ScanFile:
+class ScanFile(object):
   """
   A PNC (Advanced Photon Source Sector 20) scan file.
 

@@ -6,7 +6,7 @@ import numpy as np
 from itertools import izip
 import os
 
-class Exposure:
+class Exposure(object):
   """
   Raw detector exposures
 

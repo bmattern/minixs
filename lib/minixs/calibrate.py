@@ -384,7 +384,7 @@ def calibrate(filtered_exposures, energies, regions, dispersive_direction, fit_t
   else:
     return calibration_matrix
 
-class Calibration:
+class Calibration(object):
   """
   A calibration matrix and all corresponding information
   """

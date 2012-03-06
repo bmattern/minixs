@@ -58,40 +58,6 @@ def determine_dispersive_direction(e1, e2, threshold=.75, sep=20):
 
   return -1
 
-def build_rixs(spectra, energies):
-  total_length = np.sum([len(s) for s in spectra])
-  full_spectrum = np.zeros((total_length, 6))
-
-  i = 0
-  for s,E in izip(spectra, energies):
-    full_spectrum[i:i+len(s),0] = E
-    full_spectrum[i:i+len(s),1:] = s
-    i += len(s)
-
-  return full_spectrum
-
-def save_rixs(filename, rixs):
-  with open(filename, 'w') as f:
-    f.write("#    E_incident      E_emission       Intensity           Sigma          Counts      Num_pixels\n")
-
-    fmt = ('% 15.2f', '% 15.2f', '% 15.8e','% 15.8e','% 15d', '% 15d')
-    np.savetxt(f, rixs, fmt=fmt)
-
-
-def rixs_xes_cut(rixs, energy):
-  energies = np.unique(rixs[:,0])
- 
-  i = np.argmin(np.abs(energies - energy))
-
-  return rixs[np.where(rixs[:,0] == energies[i])]
-
-def rixs_pfy_cut(rixs, energy):
-  energies = np.unique(rixs[:,1])
- 
-  i = np.argmin(np.abs(energies - energy))
-
-  return rixs[np.where(rixs[:,1] == energies[i])]
-
 def _find_boundaries(p, axis):
   """
   Helper function for find_xtal_boundaries

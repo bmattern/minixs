@@ -227,4 +227,31 @@ class RIXS(object):
     i = len(inc_energies)
     return (inc_energies, emit_energies, self.spectrum[:,2].reshape((i,len(self.spectrum)/i)).T)
 
+  def xes_cut(self, energy):
+    """
+    Get constant incident energy slice of RIXS spectrum
+
+    Parameters:
+      energy: incident energy
+
+    Returns:
+      Slice of RIXS spectrum with incident energy closest to `energy`.
+    """
+    energies = np.unique(self.spectrum[:,0])
+    i = np.argmin(np.abs(energies - energy))
+    return self.spectrum[np.where(self.spectrum[:,0] == energies[i])]
+
+  def pfy_cut(self, energy):
+    """
+    Get constant emission energy slice of RIXS spectrum
+
+    Parameters:
+      energy: emission energy
+
+    Returns:
+      Slice of RIXS spectrum with emission energy closest to `energy`.
+    """
+    energies = np.unique(self.spectrum[:,1])
+    i = np.argmin(np.abs(energies - energy))
+    return self.spectrum[np.where(self.spectrum[:,1] == energies[i])]
 

@@ -73,7 +73,8 @@ if __name__ == "__main__":
   import platform
   if platform.system() == 'Windows':
     import glob, operator
-    exposures = reduce(operator.add, map(glob.glob, exposures))
+    sorted_glob = lambda x: sorted(glob.glob(x))
+    exposures = reduce(operator.add, map(sorted_glob, exposures))
     scans = reduce(operator.add, map(glob.glob, scans))
 
   # read in scan files

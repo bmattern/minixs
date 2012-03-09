@@ -35,7 +35,8 @@ def progress_cb(i, energy):
 import platform
 if platform.system() == 'Windows':
   import glob, operator
-  args.exposures = reduce(operator.add, map(glob.glob, args.exposures))
+  sorted_glob = lambda x: sorted(glob.glob(x))
+  args.exposures = reduce(operator.add, map(sorted_glob, args.exposures))
   args.scans = reduce(operator.add, map(glob.glob, args.scans))
 
 # read in scan files

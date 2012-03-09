@@ -139,9 +139,9 @@ class RIXS(object):
 
     if not self.calibration_file:
       self.errors.append("Missing calibration_file.")
-    if not self.energies:
+    if self.energies is None:
       self.errors.append("Incident energies have not been set.")
-    if not self.I0s:
+    if self.I0s is None:
       self.errors.append("I0 values have not been set.")
     if not self.exposure_files:
       self.errors.append("Exposure files have not been set.")

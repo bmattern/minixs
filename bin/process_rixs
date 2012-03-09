@@ -122,7 +122,12 @@ emission_energies = np.arange(c[np.where(c>0)].min(), c.max(), .25)
 sys.stdout.write("Processing")
 sys.stdout.flush()
 
-rixs.process(emission_energies, progress_callback=progress_cb)
+try:
+  rixs.process(emission_energies, progress_callback=progress_cb)
+except mx.rixs.InvalidParameters:
+  print("")
+  print('\n'.join(rixs.errors))
+
 print("")
 
 print("Saving...")

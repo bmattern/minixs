@@ -367,7 +367,10 @@ class EmissionSpectrum(object):
     self.I0 = parsed.get('I0', 0.0)
     solid_angle_map = parsed.get('Solid Angle Map')
     if solid_angle_map:
-      self._load_solid_angle_map(solid_angle_map)
+      try:
+        self._load_solid_angle_map(solid_angle_map)
+      except IOError as e:
+        self.load_errors.append(e.message)
     self.exposure_files = parsed.get('Exposures')
 
     # load filters

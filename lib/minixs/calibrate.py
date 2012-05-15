@@ -54,7 +54,7 @@ def find_maxima(pixels, direction, window_size = 3):
 
   # build vector of indices along column (row) 
   cols = np.arange(0,p.shape[rolldir])
-  if direction == VERTICAL:
+  if rolldir == VERTICAL:
     cols.shape = (len(cols),1)
 
   # find first moments about local maxima
@@ -70,7 +70,7 @@ def find_maxima(pixels, direction, window_size = 3):
   index = np.where(windowedAvg > 0)
  
   # pull out the pixel locations of the peak centers
-  if direction == VERTICAL:
+  if rolldir == VERTICAL:
     y = windowedAvg[index]
     x = index[1]
   else:

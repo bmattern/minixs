@@ -30,7 +30,7 @@ def process_spectrum(cal, exposure, energies, I0, direction, xtals, solid_angle=
   energies : list of emission energies for desired spectrum
   I0 : intensity normalization value
   direction: dispersive direction (minixs.HORIZONTAL or minixs.VERTICAL)
-  xtals: list of crystal rects
+  xtals: list of crystal rects [ [(10,5), (200, 120)], [...] ]
   solid_angle: an array giving the solid angle subtended by each pixel
 
   If solid_angle is not given, then it is effectively an array of ones

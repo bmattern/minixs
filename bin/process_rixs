@@ -30,14 +30,11 @@ def progress_cb(i, energy):
   sys.stdout.write(".")
   sys.stdout.flush()
 
-# The Windows command shell does not expand glob expressions (e.g. foo*),
-# so we do that manually here for scans and exposures.
-import platform
-if platform.system() == 'Windows':
-  import glob, operator
-  sorted_glob = lambda x: sorted(glob.glob(x))
-  args.exposures = reduce(operator.add, map(sorted_glob, args.exposures))
-  args.scans = reduce(operator.add, map(glob.glob, args.scans))
+# expand globs manually (needed for windows or for more files than bash allows)
+import glob, operator
+sorted_glob = lambda x: sorted(glob.glob(x))
+args.exposures = reduce(operator.add, map(sorted_glob, args.exposures))
+args.scans = reduce(operator.add, map(glob.glob, args.scans))
 
 # read in scan files
 energies = None
